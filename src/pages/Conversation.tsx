@@ -378,16 +378,20 @@ const Conversation: React.FC = () => {
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col bg-background/80 backdrop-blur-sm">
           {/* Header */}
-          <div className="border-b bg-card/50 backdrop-blur-sm p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MessageCircle className="h-6 w-6 text-primary" />
-                <div>
-                  <h1 className="text-lg font-semibold">{conversation.title}</h1>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>{formatTime(getTimeRemaining())} restantes</span>
-                    <Badge variant={conversation.status === 'active' ? 'default' : 'secondary'} className="h-5 text-xs">
+          <div className="border-b bg-card/50 backdrop-blur-sm px-8 py-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <MessageCircle className="h-8 w-8 text-primary" />
+                </div>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold">{conversation.title}</h1>
+                  <div className="flex items-center gap-4 text-base text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      <span className="font-medium">{formatTime(getTimeRemaining())} restantes</span>
+                    </div>
+                    <Badge variant={conversation.status === 'active' ? 'default' : 'secondary'} className="h-7 px-3 text-sm font-medium">
                       {conversation.status}
                     </Badge>
                   </div>
@@ -395,46 +399,50 @@ const Conversation: React.FC = () => {
               </div>
               
               {/* Session Controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Button
                   onClick={() => setAutoTTS(!autoTTS)}
                   variant="ghost"
-                  size="sm"
+                  size="default"
+                  className="h-11 px-4"
                 >
-                  {autoTTS ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  {autoTTS ? <Volume2 className="h-5 w-5 mr-2" /> : <VolumeX className="h-5 w-5 mr-2" />}
+                  <span className="hidden sm:inline">Audio</span>
                 </Button>
                 <Button
                   onClick={handleClearConversation}
                   variant="ghost"
-                  size="sm"
+                  size="default"
                   disabled={isLoading || messages.length === 0}
+                  className="h-11 px-4"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5 mr-2" />
+                  <span className="hidden sm:inline">Limpiar</span>
                 </Button>
                 
                 {!isSessionActive && conversation.status === 'active' && (
-                  <Button onClick={handleStartSession} size="sm">
-                    <Play className="h-4 w-4 mr-1" />
+                  <Button onClick={handleStartSession} size="default" className="h-11 px-6">
+                    <Play className="h-5 w-5 mr-2" />
                     Iniciar
                   </Button>
                 )}
                 
                 {isSessionActive && (
-                  <Button onClick={handlePauseSession} variant="outline" size="sm">
-                    <Pause className="h-4 w-4 mr-1" />
+                  <Button onClick={handlePauseSession} variant="outline" size="default" className="h-11 px-6">
+                    <Pause className="h-5 w-5 mr-2" />
                     Pausar
                   </Button>
                 )}
                 
                 {!isSessionActive && conversation.status === 'paused' && (
-                  <Button onClick={handleResumeSession} size="sm">
-                    <Play className="h-4 w-4 mr-1" />
+                  <Button onClick={handleResumeSession} size="default" className="h-11 px-6">
+                    <Play className="h-5 w-5 mr-2" />
                     Reanudar
                   </Button>
                 )}
                 
-                <Button onClick={handleEndSession} variant="outline" size="sm">
-                  <Square className="h-4 w-4 mr-1" />
+                <Button onClick={handleEndSession} variant="outline" size="default" className="h-11 px-6">
+                  <Square className="h-5 w-5 mr-2" />
                   Terminar
                 </Button>
               </div>
