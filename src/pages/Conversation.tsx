@@ -510,49 +510,6 @@ const Conversation: React.FC = () => {
             <div ref={messagesEndRef} />
           </ScrollArea>
           
-          {/* Message Input */}
-          <div className="border-t bg-card/50 backdrop-blur-sm p-4">
-            <div className="max-w-4xl mx-auto">
-              <form onSubmit={handleSendMessage} className="flex gap-3">
-                <Input
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder={isSessionActive ? "Escribe tu mensaje..." : "Inicia la sesión para comenzar"}
-                  disabled={!isSessionActive || isLoading}
-                  className="flex-1 bg-background"
-                />
-                <VoiceInput
-                  onTranscription={handleVoiceTranscription}
-                  disabled={!isSessionActive || isLoading}
-                />
-                <Button 
-                  type="submit" 
-                  disabled={!isSessionActive || !currentMessage.trim() || isLoading}
-                  size="icon"
-                >
-                  {isLoading ? (
-                    <LoadingSpinner />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </form>
-              {(isSpeaking || ttsLoading) && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                  <Volume2 className="h-4 w-4 animate-pulse" />
-                  <span>{ttsLoading ? 'Preparando audio...' : 'Reproduciendo respuesta...'}</span>
-                  <Button
-                    onClick={stop}
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 ml-auto"
-                  >
-                    Detener
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
         
         {/* Insights Sidebar */}
