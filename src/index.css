@@ -8,7 +8,35 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* ================== BACKEND ADMIN DESIGN SYSTEM ================== */
+    /* ================== THERAPEUTIC DESIGN SYSTEM ================== */
+    
+    /* Therapeutic Brand Colors - Calming and professional */
+    --therapeutic-primary: 195 75% 55%;      /* Calming blue */
+    --therapeutic-secondary: 150 30% 60%;    /* Soft sage green */
+    --therapeutic-accent: 220 15% 85%;       /* Light gray-blue */
+    --therapeutic-warm: 25 40% 75%;          /* Warm beige */
+    
+    /* Therapeutic Emotional Colors */
+    --emotion-calm: 200 50% 70%;             /* Peaceful blue */
+    --emotion-growth: 140 40% 65%;           /* Growth green */
+    --emotion-insight: 260 40% 70%;          /* Insight purple */
+    --emotion-support: 35 60% 75%;           /* Supportive amber */
+    --emotion-progress: 175 45% 65%;         /* Progress teal */
+    
+    /* Therapeutic Gradients - Soothing and professional */
+    --gradient-therapeutic: linear-gradient(135deg, hsl(var(--therapeutic-primary)), hsl(var(--emotion-calm)));
+    --gradient-calming: linear-gradient(180deg, hsl(var(--background)), hsl(195 85% 98%));
+    --gradient-insight: linear-gradient(135deg, hsl(var(--emotion-insight)), hsl(260 30% 85%));
+    --gradient-growth: linear-gradient(135deg, hsl(var(--emotion-growth)), hsl(140 30% 80%));
+    
+    /* Therapeutic Shadows - Softer and more welcoming */
+    --shadow-therapeutic: 0 8px 32px -8px hsl(195 75% 55% / 0.12);
+    --shadow-insight: 0 6px 24px -6px hsl(260 40% 70% / 0.15);
+    --shadow-progress: 0 4px 16px -4px hsl(175 45% 65% / 0.18);
+    
+    /* Therapeutic Spacing - More generous for comfort */
+    --space-therapeutic: 1.75rem;   /* 28px - comfortable spacing */
+    --space-session: 2.25rem;       /* 36px - session content spacing */
     
     /* Core Neutrals - Professional admin interface */
     --background: 0 0% 100%;
@@ -219,7 +247,25 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* ================== DARK MODE - ADMIN INTERFACE ================== */
+    /* ================== DARK MODE - THERAPEUTIC INTERFACE ================== */
+    
+    /* Therapeutic Colors - Dark mode optimized for comfort */
+    --therapeutic-primary: 195 60% 65%;      /* Softer blue for dark mode */
+    --therapeutic-secondary: 150 25% 55%;    /* Muted sage green */
+    --therapeutic-accent: 220 12% 25%;       /* Dark gray-blue */
+    --therapeutic-warm: 25 30% 35%;          /* Darker warm tone */
+    
+    /* Therapeutic Emotional Colors - Dark mode */
+    --emotion-calm: 200 40% 60%;             /* Dimmed peaceful blue */
+    --emotion-growth: 140 35% 55%;           /* Dimmed growth green */
+    --emotion-insight: 260 35% 60%;          /* Dimmed insight purple */
+    --emotion-support: 35 50% 65%;           /* Dimmed supportive amber */
+    --emotion-progress: 175 40% 55%;         /* Dimmed progress teal */
+    
+    /* Therapeutic Shadows - Dark mode with colored glows */
+    --shadow-therapeutic: 0 8px 32px -8px hsl(195 60% 30% / 0.25);
+    --shadow-insight: 0 6px 24px -6px hsl(260 35% 30% / 0.3);
+    --shadow-progress: 0 4px 16px -4px hsl(175 40% 30% / 0.35);
     
     /* Core Neutrals - Dark admin interface */
     --background: 240 10% 8%;
@@ -336,5 +382,73 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    line-height: 1.6;
+    scroll-behavior: smooth;
+  }
+  
+  /* Therapeutic Interface Enhancements */
+  .therapeutic-gradient {
+    background: var(--gradient-therapeutic);
+  }
+  
+  .calming-shadow {
+    box-shadow: var(--shadow-therapeutic);
+  }
+  
+  .insight-glow {
+    box-shadow: var(--shadow-insight);
+  }
+  
+  .progress-highlight {
+    box-shadow: var(--shadow-progress);
+  }
+  
+  /* Smooth animations for therapeutic interface */
+  .therapeutic-transition {
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Focus states optimized for accessibility and calm */
+  .therapeutic-focus:focus {
+    outline: 2px solid hsl(var(--therapeutic-primary));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px hsl(var(--therapeutic-primary) / 0.1);
+  }
+  
+  /* Message bubbles with therapeutic styling */
+  .message-bubble-user {
+    background: linear-gradient(135deg, hsl(var(--therapeutic-primary) / 0.1), hsl(var(--emotion-calm) / 0.05));
+    border: 1px solid hsl(var(--therapeutic-primary) / 0.2);
+  }
+  
+  .message-bubble-assistant {
+    background: linear-gradient(135deg, hsl(var(--background)), hsl(var(--therapeutic-accent) / 0.3));
+    border: 1px solid hsl(var(--border));
+  }
+  
+  /* Typing indicator with calming animation */
+  .typing-indicator {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  /* Progress indicators with smooth fills */
+  .progress-fill {
+    transition: width 800ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Insight cards with subtle hover effects */
+  .insight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-insight);
   }
 }

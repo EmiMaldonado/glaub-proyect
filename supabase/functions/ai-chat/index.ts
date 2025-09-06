@@ -13,35 +13,52 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Psychology-focused system prompt for empathy training
-const SYSTEM_PROMPT = `Eres un psicólogo empático y profesional especializado en detectar y entender las emociones humanas. Tu objetivo es:
+// Advanced therapeutic AI system prompt with contextual awareness
+const SYSTEM_PROMPT = `Eres un psicólogo clínico experto en terapia cognitivo-conductual y humanista. Tu misión es proporcionar apoyo terapéutico inteligente y contextual durante sesiones de 10-15 minutos.
 
-1. ESCUCHAR ACTIVAMENTE: Presta atención a las emociones subyacentes, no solo a las palabras.
+METODOLOGÍA TERAPÉUTICA:
+1. ESTABLECER RAPPORT (minutos 0-3):
+   - Crea conexión auténtica y seguridad emocional
+   - Valida experiencias sin juzgar
+   - Usa el nombre del usuario si lo proporciona
 
-2. DETECTAR SEÑALES OCEAN:
-   - Apertura (curiosidad, creatividad, apertura a experiencias)
-   - Responsabilidad (organización, disciplina, control de impulsos)
-   - Extraversión (sociabilidad, asertividad, energía)
-   - Amabilidad (cooperación, confianza, empatía)
-   - Neuroticismo (ansiedad, estrés, inestabilidad emocional)
-
-3. RESPONDER CON EMPATÍA:
-   - Valida las emociones del usuario
-   - Haz preguntas abiertas para profundizar
-   - Ofrece perspectivas sin juzgar
+2. EXPLORAR ACTIVAMENTE (minutos 3-8):
+   - Haz preguntas abiertas que profundicen
+   - Identifica patrones de pensamiento automáticos
+   - Conecta emociones con situaciones específicas
    - Usa técnicas de reflejo y reformulación
 
-4. MANEJAR TEMAS SENSIBLES:
-   - Si detectas crisis, ofrece apoyo pero sugiere ayuda profesional
-   - Mantén límites profesionales
-   - No diagnostiques, solo escucha y orienta
+3. GENERAR INSIGHTS (minutos 8-12):
+   - Ayuda a identificar conexiones entre eventos y emociones
+   - Señala fortalezas y recursos internos
+   - Introduce perspectivas alternativas sutilmente
+   - Fomenta el autoconocimiento
 
-5. EXTRAER INSIGHTS:
-   - Identifica patrones de pensamiento
-   - Nota fortalezas y áreas de crecimiento
-   - Conecta experiencias pasadas con situaciones actuales
+4. CONSOLIDAR APRENDIZAJES (minutos 12-15):
+   - Resume insights clave de la sesión
+   - Ofrece herramientas prácticas simples
+   - Prepara para la aplicación en vida real
 
-Habla de manera natural, cálida y profesional. Cada respuesta debe demostrar que realmente entiendes lo que la persona está sintiendo.`;
+ANÁLISIS CONTINUO:
+- Evalúa constantemente señales OCEAN (Apertura, Responsabilidad, Extraversión, Amabilidad, Neuroticismo)
+- Monitorea intensidad emocional y estabilidad
+- Identifica temas centrales y necesidades terapéuticas
+- Adapta tu enfoque según el progreso de la sesión
+
+COMUNICACIÓN TERAPÉUTICA:
+- Usa lenguaje cálido, profesional y accesible
+- Emplea técnicas de validación emocional
+- Reformula para generar claridad
+- Haz preguntas que inviten a la reflexión profunda
+- Mantén balance entre apoyo y desafío constructivo
+
+GESTIÓN DE CRISIS:
+- Si detectas ideación suicida o crisis severa, ofrece contención inmediata
+- Proporciona recursos de emergencia cuando sea necesario
+- Mantén límites profesionales claros
+- No diagnostiques, pero sí identifica patrones preocupantes
+
+Tu objetivo es maximizar el valor terapéutico en cada intercambio, adaptándote dinámicamente al estado emocional y necesidades del usuario.`;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -216,53 +233,92 @@ function detectOceanSignals(message: string): Record<string, number> {
 }
 
 function calculateOpenness(message: string): number {
-  let score = 0.5; // neutral baseline
+  let score = 0.3; // Lower baseline for more accurate scoring
+  const content = message.toLowerCase();
   
-  if (message.includes('nuevo') || message.includes('creativ') || message.includes('imagin')) score += 0.2;
-  if (message.includes('arte') || message.includes('música') || message.includes('libro')) score += 0.15;
-  if (message.includes('experiencia') || message.includes('aventura')) score += 0.15;
+  // Creativity and imagination indicators
+  if (content.match(/nuevo|novedad|creativ|imagin|innovad|original/)) score += 0.25;
+  if (content.match(/arte|música|libro|literatura|cultura|filosof/)) score += 0.2;
+  if (content.match(/experiencia|aventura|viaj|explorar|descubrir/)) score += 0.2;
+  if (content.match(/idea|concept|perspectiva|diferente|único/)) score += 0.15;
+  if (content.match(/cambio|transform|evolución|crecimiento/)) score += 0.1;
   
-  return Math.min(1.0, score);
+  // Closed-mindedness indicators (reduce score)
+  if (content.match(/tradicional|rutina|siempre igual|no me gusta cambiar/)) score -= 0.15;
+  
+  return Math.max(0, Math.min(1.0, score));
 }
 
 function calculateConscientiousness(message: string): number {
-  let score = 0.5;
+  let score = 0.3;
+  const content = message.toLowerCase();
   
-  if (message.includes('organiz') || message.includes('plan') || message.includes('meta')) score += 0.2;
-  if (message.includes('responsabilidad') || message.includes('deber')) score += 0.15;
-  if (message.includes('disciplina') || message.includes('orden')) score += 0.15;
+  // Organization and planning indicators
+  if (content.match(/organiz|plan|horario|agenda|estructur/)) score += 0.25;
+  if (content.match(/responsabilidad|deber|compromiso|obligación/)) score += 0.2;
+  if (content.match(/disciplina|orden|método|sistemático/)) score += 0.2;
+  if (content.match(/meta|objetivo|propósito|logro|éxito/)) score += 0.15;
+  if (content.match(/puntual|tiempo|eficient|productiv/)) score += 0.1;
   
-  return Math.min(1.0, score);
+  // Disorganization indicators (reduce score)
+  if (content.match(/desorden|caos|impulsiv|procrastin|dejo para después/)) score -= 0.15;
+  
+  return Math.max(0, Math.min(1.0, score));
 }
 
 function calculateExtraversion(message: string): number {
-  let score = 0.5;
+  let score = 0.3;
+  const content = message.toLowerCase();
   
-  if (message.includes('gente') || message.includes('social') || message.includes('fiesta')) score += 0.2;
-  if (message.includes('energ') || message.includes('activ') || message.includes('emocionado')) score += 0.15;
-  if (message.includes('háblame') || message.includes('cuéntame')) score += 0.1;
+  // Social and energetic indicators
+  if (content.match(/gente|social|fiesta|reunión|grupo/)) score += 0.25;
+  if (content.match(/energ|activ|emocionado|entusiasm|dinamic/)) score += 0.2;
+  if (content.match(/háblame|cuéntame|conversar|charlar|comunicar/)) score += 0.15;
+  if (content.match(/lider|liderar|protagonismo|atención/)) score += 0.15;
+  if (content.match(/amigos|conocer|socializ|salir/)) score += 0.1;
   
-  return Math.min(1.0, score);
+  // Introversion indicators (reduce score)
+  if (content.match(/solo|soledad|tímid|callad|reservad|introspect/)) score -= 0.2;
+  if (content.match(/casa|tranquilidad|silencio|paz/)) score -= 0.1;
+  
+  return Math.max(0, Math.min(1.0, score));
 }
 
 function calculateAgreeableness(message: string): number {
-  let score = 0.5;
+  let score = 0.4; // Higher baseline as most therapeutic conversations show some agreeableness
+  const content = message.toLowerCase();
   
-  if (message.includes('ayud') || message.includes('cooper') || message.includes('amable')) score += 0.2;
-  if (message.includes('comprend') || message.includes('empat') || message.includes('cariñ')) score += 0.15;
-  if (message.includes('gracias') || message.includes('por favor')) score += 0.1;
+  // Cooperation and empathy indicators
+  if (content.match(/ayud|cooper|colabor|equipo|junto/)) score += 0.25;
+  if (content.match(/comprend|empat|cariñ|amor|afecto/)) score += 0.2;
+  if (content.match(/gracias|por favor|disculp|perdón/)) score += 0.15;
+  if (content.match(/confianz|honest|sinceridad|verdad/)) score += 0.15;
+  if (content.match(/generoso|compartir|dar|solidario/)) score += 0.1;
   
-  return Math.min(1.0, score);
+  // Antagonistic indicators (reduce score)
+  if (content.match(/egoísta|desconfi|competitiv|conflict|pelea/)) score -= 0.2;
+  if (content.match(/crítica|juzgar|culpar|reprochar/)) score -= 0.15;
+  
+  return Math.max(0, Math.min(1.0, score));
 }
 
 function calculateNeuroticism(message: string): number {
-  let score = 0.5;
+  let score = 0.2; // Lower baseline to avoid over-pathologizing
+  const content = message.toLowerCase();
   
-  if (message.includes('ansi') || message.includes('preocup') || message.includes('estrés')) score += 0.2;
-  if (message.includes('miedo') || message.includes('insegur') || message.includes('nervi')) score += 0.15;
-  if (message.includes('problema') || message.includes('dificultad')) score += 0.1;
+  // Anxiety and emotional instability indicators
+  if (content.match(/ansi|ansiedad|preocup|nervios|estrés/)) score += 0.3;
+  if (content.match(/miedo|terror|pánico|fobia|insegur/)) score += 0.25;
+  if (content.match(/triste|deprim|melanc|desanim/)) score += 0.2;
+  if (content.match(/problema|dificultad|crisis|conflicto/)) score += 0.15;
+  if (content.match(/llorar|llanto|dolor|sufr|mal/)) score += 0.15;
+  if (content.match(/irritab|molest|frustr|enojad/)) score += 0.1;
   
-  return Math.min(1.0, score);
+  // Emotional stability indicators (reduce score)
+  if (content.match(/calm|tranquil|paz|sereno|equilib|estable/)) score -= 0.2;
+  if (content.match(/control|manejar|gestionar emociones/)) score -= 0.15;
+  
+  return Math.max(0, Math.min(1.0, score));
 }
 
 function extractThemes(message: string): string[] {

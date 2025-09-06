@@ -8,10 +8,12 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Send, Clock, Pause, Play, Square, MessageCircle, Brain, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { Send, Clock, Pause, Play, Square, MessageCircle, Brain, Trash2, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import VoiceInput from '@/components/VoiceInput';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import { useTherapeuticAnalysis } from '@/hooks/useTherapeuticAnalysis';
+import TherapeuticInsights from '@/components/TherapeuticInsights';
 
 interface Message {
   id: string;
@@ -44,9 +46,11 @@ const Conversation: React.FC = () => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [hasShownWarning, setHasShownWarning] = useState(false);
   const [autoTTS, setAutoTTS] = useState(true);
+  const [intelligentAlertShown, setIntelligentAlertShown] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionIntervalRef = useRef<NodeJS.Timeout>();
   const { speak, stop, isSpeaking, isLoading: ttsLoading } = useTextToSpeech();
+  const { conversationContext, analyzeConversationFlow, generateIntelligentAlert } = useTherapeuticAnalysis();
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -116,7 +120,7 @@ const Conversation: React.FC = () => {
     initializeConversation();
   }, [user]);
 
-  // Session timer
+  // Enhanced session timer with intelligent alerts
   useEffect(() => {
     if (isSessionActive && conversation) {
       sessionIntervalRef.current = setInterval(() => {
@@ -124,8 +128,25 @@ const Conversation: React.FC = () => {
           const newTime = prev + 1;
           const minutes = Math.floor(newTime / 60);
           
-          // Show warning at 14 minutes
-          if (minutes >= 14 && !hasShownWarning) {
+          // Analyze conversation flow continuously
+          analyzeConversationFlow(messages, minutes);
+          
+          // Generate intelligent alerts
+          const alert = generateIntelligentAlert(minutes);
+          if (alert && !intelligentAlertShown && minutes >= 14) {
+            setIntelligentAlertShown(true);
+            
+            toast({
+              title: alert.type === 'warning' ? "⏰ Tiempo casi agotado" : 
+                     alert.type === 'question' ? "🤔 Momento de reflexión" : 
+                     "💭 Cierre de sesión",
+              description: alert.message,
+              duration: alert.type === 'reflection' ? 8000 : 5000,
+            });
+          }
+          
+          // Standard 14-minute warning fallback
+          if (minutes >= 14 && !hasShownWarning && !alert) {
             setHasShownWarning(true);
             toast({
               title: "⏰ Tiempo casi agotado",
@@ -153,9 +174,9 @@ const Conversation: React.FC = () => {
         clearInterval(sessionIntervalRef.current);
       }
     };
-  }, [isSessionActive, conversation, hasShownWarning]);
+  }, [isSessionActive, conversation, hasShownWarning, messages, intelligentAlertShown, analyzeConversationFlow, generateIntelligentAlert]);
 
-  // Real-time message updates
+  // Real-time message updates with therapeutic analysis
   useEffect(() => {
     if (!conversation) return;
 
@@ -171,7 +192,14 @@ const Conversation: React.FC = () => {
         },
         (payload) => {
           const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
+          setMessages(prev => {
+            const updated = [...prev, newMessage];
+            // Update therapeutic analysis with new message
+            const minutes = Math.floor(sessionTime / 60);
+            analyzeConversationFlow(updated, minutes);
+            return updated;
+          });
+          
           if (newMessage.role === 'assistant') {
             setIsTyping(false);
             // Auto-speak AI responses if enabled
@@ -186,7 +214,7 @@ const Conversation: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversation, autoTTS, speak]);
+  }, [conversation, autoTTS, speak, sessionTime, analyzeConversationFlow]);
 
   const handleStartSession = () => {
     setIsSessionActive(true);
@@ -344,11 +372,11 @@ const Conversation: React.FC = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="flex h-screen">
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="flex h-screen">
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col bg-background/80 backdrop-blur-sm">
           {/* Header */}
           <div className="border-b bg-card/50 backdrop-blur-sm p-4">
             <div className="flex items-center justify-between">
