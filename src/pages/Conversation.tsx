@@ -8,8 +8,10 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Send, Clock, Pause, Play, Square, MessageCircle, Brain } from 'lucide-react';
+import { Send, Clock, Pause, Play, Square, MessageCircle, Brain, Trash2, Volume2, VolumeX } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import VoiceInput from '@/components/VoiceInput';
+import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 
 interface Message {
   id: string;
@@ -41,8 +43,10 @@ const Conversation: React.FC = () => {
   const [sessionTime, setSessionTime] = useState(0);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [hasShownWarning, setHasShownWarning] = useState(false);
+  const [autoTTS, setAutoTTS] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionIntervalRef = useRef<NodeJS.Timeout>();
+  const { speak, stop, isSpeaking, isLoading: ttsLoading } = useTextToSpeech();
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -170,6 +174,10 @@ const Conversation: React.FC = () => {
           setMessages(prev => [...prev, newMessage]);
           if (newMessage.role === 'assistant') {
             setIsTyping(false);
+            // Auto-speak AI responses if enabled
+            if (autoTTS && newMessage.content) {
+              speak(newMessage.content);
+            }
           }
         }
       )
@@ -178,7 +186,7 @@ const Conversation: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversation]);
+  }, [conversation, autoTTS, speak]);
 
   const handleStartSession = () => {
     setIsSessionActive(true);
@@ -238,14 +246,17 @@ const Conversation: React.FC = () => {
     navigate('/dashboard');
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentMessage.trim() || !conversation || isLoading) return;
+  const handleSendMessage = async (e?: React.FormEvent, textToSend?: string) => {
+    e?.preventDefault();
+    const messageToSend = textToSend || currentMessage.trim();
+    if (!messageToSend || !conversation || isLoading) return;
 
-    const messageToSend = currentMessage.trim();
     setCurrentMessage('');
     setIsLoading(true);
     setIsTyping(true);
+    
+    // Stop any current TTS playback
+    stop();
 
     try {
       const response = await supabase.functions.invoke('ai-chat', {
@@ -267,6 +278,46 @@ const Conversation: React.FC = () => {
       toast({
         title: "Error",
         description: "No se pudo enviar el mensaje",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVoiceTranscription = (text: string) => {
+    handleSendMessage(undefined, text);
+  };
+
+  const handleClearConversation = async () => {
+    if (!conversation || isLoading) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Stop any current TTS playback
+      stop();
+
+      // Call the database function to clear messages
+      const { error } = await supabase.rpc('clear_conversation_messages', {
+        conversation_uuid: conversation.id
+      });
+
+      if (error) throw error;
+
+      // Clear local state
+      setMessages([]);
+      setConversation(prev => prev ? { ...prev, insights: null, ocean_signals: null } : null);
+
+      toast({
+        title: "🗑️ Conversación limpiada",
+        description: "Se han eliminado todos los mensajes",
+      });
+    } catch (error) {
+      console.error('Error clearing conversation:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo limpiar la conversación",
         variant: "destructive",
       });
     } finally {
@@ -304,9 +355,28 @@ const Conversation: React.FC = () => {
                 <MessageCircle className="h-5 w-5 text-primary" />
                 <h1 className="text-xl font-semibold">{conversation.title}</h1>
               </div>
-              <Badge variant={conversation.status === 'active' ? 'default' : 'secondary'}>
-                {conversation.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={conversation.status === 'active' ? 'default' : 'secondary'}>
+                  {conversation.status}
+                </Badge>
+                <Button
+                  onClick={() => setAutoTTS(!autoTTS)}
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                >
+                  {autoTTS ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
+                <Button
+                  onClick={handleClearConversation}
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoading || messages.length === 0}
+                  className="shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             
             <div className="flex items-center gap-4">
@@ -401,9 +471,13 @@ const Conversation: React.FC = () => {
                 <Input
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder={isSessionActive ? "Escribe tu mensaje..." : "Inicia la sesión para comenzar"}
+                  placeholder={isSessionActive ? "Escribe tu mensaje o usa el micrófono..." : "Inicia la sesión para comenzar"}
                   disabled={!isSessionActive || isLoading}
                   className="flex-1"
+                />
+                <VoiceInput
+                  onTranscription={handleVoiceTranscription}
+                  disabled={!isSessionActive || isLoading}
                 />
                 <Button 
                   type="submit" 
@@ -417,6 +491,20 @@ const Conversation: React.FC = () => {
                   )}
                 </Button>
               </form>
+              {(isSpeaking || ttsLoading) && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Volume2 className="h-4 w-4 animate-pulse" />
+                  <span>{ttsLoading ? 'Preparando audio...' : 'Reproduciendo respuesta...'}</span>
+                  <Button
+                    onClick={stop}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2"
+                  >
+                    Detener
+                  </Button>
+                </div>
+              )}
             </div>
           </Card>
           

@@ -2,3 +2,9 @@ project_id = "bmrifufykczudfxomenr"
 
 [edge_functions.ai-chat]
 verify_jwt = true
+
+[edge_functions.text-to-speech]
+verify_jwt = false
+
+[edge_functions.speech-to-text]
+verify_jwt = false
