@@ -141,7 +141,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      clear_conversation_messages: {
+        Args: { conversation_uuid: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
