@@ -1,1 +1,4 @@
 project_id = "bmrifufykczudfxomenr"
+
+[edge_functions.ai-chat]
+verify_jwt = true
