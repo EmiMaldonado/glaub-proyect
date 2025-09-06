@@ -3,25 +3,95 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import AuthGuard from "@/components/AuthGuard";
+import Navigation from "@/components/Navigation";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import ServerError from "./pages/ServerError";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <div className="min-h-screen bg-gradient-subtle">
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={
+                  <>
+                    <Navigation />
+                    <Index />
+                  </>
+                } />
+                <Route path="/auth" element={
+                  <AuthGuard requireAuth={false}>
+                    <Auth />
+                  </AuthGuard>
+                } />
+                <Route path="/500" element={<ServerError />} />
+
+                {/* Protected routes */}
+                <Route path="/dashboard" element={
+                  <AuthGuard>
+                    <Navigation />
+                    <Dashboard />
+                  </AuthGuard>
+                } />
+                <Route path="/conversation" element={
+                  <AuthGuard>
+                    <Navigation />
+                    <div className="container mx-auto px-4 py-8">
+                      <h1 className="text-2xl font-bold">Conversación</h1>
+                      <p>Esta funcionalidad se implementará en el siguiente nivel.</p>
+                    </div>
+                  </AuthGuard>
+                } />
+                <Route path="/history" element={
+                  <AuthGuard>
+                    <Navigation />
+                    <div className="container mx-auto px-4 py-8">
+                      <h1 className="text-2xl font-bold">Historial</h1>
+                      <p>Esta funcionalidad se implementará en el siguiente nivel.</p>
+                    </div>
+                  </AuthGuard>
+                } />
+                <Route path="/profile" element={
+                  <AuthGuard>
+                    <Navigation />
+                    <div className="container mx-auto px-4 py-8">
+                      <h1 className="text-2xl font-bold">Perfil</h1>
+                      <p>Esta funcionalidad se implementará en el siguiente nivel.</p>
+                    </div>
+                  </AuthGuard>
+                } />
+                <Route path="/settings" element={
+                  <AuthGuard>
+                    <Navigation />
+                    <div className="container mx-auto px-4 py-8">
+                      <h1 className="text-2xl font-bold">Configuración</h1>
+                      <p>Esta funcionalidad se implementará en el siguiente nivel.</p>
+                    </div>
+                  </AuthGuard>
+                } />
+
+                {/* Catch-all route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

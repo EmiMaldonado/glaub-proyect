@@ -2,24 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Users, Shield, TrendingUp, MessageCircle, Target, CheckCircle, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-image.jpg";
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      {/* Header */}
-      <header className="container mx-auto px-4 py-6">
-        <nav className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Brain className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">PersonaInsights</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost">Iniciar Sesión</Button>
-            <Button variant="hero">Comenzar Gratis</Button>
-          </div>
-        </nav>
-      </header>
+    <div className="min-h-screen">{/* Navigation is handled by App.tsx */}
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
@@ -40,12 +28,16 @@ const Landing = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="empathy" size="lg" className="text-lg px-8">
-                Empezar Conversación
-                <ArrowRight className="h-5 w-5" />
+              <Button variant="empathy" size="lg" className="text-lg px-8" asChild>
+                <Link to="/auth?mode=signup">
+                  Empezar Conversación
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8">
-                Ver Demo
+              <Button variant="outline" size="lg" className="text-lg px-8" asChild>
+                <Link to="/auth">
+                  Ver Demo
+                </Link>
               </Button>
             </div>
             <div className="flex items-center space-x-8 text-sm text-muted-foreground">
@@ -231,9 +223,11 @@ const Landing = () => {
             Únete a la beta gratuita y descubre cómo las conversaciones empáticas 
             pueden transformar la forma en que entiendes y motivas a tu equipo.
           </p>
-          <Button variant="accent" size="lg" className="text-lg px-8 shadow-medium">
-            Comenzar Beta Gratuita
-            <ArrowRight className="h-5 w-5" />
+          <Button variant="accent" size="lg" className="text-lg px-8 shadow-medium" asChild>
+            <Link to="/auth?mode=signup">
+              Comenzar Beta Gratuita
+              <ArrowRight className="h-5 w-5" />
+            </Link>
           </Button>
         </div>
       </section>
