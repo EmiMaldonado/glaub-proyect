@@ -345,135 +345,153 @@ const Conversation: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/10">
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        {/* Session Header */}
-        <Card className="mb-6 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-semibold">{conversation.title}</h1>
+    <div className="min-h-screen bg-background">
+      <div className="flex h-screen">
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="border-b bg-card/50 backdrop-blur-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MessageCircle className="h-6 w-6 text-primary" />
+                <div>
+                  <h1 className="text-lg font-semibold">{conversation.title}</h1>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>{formatTime(getTimeRemaining())} restantes</span>
+                    <Badge variant={conversation.status === 'active' ? 'default' : 'secondary'} className="h-5 text-xs">
+                      {conversation.status}
+                    </Badge>
+                  </div>
+                </div>
               </div>
+              
+              {/* Session Controls */}
               <div className="flex items-center gap-2">
-                <Badge variant={conversation.status === 'active' ? 'default' : 'secondary'}>
-                  {conversation.status}
-                </Badge>
                 <Button
                   onClick={() => setAutoTTS(!autoTTS)}
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="shrink-0"
                 >
                   {autoTTS ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </Button>
                 <Button
                   onClick={handleClearConversation}
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   disabled={isLoading || messages.length === 0}
-                  className="shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span className="font-mono text-lg">
-                  {formatTime(getTimeRemaining())}
-                </span>
-              </div>
-              
-              {!isSessionActive && conversation.status === 'active' && (
-                <Button onClick={handleStartSession} size="sm">
-                  <Play className="h-4 w-4 mr-1" />
-                  Iniciar
-                </Button>
-              )}
-              
-              {isSessionActive && (
-                <Button onClick={handlePauseSession} variant="outline" size="sm">
-                  <Pause className="h-4 w-4 mr-1" />
-                  Pausar
-                </Button>
-              )}
-              
-              {!isSessionActive && conversation.status === 'paused' && (
-                <Button onClick={handleResumeSession} size="sm">
-                  <Play className="h-4 w-4 mr-1" />
-                  Reanudar
-                </Button>
-              )}
-              
-              <Button onClick={handleEndSession} variant="outline" size="sm">
-                <Square className="h-4 w-4 mr-1" />
-                Terminar
-              </Button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Chat Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Messages */}
-          <Card className="lg:col-span-3 h-[600px] flex flex-col">
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg mb-2">¡Hola! Soy tu psicólogo virtual</p>
-                    <p>Estoy aquí para escucharte y entenderte. ¿Cómo te sientes hoy?</p>
-                  </div>
+                
+                {!isSessionActive && conversation.status === 'active' && (
+                  <Button onClick={handleStartSession} size="sm">
+                    <Play className="h-4 w-4 mr-1" />
+                    Iniciar
+                  </Button>
                 )}
                 
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                      <p className="text-xs opacity-70 mt-1">
+                {isSessionActive && (
+                  <Button onClick={handlePauseSession} variant="outline" size="sm">
+                    <Pause className="h-4 w-4 mr-1" />
+                    Pausar
+                  </Button>
+                )}
+                
+                {!isSessionActive && conversation.status === 'paused' && (
+                  <Button onClick={handleResumeSession} size="sm">
+                    <Play className="h-4 w-4 mr-1" />
+                    Reanudar
+                  </Button>
+                )}
+                
+                <Button onClick={handleEndSession} variant="outline" size="sm">
+                  <Square className="h-4 w-4 mr-1" />
+                  Terminar
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Messages Area */}
+          <ScrollArea className="flex-1 p-4">
+            <div className="max-w-4xl mx-auto space-y-6">
+              {messages.length === 0 && (
+                <div className="text-center py-20">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageCircle className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">¡Hola! Soy tu psicólogo virtual</h3>
+                  <p className="text-muted-foreground">Estoy aquí para escucharte y entenderte. ¿Cómo te sientes hoy?</p>
+                </div>
+              )}
+              
+              {messages.map((message) => (
+                <div key={message.id} className="flex gap-3">
+                  {/* Avatar */}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium shrink-0 ${
+                    message.role === 'user' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {message.role === 'user' ? 'Tú' : 'AI'}
+                  </div>
+                  
+                  {/* Message Content */}
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {message.role === 'user' ? 'Tú' : 'Psicólogo Virtual'}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
                         {new Date(message.created_at).toLocaleTimeString()}
-                      </p>
+                      </span>
+                    </div>
+                    <div className={`rounded-lg p-3 max-w-3xl ${
+                      message.role === 'user'
+                        ? 'bg-primary/10 border border-primary/20'
+                        : 'bg-muted/50'
+                    }`}>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
                     </div>
                   </div>
-                ))}
-                
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg p-3 max-w-[80%]">
+                </div>
+              ))}
+              
+              {isTyping && (
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-sm font-medium shrink-0">
+                    AI
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Psicólogo Virtual</span>
+                      <span className="text-xs text-muted-foreground">escribiendo...</span>
+                    </div>
+                    <div className="bg-muted/50 rounded-lg p-3 max-w-3xl">
                       <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-foreground/60 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
-              <div ref={messagesEndRef} />
-            </ScrollArea>
-            
-            {/* Message Input */}
-            <div className="p-4 border-t">
-              <form onSubmit={handleSendMessage} className="flex gap-2">
+                </div>
+              )}
+            </div>
+            <div ref={messagesEndRef} />
+          </ScrollArea>
+          
+          {/* Message Input */}
+          <div className="border-t bg-card/50 backdrop-blur-sm p-4">
+            <div className="max-w-4xl mx-auto">
+              <form onSubmit={handleSendMessage} className="flex gap-3">
                 <Input
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder={isSessionActive ? "Escribe tu mensaje o usa el micrófono..." : "Inicia la sesión para comenzar"}
+                  placeholder={isSessionActive ? "Escribe tu mensaje..." : "Inicia la sesión para comenzar"}
                   disabled={!isSessionActive || isLoading}
-                  className="flex-1"
+                  className="flex-1 bg-background"
                 />
                 <VoiceInput
                   onTranscription={handleVoiceTranscription}
@@ -492,58 +510,86 @@ const Conversation: React.FC = () => {
                 </Button>
               </form>
               {(isSpeaking || ttsLoading) && (
-                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                   <Volume2 className="h-4 w-4 animate-pulse" />
                   <span>{ttsLoading ? 'Preparando audio...' : 'Reproduciendo respuesta...'}</span>
                   <Button
                     onClick={stop}
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2"
+                    className="h-6 px-2 ml-auto"
                   >
                     Detener
                   </Button>
                 </div>
               )}
             </div>
-          </Card>
-          
-          {/* Insights Panel */}
-          <Card className="p-4 h-[600px]">
-            <div className="flex items-center gap-2 mb-4">
+          </div>
+        </div>
+        
+        {/* Insights Sidebar */}
+        <div className="w-80 border-l bg-card/30 backdrop-blur-sm">
+          <div className="p-4 border-b">
+            <div className="flex items-center gap-2">
               <Brain className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold">Insights</h3>
+              <h3 className="font-semibold">Insights de Sesión</h3>
             </div>
-            
-            {conversation.ocean_signals && (
-              <div className="space-y-4">
+          </div>
+          
+          <ScrollArea className="h-[calc(100vh-5rem)]">
+            <div className="p-4 space-y-6">
+              {conversation.ocean_signals && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Personalidad OCEAN</h4>
-                  <div className="space-y-2 text-sm">
+                  <h4 className="text-sm font-medium mb-3">Personalidad OCEAN</h4>
+                  <div className="space-y-3">
                     {Object.entries(conversation.ocean_signals).map(([trait, score]) => (
-                      <div key={trait} className="flex justify-between">
-                        <span className="capitalize">{trait}</span>
-                        <span className="text-muted-foreground">
-                          {Math.round((score as number) * 100)}%
-                        </span>
+                      <div key={trait} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="capitalize font-medium">{trait}</span>
+                          <span className="text-muted-foreground">
+                            {Math.round((score as number) * 100)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className="bg-primary h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.round((score as number) * 100)}%` }}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
-            
-            {messages.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-medium mb-2">Progreso de la Sesión</h4>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>Mensajes: {messages.length}</p>
-                  <p>Tiempo transcurrido: {formatTime(sessionTime)}</p>
-                  <p>Estado emocional: Explorando...</p>
+              )}
+              
+              {messages.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Progreso de la Sesión</h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Mensajes</span>
+                      <span className="font-medium">{messages.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tiempo transcurrido</span>
+                      <span className="font-medium">{formatTime(sessionTime)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Estado</span>
+                      <span className="font-medium">En progreso</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
-          </Card>
+              )}
+              
+              {messages.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Brain className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">Los insights aparecerán conforme conversemos</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </div>
       </div>
     </div>
