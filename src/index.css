@@ -8,52 +8,196 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Brand colors - warm and trustworthy */
+    /* ================== BACKEND ADMIN DESIGN SYSTEM ================== */
+    
+    /* Core Neutrals - Professional admin interface */
     --background: 0 0% 100%;
-    --foreground: 222 20% 15%;
-
+    --foreground: 240 10% 15%;
+    --background-secondary: 240 5% 98%;
+    --background-tertiary: 240 8% 96%;
+    
+    /* Surface Colors */
     --card: 0 0% 100%;
-    --card-foreground: 222 20% 15%;
-
+    --card-foreground: 240 10% 15%;
+    --card-hover: 240 5% 98%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 222 20% 15%;
-
-    --primary: 200 95% 45%;
+    --popover-foreground: 240 10% 15%;
+    
+    /* Admin Brand Colors - Professional and trustworthy */
+    --primary: 215 85% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 200 85% 65%;
-    --primary-dark: 200 100% 35%;
-
-    --secondary: 190 50% 55%;
-    --secondary-foreground: 0 0% 100%;
-
-    --accent: 25 90% 65%;
+    --primary-50: 215 90% 97%;
+    --primary-100: 215 85% 92%;
+    --primary-200: 215 80% 85%;
+    --primary-300: 215 75% 75%;
+    --primary-400: 215 80% 62%;
+    --primary-500: 215 85% 50%;
+    --primary-600: 215 90% 45%;
+    --primary-700: 215 95% 38%;
+    --primary-800: 215 100% 32%;
+    --primary-900: 215 100% 25%;
+    
+    /* Secondary - Cool gray for supporting elements */
+    --secondary: 240 15% 85%;
+    --secondary-foreground: 240 25% 25%;
+    --secondary-hover: 240 20% 80%;
+    
+    /* Semantic Status Colors */
+    --success: 140 65% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 140 55% 92%;
+    --success-border: 140 60% 65%;
+    
+    --warning: 35 85% 55%;
+    --warning-foreground: 35 100% 10%;
+    --warning-light: 35 90% 95%;
+    --warning-border: 35 80% 70%;
+    
+    --error: 0 75% 55%;
+    --error-foreground: 0 0% 100%;
+    --error-light: 0 80% 95%;
+    --error-border: 0 70% 70%;
+    
+    --info: 200 85% 55%;
+    --info-foreground: 0 0% 100%;
+    --info-light: 200 90% 95%;
+    --info-border: 200 80% 70%;
+    
+    /* Neutral Grays - Extended palette */
+    --gray-50: 240 10% 98%;
+    --gray-100: 240 8% 95%;
+    --gray-200: 240 6% 90%;
+    --gray-300: 240 5% 80%;
+    --gray-400: 240 4% 65%;
+    --gray-500: 240 4% 50%;
+    --gray-600: 240 5% 40%;
+    --gray-700: 240 6% 30%;
+    --gray-800: 240 8% 20%;
+    --gray-900: 240 10% 12%;
+    
+    /* Legacy compatibility */
+    --accent: 200 85% 55%;
     --accent-foreground: 0 0% 100%;
-    --accent-light: 25 85% 75%;
-
-    --muted: 210 30% 96%;
-    --muted-foreground: 215 15% 45%;
-
-    --destructive: 0 84% 60%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 50%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 214 25% 90%;
-    --input: 214 25% 90%;
-    --ring: 200 95% 45%;
-
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
-    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
-    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-light)));
-    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
-
-    /* Shadows */
-    --shadow-soft: 0 4px 20px -2px hsl(var(--primary) / 0.15);
-    --shadow-medium: 0 8px 30px -4px hsl(var(--primary) / 0.2);
-    --shadow-strong: 0 15px 40px -8px hsl(var(--primary) / 0.25);
-
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    /* Interactive States */
+    --border: 240 6% 88%;
+    --border-strong: 240 8% 75%;
+    --input: 240 6% 88%;
+    --ring: 215 85% 50%;
+    
+    /* Typography Scale */
+    --font-size-xs: 0.75rem;      /* 12px */
+    --font-size-sm: 0.875rem;     /* 14px */
+    --font-size-base: 1rem;       /* 16px */
+    --font-size-lg: 1.125rem;     /* 18px */
+    --font-size-xl: 1.25rem;      /* 20px */
+    --font-size-2xl: 1.5rem;      /* 24px */
+    --font-size-3xl: 1.875rem;    /* 30px */
+    --font-size-4xl: 2.25rem;     /* 36px */
+    --font-size-5xl: 3rem;        /* 48px */
+    
+    /* Line Heights */
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 2;
+    
+    /* Font Weights */
+    --font-weight-thin: 100;
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+    --font-weight-black: 900;
+    
+    /* Spacing Scale */
+    --space-px: 1px;
+    --space-0: 0px;
+    --space-1: 0.25rem;   /* 4px */
+    --space-2: 0.5rem;    /* 8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.25rem;   /* 20px */
+    --space-6: 1.5rem;    /* 24px */
+    --space-8: 2rem;      /* 32px */
+    --space-10: 2.5rem;   /* 40px */
+    --space-12: 3rem;     /* 48px */
+    --space-16: 4rem;     /* 64px */
+    --space-20: 5rem;     /* 80px */
+    --space-24: 6rem;     /* 96px */
+    --space-32: 8rem;     /* 128px */
+    
+    /* Professional Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary-500)), hsl(var(--primary-400)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--gray-200)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(140 55% 55%));
+    --gradient-warning: linear-gradient(135deg, hsl(var(--warning)), hsl(35 75% 65%));
+    --gradient-error: linear-gradient(135deg, hsl(var(--error)), hsl(0 65% 65%));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--gray-50)));
+    --gradient-admin: linear-gradient(135deg, hsl(var(--primary-600)), hsl(var(--primary-400)));
+    
+    /* Professional Shadow System */
+    --shadow-xs: 0 1px 2px 0 hsl(240 8% 20% / 0.05);
+    --shadow-sm: 0 1px 3px 0 hsl(240 8% 20% / 0.1), 0 1px 2px -1px hsl(240 8% 20% / 0.1);
+    --shadow-base: 0 4px 6px -1px hsl(240 8% 20% / 0.1), 0 2px 4px -2px hsl(240 8% 20% / 0.1);
+    --shadow-md: 0 10px 15px -3px hsl(240 8% 20% / 0.1), 0 4px 6px -4px hsl(240 8% 20% / 0.1);
+    --shadow-lg: 0 20px 25px -5px hsl(240 8% 20% / 0.1), 0 8px 10px -6px hsl(240 8% 20% / 0.1);
+    --shadow-xl: 0 25px 50px -12px hsl(240 8% 20% / 0.25);
+    --shadow-2xl: 0 50px 100px -20px hsl(240 8% 20% / 0.25);
+    --shadow-inner: inset 0 2px 4px 0 hsl(240 8% 20% / 0.05);
+    
+    /* Colored Shadows */
+    --shadow-primary: 0 10px 25px -5px hsl(var(--primary-500) / 0.2);
+    --shadow-success: 0 10px 25px -5px hsl(var(--success) / 0.2);
+    --shadow-warning: 0 10px 25px -5px hsl(var(--warning) / 0.2);
+    --shadow-error: 0 10px 25px -5px hsl(var(--error) / 0.2);
+    
+    /* Border Radius Scale */
+    --radius-none: 0px;
+    --radius-sm: 0.125rem;    /* 2px */
+    --radius-base: 0.25rem;   /* 4px */
+    --radius-md: 0.375rem;    /* 6px */
+    --radius-lg: 0.5rem;      /* 8px */
+    --radius-xl: 0.75rem;     /* 12px */
+    --radius-2xl: 1rem;       /* 16px */
+    --radius-3xl: 1.5rem;     /* 24px */
+    --radius-full: 9999px;
+    
+    /* Animation & Transitions */
+    --transition-none: none;
+    --transition-all: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --transition-spring: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    
+    /* Z-Index Scale */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+    --z-toast: 1080;
+    
+    /* Legacy shadows for compatibility */
+    --shadow-soft: var(--shadow-sm);
+    --shadow-medium: var(--shadow-md);
+    --shadow-strong: var(--shadow-lg);
+    
+    /* Legacy transitions for compatibility */
+    --transition-smooth: var(--transition-normal);
+    --transition-bounce: var(--transition-bounce);
 
     --radius: 0.5rem;
 
@@ -75,41 +219,113 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* ================== DARK MODE - ADMIN INTERFACE ================== */
+    
+    /* Core Neutrals - Dark admin interface */
+    --background: 240 10% 8%;
+    --foreground: 240 5% 95%;
+    --background-secondary: 240 8% 10%;
+    --background-tertiary: 240 6% 12%;
+    
+    /* Surface Colors */
+    --card: 240 8% 10%;
+    --card-foreground: 240 5% 95%;
+    --card-hover: 240 6% 12%;
+    
+    --popover: 240 8% 10%;
+    --popover-foreground: 240 5% 95%;
+    
+    /* Admin Brand Colors - Adjusted for dark mode */
+    --primary: 215 85% 60%;
+    --primary-foreground: 240 10% 8%;
+    --primary-50: 215 100% 5%;
+    --primary-100: 215 95% 10%;
+    --primary-200: 215 90% 18%;
+    --primary-300: 215 85% 25%;
+    --primary-400: 215 80% 40%;
+    --primary-500: 215 85% 60%;
+    --primary-600: 215 90% 70%;
+    --primary-700: 215 95% 80%;
+    --primary-800: 215 100% 85%;
+    --primary-900: 215 100% 92%;
+    
+    /* Secondary - Adjusted for dark mode */
+    --secondary: 240 8% 20%;
+    --secondary-foreground: 240 5% 85%;
+    --secondary-hover: 240 6% 25%;
+    
+    /* Semantic Status Colors - Dark mode optimized */
+    --success: 140 60% 55%;
+    --success-foreground: 140 100% 5%;
+    --success-light: 140 80% 8%;
+    --success-border: 140 50% 35%;
+    
+    --warning: 35 80% 65%;
+    --warning-foreground: 35 100% 8%;
+    --warning-light: 35 90% 10%;
+    --warning-border: 35 70% 45%;
+    
+    --error: 0 70% 65%;
+    --error-foreground: 0 100% 5%;
+    --error-light: 0 80% 8%;
+    --error-border: 0 60% 45%;
+    
+    --info: 200 80% 65%;
+    --info-foreground: 200 100% 5%;
+    --info-light: 200 90% 8%;
+    --info-border: 200 70% 45%;
+    
+    /* Neutral Grays - Dark mode palette */
+    --gray-50: 240 8% 20%;
+    --gray-100: 240 6% 18%;
+    --gray-200: 240 5% 15%;
+    --gray-300: 240 4% 25%;
+    --gray-400: 240 4% 40%;
+    --gray-500: 240 4% 55%;
+    --gray-600: 240 5% 70%;
+    --gray-700: 240 6% 80%;
+    --gray-800: 240 8% 88%;
+    --gray-900: 240 10% 95%;
+    
+    /* Legacy compatibility - dark mode */
+    --accent: 200 80% 65%;
+    --accent-foreground: 200 100% 5%;
+    --muted: 240 6% 15%;
+    --muted-foreground: 240 4% 55%;
+    --destructive: 0 70% 65%;
+    --destructive-foreground: 0 100% 5%;
+    
+    /* Interactive States - Dark mode */
+    --border: 240 6% 18%;
+    --border-strong: 240 8% 25%;
+    --input: 240 6% 18%;
+    --ring: 215 85% 60%;
+    
+    /* Dark mode shadows - lighter for contrast */
+    --shadow-xs: 0 1px 2px 0 hsl(240 15% 5% / 0.3);
+    --shadow-sm: 0 1px 3px 0 hsl(240 15% 5% / 0.4), 0 1px 2px -1px hsl(240 15% 5% / 0.4);
+    --shadow-base: 0 4px 6px -1px hsl(240 15% 5% / 0.4), 0 2px 4px -2px hsl(240 15% 5% / 0.4);
+    --shadow-md: 0 10px 15px -3px hsl(240 15% 5% / 0.4), 0 4px 6px -4px hsl(240 15% 5% / 0.4);
+    --shadow-lg: 0 20px 25px -5px hsl(240 15% 5% / 0.4), 0 8px 10px -6px hsl(240 15% 5% / 0.4);
+    --shadow-xl: 0 25px 50px -12px hsl(240 15% 5% / 0.5);
+    --shadow-2xl: 0 50px 100px -20px hsl(240 15% 5% / 0.5);
+    --shadow-inner: inset 0 2px 4px 0 hsl(240 15% 5% / 0.3);
+    
+    /* Colored Shadows - Dark mode */
+    --shadow-primary: 0 10px 25px -5px hsl(var(--primary-500) / 0.3);
+    --shadow-success: 0 10px 25px -5px hsl(var(--success) / 0.3);
+    --shadow-warning: 0 10px 25px -5px hsl(var(--warning) / 0.3);
+    --shadow-error: 0 10px 25px -5px hsl(var(--error) / 0.3);
+    
+    /* Sidebar - Dark mode optimized */
+    --sidebar-background: 240 8% 6%;
+    --sidebar-foreground: 240 5% 90%;
+    --sidebar-primary: 215 85% 60%;
+    --sidebar-primary-foreground: 240 10% 5%;
+    --sidebar-accent: 240 6% 12%;
+    --sidebar-accent-foreground: 240 5% 90%;
+    --sidebar-border: 240 6% 15%;
+    --sidebar-ring: 215 85% 60%;
   }
 }
 
