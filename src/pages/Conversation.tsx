@@ -59,6 +59,36 @@ const Conversation: React.FC = () => {
   const { speak, stop, isSpeaking, isLoading: ttsLoading } = useTextToSpeech();
   const { conversationContext, analyzeConversationFlow, generateIntelligentAlert } = useTherapeuticAnalysis();
 
+  // Parse categorized summary from the conversation summary (must be before any conditional returns)
+  const categorizedSummary: { insights: string[]; summary: string[]; strengths: string[]; followUp: string[] } = React.useMemo(() => {
+    if (!conversationSummary) return { insights: [], summary: [], strengths: [], followUp: [] };
+    
+    const lines = conversationSummary.split('\n');
+    let currentSection = '';
+    const sections = {
+      insights: [] as string[],
+      summary: [] as string[],
+      strengths: [] as string[],
+      followUp: [] as string[]
+    };
+    
+    lines.forEach(line => {
+      if (line.includes('Insights:') || line.includes('insights')) {
+        currentSection = 'insights';
+      } else if (line.includes('Resumen') || line.includes('summary')) {
+        currentSection = 'summary';
+      } else if (line.includes('Puntos') || line.includes('strengths') || line.includes('Fortalezas')) {
+        currentSection = 'strengths';
+      } else if (line.includes('Recomendaciones') || line.includes('Seguimiento') || line.includes('follow')) {
+        currentSection = 'followUp';
+      } else if (line.trim() && currentSection && currentSection in sections) {
+        (sections as any)[currentSection].push(line.trim());
+      }
+    });
+    
+    return sections;
+  }, [conversationSummary]);
+
   // Toggle TTS functionality
   const handleToggleTTS = () => {
     setAutoTTS(!autoTTS);
@@ -413,36 +443,6 @@ const Conversation: React.FC = () => {
       </div>
     );
   }
-
-  // Parse categorized summary from the conversation summary
-  const categorizedSummary: { insights: string[]; summary: string[]; strengths: string[]; followUp: string[] } = React.useMemo(() => {
-    if (!conversationSummary) return { insights: [], summary: [], strengths: [], followUp: [] };
-    
-    const lines = conversationSummary.split('\n');
-    let currentSection = '';
-    const sections = {
-      insights: [] as string[],
-      summary: [] as string[],
-      strengths: [] as string[],
-      followUp: [] as string[]
-    };
-    
-    lines.forEach(line => {
-      if (line.includes('Insights:') || line.includes('insights')) {
-        currentSection = 'insights';
-      } else if (line.includes('Resumen') || line.includes('summary')) {
-        currentSection = 'summary';
-      } else if (line.includes('Puntos') || line.includes('strengths') || line.includes('Fortalezas')) {
-        currentSection = 'strengths';
-      } else if (line.includes('Recomendaciones') || line.includes('Seguimiento') || line.includes('follow')) {
-        currentSection = 'followUp';
-      } else if (line.trim() && currentSection && currentSection in sections) {
-        (sections as any)[currentSection].push(line.trim());
-      }
-    });
-    
-    return sections;
-  }, [conversationSummary]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
