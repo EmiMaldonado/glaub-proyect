@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -279,6 +280,9 @@ const Conversation: React.FC = () => {
     const messageToSend = textToSend || currentMessage.trim();
     if (!messageToSend || !conversation || isLoading) return;
 
+    // Console log for debugging
+    console.log('Message sent:', messageToSend);
+
     setCurrentMessage('');
     setIsLoading(true);
     setIsTyping(true);
@@ -298,6 +302,12 @@ const Conversation: React.FC = () => {
       if (response.error) {
         throw new Error(response.error.message);
       }
+
+      // Show success toast
+      toast({
+        title: "✅ Mensaje enviado",
+        description: "El mensaje ha sido procesado correctamente",
+      });
 
       // Message will be added via real-time subscription
     } catch (error) {
@@ -517,6 +527,56 @@ const Conversation: React.FC = () => {
             </div>
             <div ref={messagesEndRef} />
           </ScrollArea>
+
+          {/* Input Section */}
+          <div className="border-t bg-card/50 backdrop-blur-sm p-4">
+            <div className="max-w-4xl mx-auto">
+              <form onSubmit={handleSendMessage} className="flex gap-3">
+                <div className="flex-1 relative">
+                  <Textarea
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    placeholder="Escribe tu mensaje aquí..."
+                    className="min-h-[60px] max-h-[120px] resize-none pr-12"
+                    disabled={isLoading || !isSessionActive}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  {isLoading && (
+                    <div className="absolute right-3 top-3">
+                      <LoadingSpinner />
+                    </div>
+                  )}
+                </div>
+                <Button
+                  type="submit"
+                  disabled={isLoading || !currentMessage.trim() || !isSessionActive}
+                  className="h-[60px] px-6"
+                >
+                  {isLoading ? (
+                    <LoadingSpinner />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Enviar
+                    </>
+                  )}
+                </Button>
+              </form>
+              
+              {!isSessionActive && (
+                <div className="mt-3 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Inicia la sesión para comenzar a conversar
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
           
         </div>
         
