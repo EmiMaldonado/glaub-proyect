@@ -52,6 +52,28 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscription, disabled, show
     }
   };
 
+  const playNotificationSound = (frequency: number = 800, duration: number = 200) => {
+    try {
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + duration / 1000);
+    } catch (error) {
+      console.warn('Could not play notification sound:', error);
+    }
+  };
+
   const createAudioAnalyser = (stream: MediaStream) => {
     try {
       const audioContext = new AudioContext();
@@ -98,6 +120,9 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscription, disabled, show
 
       console.log('🎤 Microphone access granted successfully');
       setHasPermission(true);
+      
+      // Play notification sound to indicate recording started
+      playNotificationSound(800, 200);
       
       // Create audio analyser for visual feedback
       createAudioAnalyser(stream);
