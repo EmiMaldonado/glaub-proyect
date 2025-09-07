@@ -493,6 +493,7 @@ const Conversation: React.FC = () => {
           onVoiceTranscription={handleVoiceTranscription}
           onTextInputChange={handleTextInputChange}
           onSendTextMessage={handleSendTextMessage}
+          onInputModeChange={handleInputModeChange}
           formatTime={formatTime}
           sessionTime={sessionTime}
         />

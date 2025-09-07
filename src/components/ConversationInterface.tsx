@@ -30,6 +30,7 @@ interface ConversationInterfaceProps {
   onVoiceTranscription: (text: string) => void;
   onTextInputChange: (text: string) => void;
   onSendTextMessage: () => void;
+  onInputModeChange: (mode: 'audio' | 'text' | 'both') => void;
   formatTime: (seconds: number) => string;
   sessionTime: number;
 }
@@ -49,6 +50,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   onVoiceTranscription,
   onTextInputChange,
   onSendTextMessage,
+  onInputModeChange,
   formatTime,
   sessionTime
 }) => {
@@ -106,14 +108,110 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-4xl mx-auto">
           {!isSessionActive && messages.length === 0 && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Brain className="h-8 w-8 text-primary" />
+            <div className="flex flex-col items-center justify-center py-12 space-y-8">
+              
+              {/* Mode Selection */}
+              <div className="flex flex-col items-center space-y-4">
+                <h3 className="text-2xl font-semibold">Selecciona el modo de conversación</h3>
+                <div className="flex gap-3">
+                  <Button 
+                    variant={inputMode === 'audio' ? 'default' : 'outline'}
+                    onClick={() => onInputModeChange('audio')}
+                    className="gap-2"
+                  >
+                    <Mic className="h-4 w-4" />
+                    Solo Voz
+                  </Button>
+                  <Button 
+                    variant={inputMode === 'text' ? 'default' : 'outline'}
+                    onClick={() => onInputModeChange('text')}
+                    className="gap-2"
+                  >
+                    <Keyboard className="h-4 w-4" />
+                    Solo Texto
+                  </Button>
+                  <Button 
+                    variant={inputMode === 'both' ? 'default' : 'outline'}
+                    onClick={() => onInputModeChange('both')}
+                    className="gap-2"
+                  >
+                    <Volume2 className="h-4 w-4" />
+                    Ambos
+                  </Button>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Bienvenido a tu sesión de terapia</h3>
-              <p className="text-muted-foreground">
-                Inicia la conversación usando {inputMode === 'audio' ? 'el micrófono' : inputMode === 'text' ? 'texto' : 'voz o texto'}
-              </p>
+
+              {/* Main Recording Button */}
+              <div className="relative">
+                <Button
+                  onClick={onStartRecording}
+                  variant="default"
+                  className="h-32 w-32 rounded-full text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
+                  disabled={isLoading}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Mic className="h-12 w-12" />
+                  </div>
+                </Button>
+              </div>
+
+              {/* Welcome Text */}
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold">Iniciar Sesión</h2>
+                <p className="text-muted-foreground max-w-md">
+                  Presiona el botón para comenzar tu sesión de terapia usando {inputMode === 'audio' ? 'solo voz' : inputMode === 'text' ? 'solo texto' : 'voz y texto'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Session Active Welcome - Show recording controls */}
+          {isSessionActive && messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 space-y-8">
+              
+              {/* Recording Status */}
+              <div className="text-center space-y-4">
+                <h3 className="text-xl font-semibold mb-2">Sesión Activa</h3>
+                <p className="text-muted-foreground">
+                  {isRecording ? 'Grabando... Habla ahora' : 'Presiona el botón para comenzar a grabar'}
+                </p>
+              </div>
+
+              {/* Main Recording Button with Animation */}
+              <div className="relative">
+                <Button
+                  {...buttonConfig}
+                  disabled={isLoading}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    {buttonConfig.icon}
+                  </div>
+                </Button>
+                
+                {/* Recording Animation */}
+                {isRecording && (
+                  <>
+                    <div className="absolute -inset-6 border-4 border-destructive rounded-full animate-ping opacity-20"></div>
+                    <div className="absolute -inset-12 border-2 border-destructive/60 rounded-full animate-ping opacity-10"></div>
+                    <div className="absolute -inset-2 flex items-center justify-center">
+                      <div className="flex items-center gap-1 text-destructive text-sm font-medium">
+                        <div className="w-2 h-2 bg-destructive rounded-full animate-pulse"></div>
+                        <span>REC</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Recording Status Text */}
+              <div className="text-center">
+                <h4 className="text-lg font-semibold">
+                  {isRecording ? 'Grabando...' : 'Listo para grabar'}
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  {isRecording ? 'Presiona para pausar la grabación' : 'Presiona para continuar hablando'}
+                </p>
+              </div>
             </div>
           )}
 
