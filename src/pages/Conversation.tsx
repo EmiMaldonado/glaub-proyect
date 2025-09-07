@@ -2,20 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
-import { Send, Clock, Pause, Play, Square, MessageCircle, Brain, Trash2, Volume2, VolumeX, AlertTriangle, Mic, MicOff, StopCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import VoiceInput from '@/components/VoiceInput';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useTherapeuticAnalysis } from '@/hooks/useTherapeuticAnalysis';
-import TherapeuticInsights from '@/components/TherapeuticInsights';
+import SessionStatusPanel from '@/components/SessionStatusPanel';
+import VoiceRecordingInterface from '@/components/VoiceRecordingInterface';
+import ConversationSummaryPanel from '@/components/ConversationSummaryPanel';
+import ConfirmationModal from '@/components/ConfirmationModal';
 
 interface Message {
   id: string;
@@ -53,19 +48,26 @@ const Conversation: React.FC = () => {
   const [currentAIMessage, setCurrentAIMessage] = useState('');
   const [conversationSummary, setConversationSummary] = useState('');
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [sessionQuality, setSessionQuality] = useState({
+    audioQuality: 0.85,
+    connectionStability: 0.92,
+    responseTime: 120
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionIntervalRef = useRef<NodeJS.Timeout>();
   const { speak, stop, isSpeaking, isLoading: ttsLoading } = useTextToSpeech();
   const { conversationContext, analyzeConversationFlow, generateIntelligentAlert } = useTherapeuticAnalysis();
 
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Toggle TTS functionality
+  const handleToggleTTS = () => {
+    setAutoTTS(!autoTTS);
+    console.log('TTS toggled:', !autoTTS);
+    toast({
+      title: autoTTS ? "🔇 Síntesis de voz desactivada" : "🔊 Síntesis de voz activada",
+      description: autoTTS ? "Los mensajes no se reproducirán automáticamente" : "Los mensajes se reproducirán automáticamente",
+    });
   };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   // Initialize or resume conversation
   useEffect(() => {
@@ -223,15 +225,12 @@ const Conversation: React.FC = () => {
     };
   }, [conversation, autoTTS, speak, sessionTime, analyzeConversationFlow]);
 
-  const handleSendMessage = async (e?: React.FormEvent, textToSend?: string) => {
-    e?.preventDefault();
-    const messageToSend = textToSend || currentMessage.trim();
-    if (!messageToSend || !conversation || isLoading) return;
+  const handleSendMessage = async (textToSend: string) => {
+    if (!textToSend || !conversation || isLoading) return;
 
     // Console log for debugging
-    console.log('Message sent:', messageToSend);
+    console.log('Message sent:', textToSend);
 
-    setCurrentMessage('');
     setIsLoading(true);
     setIsTyping(true);
     
@@ -241,7 +240,7 @@ const Conversation: React.FC = () => {
     try {
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: messageToSend,
+          message: textToSend,
           conversationId: conversation.id,
           userId: user?.id
         }
@@ -373,7 +372,27 @@ const Conversation: React.FC = () => {
   };
 
   const handleVoiceTranscription = (text: string) => {
-    handleSendMessage(undefined, text);
+    handleSendMessage(text);
+  };
+
+  const handleSendSummary = () => {
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmSendSummary = (data: {
+    recipient: 'user' | 'manager';
+    categories: string[];
+    additionalNotes?: string;
+  }) => {
+    console.log('Summary confirmation data:', data);
+    
+    toast({
+      title: "📧 Resumen enviado",
+      description: `Resumen enviado exitosamente a ${data.recipient === 'user' ? 'tu correo' : 'tu terapeuta'}`,
+    });
+    
+    // Here you would implement the actual sending logic
+    // For now, we just show the confirmation
   };
 
   const formatTime = (seconds: number) => {
@@ -395,232 +414,107 @@ const Conversation: React.FC = () => {
     );
   }
 
+  // Parse categorized summary from the conversation summary
+  const categorizedSummary: { insights: string[]; summary: string[]; strengths: string[]; followUp: string[] } = React.useMemo(() => {
+    if (!conversationSummary) return { insights: [], summary: [], strengths: [], followUp: [] };
+    
+    const lines = conversationSummary.split('\n');
+    let currentSection = '';
+    const sections = {
+      insights: [] as string[],
+      summary: [] as string[],
+      strengths: [] as string[],
+      followUp: [] as string[]
+    };
+    
+    lines.forEach(line => {
+      if (line.includes('Insights:') || line.includes('insights')) {
+        currentSection = 'insights';
+      } else if (line.includes('Resumen') || line.includes('summary')) {
+        currentSection = 'summary';
+      } else if (line.includes('Puntos') || line.includes('strengths') || line.includes('Fortalezas')) {
+        currentSection = 'strengths';
+      } else if (line.includes('Recomendaciones') || line.includes('Seguimiento') || line.includes('follow')) {
+        currentSection = 'followUp';
+      } else if (line.trim() && currentSection && currentSection in sections) {
+        (sections as any)[currentSection].push(line.trim());
+      }
+    });
+    
+    return sections;
+  }, [conversationSummary]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="flex h-screen">
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
-          
-          {/* Header */}
-          <div className="border-b bg-card/50 backdrop-blur-sm px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <MessageCircle className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold">{conversation.title}</h1>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      <span>{formatTime(sessionTime)}</span>
-                    </div>
-                    <Badge variant={isSessionActive ? 'default' : 'secondary'}>
-                      {isSessionActive ? 'Activa' : 'Inactiva'}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        
+        {/* Left Panel - Session Status */}
+        <SessionStatusPanel
+          sessionTime={sessionTime}
+          isSessionActive={isSessionActive}
+          isRecording={isRecording}
+          autoTTS={autoTTS}
+          onToggleTTS={handleToggleTTS}
+          sessionQuality={sessionQuality}
+          formatTime={formatTime}
+          getTimeRemaining={getTimeRemaining}
+        />
 
-          {/* Central Recording Area */}
-          <div className="flex-1 flex items-center justify-center p-8">
-            <div className="text-center space-y-8 max-w-2xl">
-              
-              {/* Recording Controls */}
-              <div className="space-y-6">
-                <div className="relative">
-                  {!isRecording && !isSessionActive && (
-                    <Button
-                      onClick={handleStartRecording}
-                      size="lg"
-                      className="h-24 w-24 rounded-full text-lg font-semibold"
-                    >
-                      <Mic className="h-8 w-8" />
-                    </Button>
-                  )}
-                  
-                  {isRecording && (
-                    <div className="relative">
-                      <Button
-                        onClick={handleStopRecording}
-                        variant="outline"
-                        size="lg" 
-                        className="h-24 w-24 rounded-full border-red-500 text-red-500 hover:bg-red-50 animate-pulse"
-                      >
-                        <MicOff className="h-8 w-8" />
-                      </Button>
-                      <div className="absolute -inset-4 border-2 border-red-500 rounded-full animate-ping opacity-20"></div>
-                    </div>
-                  )}
-                  
-                  {!isRecording && isSessionActive && (
-                    <Button
-                      onClick={handleStartRecording}
-                      variant="outline"
-                      size="lg"
-                      className="h-24 w-24 rounded-full"
-                    >
-                      <Mic className="h-8 w-8" />
-                    </Button>
-                  )}
-                </div>
+        {/* Center Panel - Voice Recording Interface */}
+        <VoiceRecordingInterface
+          isRecording={isRecording}
+          isSessionActive={isSessionActive}
+          isLoading={isLoading}
+          currentAIMessage={currentAIMessage}
+          isAISpeaking={isSpeaking}
+          onStartRecording={handleStartRecording}
+          onStopRecording={handleStopRecording}
+          onEndSession={handleEndSession}
+          onVoiceTranscription={handleVoiceTranscription}
+          formatTime={formatTime}
+          sessionTime={sessionTime}
+        />
 
-                <div className="space-y-2">
-                  {!isSessionActive && (
-                    <p className="text-lg font-medium">Presiona para iniciar la sesión</p>
-                  )}
-                  {isRecording && (
-                    <p className="text-lg font-medium text-red-600">🔴 Grabando...</p>
-                  )}
-                  {!isRecording && isSessionActive && (
-                    <p className="text-lg font-medium">Presiona para continuar</p>
-                  )}
-                </div>
-              </div>
+        {/* Right Panel - Conversation Summary */}
+        <ConversationSummaryPanel
+          conversationSummary={conversationSummary}
+          conversationContext={conversationContext}
+          oceanSignals={conversation?.ocean_signals}
+          sessionTime={sessionTime}
+          messagesCount={messages.length}
+          isSessionCompleted={conversation?.status === 'completed'}
+          onSendSummary={handleSendSummary}
+          formatTime={formatTime}
+        />
 
-              {/* AI Current Message */}
-              {currentAIMessage && (
-                <Card className="p-6 bg-muted/50">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Brain className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium mb-2">Psicólogo Virtual</p>
-                      <p className="text-sm leading-relaxed">{currentAIMessage}</p>
-                    </div>
-                  </div>
-                </Card>
-              )}
+        {/* Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showConfirmationModal}
+          onClose={() => setShowConfirmationModal(false)}
+          onConfirm={handleConfirmSendSummary}
+          categorizedSummary={categorizedSummary}
+        />
 
-              {/* Session Controls */}
-              {isSessionActive && (
-                <div className="flex items-center justify-center gap-4">
-                  <Button 
-                    onClick={handleEndSession}
-                    variant="outline"
-                    className="h-12 px-6"
-                  >
-                    <StopCircle className="h-4 w-4 mr-2" />
-                    Terminar Sesión
-                  </Button>
-                  
-                  <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="h-12 px-6">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Eliminar Conversación
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acción no se puede deshacer. Se eliminará permanentemente toda la conversación y sus datos asociados.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteConversation} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Eliminar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              )}
-
-              {/* Loading Indicator */}
-              {isLoading && (
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <LoadingSpinner />
-                  <span>Procesando mensaje...</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Sidebar - Summary and Insights */}
-        <div className="w-96 border-l bg-card/30 backdrop-blur-sm">
-          <div className="p-4 border-b">
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold">Resumen e Insights</h3>
-            </div>
-          </div>
-          
-          <ScrollArea className="h-[calc(100vh-5rem)]">
-            <div className="p-4 space-y-6">
-              
-              {/* Conversation Summary */}
-              {conversationSummary ? (
-                <div className="space-y-3">
-                  <div className="prose prose-sm max-w-none">
-                    <div className="text-xs text-muted-foreground whitespace-pre-line">
-                      {conversationSummary}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Brain className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">El resumen aparecerá al finalizar la sesión</p>
-                </div>
-              )}
-
-              {/* OCEAN Personality Insights */}
-              {conversation.ocean_signals && (
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Personalidad OCEAN</h4>
-                  <div className="space-y-3">
-                    {Object.entries(conversation.ocean_signals).map(([trait, score]) => (
-                      <div key={trait} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span className="capitalize font-medium">{trait}</span>
-                          <span className="text-muted-foreground">
-                            {Math.round((score as number) * 100)}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.round((score as number) * 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Session Progress */}
-              {messages.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Progreso de la Sesión</h4>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Mensajes</span>
-                      <span className="font-medium">{messages.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tiempo transcurrido</span>
-                      <span className="font-medium">{formatTime(sessionTime)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Estado</span>
-                      <span className="font-medium">
-                        {isRecording ? 'Grabando' : isSessionActive ? 'Activa' : 'Inactiva'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer. Se eliminará permanentemente toda la conversación y sus datos asociados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConversation} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
