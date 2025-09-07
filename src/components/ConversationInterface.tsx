@@ -345,13 +345,16 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
         </div>
       )}
 
-      {/* Voice Input Component (hidden but functional) */}
-      <div className="hidden">
-        <VoiceInput 
-          onTranscription={onVoiceTranscription}
-          disabled={!isSessionActive || isLoading || inputMode === 'text'}
-        />
-      </div>
+      {/* Voice Input Component */}
+      {(inputMode === 'audio' || inputMode === 'both') && (
+        <div className="flex justify-center pt-4">
+          <VoiceInput 
+            onTranscription={onVoiceTranscription}
+            disabled={!isSessionActive || isLoading}
+            showTestButton={true}
+          />
+        </div>
+      )}
     </div>
   );
 };
