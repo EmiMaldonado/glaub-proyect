@@ -66,41 +66,176 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check endpoint
+  if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) {
+    console.log('🔍 Health check requested');
+    
+    try {
+      // Test Supabase connection
+      const { data: supabaseTest, error: supabaseError } = await supabase
+        .from('conversations')
+        .select('id')
+        .limit(1);
+
+      if (supabaseError) {
+        throw new Error(`Supabase connection failed: ${supabaseError.message}`);
+      }
+
+      // Test OpenAI connection
+      const openAITest = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${openAIApiKey}` }
+      });
+
+      if (!openAITest.ok) {
+        throw new Error(`OpenAI connection failed: ${openAITest.status}`);
+      }
+
+      console.log('✅ Health check passed - All systems operational');
+      
+      return new Response(JSON.stringify({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        services: {
+          supabase: 'connected',
+          openai: 'connected'
+        },
+        debug: {
+          message: 'All services are operational',
+          supabase_test_result: !!supabaseTest,
+          openai_test_status: openAITest.status
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } catch (error) {
+      console.error('❌ Health check failed:', error);
+      
+      return new Response(JSON.stringify({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        debug: {
+          message: 'Service health check failed',
+          error_type: error.constructor.name
+        }
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  const startTime = Date.now();
+  let debugInfo = {
+    request_received_at: new Date().toISOString(),
+    processing_steps: [],
+    timing: {},
+    metadata: {}
+  };
+
   try {
-    const { message, conversationId, userId } = await req.json();
+    const requestBody = await req.json();
+    const { message, conversationId, userId } = requestBody;
+
+    // 1. Detailed logging at the beginning
+    console.log('🚀 AI Chat function called with:', {
+      conversationId,
+      userId,
+      messageLength: message?.length || 0,
+      messagePreview: message?.substring(0, 100) + (message?.length > 100 ? '...' : ''),
+      timestamp: new Date().toISOString(),
+      requestSize: JSON.stringify(requestBody).length
+    });
+
+    debugInfo.processing_steps.push('Request parsed successfully');
+    debugInfo.metadata = {
+      conversation_id: conversationId,
+      user_id: userId,
+      message_length: message?.length || 0,
+      request_size_bytes: JSON.stringify(requestBody).length
+    };
 
     if (!message || !conversationId || !userId) {
-      throw new Error('Missing required fields');
+      const missingFields = [];
+      if (!message) missingFields.push('message');
+      if (!conversationId) missingFields.push('conversationId');
+      if (!userId) missingFields.push('userId');
+      
+      console.error('❌ Missing required fields:', missingFields);
+      debugInfo.processing_steps.push(`Missing required fields: ${missingFields.join(', ')}`);
+      
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
-    console.log('AI Chat request:', { conversationId, userId, messageLength: message.length });
-
     // Get conversation history
+    debugInfo.processing_steps.push('Fetching conversation history');
+    const historyStartTime = Date.now();
+    
     const { data: messages, error: messagesError } = await supabase
       .from('messages')
       .select('role, content')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true });
 
+    debugInfo.timing.history_fetch_ms = Date.now() - historyStartTime;
+
     if (messagesError) {
-      console.error('Error fetching messages:', messagesError);
-      throw new Error('Failed to fetch conversation history');
+      console.error('❌ Error fetching messages:', {
+        error: messagesError,
+        conversationId,
+        details: messagesError.message
+      });
+      debugInfo.processing_steps.push(`Database error: ${messagesError.message}`);
+      throw new Error(`Failed to fetch conversation history: ${messagesError.message}`);
     }
 
+    console.log('📚 Conversation history retrieved:', {
+      messageCount: messages?.length || 0,
+      conversationId,
+      fetchTimeMs: debugInfo.timing.history_fetch_ms
+    });
+
+    debugInfo.processing_steps.push(`Retrieved ${messages?.length || 0} historical messages`);
+
     // Save user message
+    debugInfo.processing_steps.push('Saving user message to database');
+    const saveUserStartTime = Date.now();
+    
     const { error: saveUserError } = await supabase
       .from('messages')
       .insert({
         conversation_id: conversationId,
         role: 'user',
         content: message,
-        metadata: { timestamp: new Date().toISOString() }
+        metadata: { 
+          timestamp: new Date().toISOString(),
+          debug_info: {
+            request_id: crypto.randomUUID(),
+            message_length: message.length
+          }
+        }
       });
 
+    debugInfo.timing.user_message_save_ms = Date.now() - saveUserStartTime;
+
     if (saveUserError) {
-      console.error('Error saving user message:', saveUserError);
-      throw new Error('Failed to save user message');
+      console.error('❌ Error saving user message:', {
+        error: saveUserError,
+        conversationId,
+        details: saveUserError.message
+      });
+      debugInfo.processing_steps.push(`User message save error: ${saveUserError.message}`);
+      throw new Error(`Failed to save user message: ${saveUserError.message}`);
     }
+
+    console.log('💾 User message saved successfully:', {
+      conversationId,
+      messageLength: message.length,
+      saveTimeMs: debugInfo.timing.user_message_save_ms
+    });
+
+    debugInfo.processing_steps.push('User message saved successfully');
 
     // Prepare messages for OpenAI
     const chatMessages = [
@@ -109,9 +244,21 @@ serve(async (req) => {
       { role: 'user', content: message }
     ];
 
-    console.log('Sending to OpenAI:', { messageCount: chatMessages.length });
+    // 2. Log before calling OpenAI with message count
+    console.log('🤖 Calling OpenAI with messages:', {
+      totalMessages: chatMessages.length,
+      systemPromptLength: SYSTEM_PROMPT.length,
+      historyMessages: messages?.length || 0,
+      currentMessage: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+      model: 'gpt-4.1-2025-04-14',
+      timestamp: new Date().toISOString()
+    });
+
+    debugInfo.processing_steps.push(`Prepared ${chatMessages.length} messages for OpenAI`);
+    debugInfo.metadata.openai_messages_count = chatMessages.length;
 
     // Call OpenAI API
+    const openAIStartTime = Date.now();
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -127,22 +274,60 @@ serve(async (req) => {
       }),
     });
 
+    debugInfo.timing.openai_call_ms = Date.now() - openAIStartTime;
+
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('❌ OpenAI API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+        conversationId,
+        messageCount: chatMessages.length
+      });
+      debugInfo.processing_steps.push(`OpenAI API error: ${response.status} - ${response.statusText}`);
+      throw new Error(`OpenAI API error: ${response.status} - ${response.statusText}`);
     }
 
     const data = await response.json();
     const assistantMessage = data.choices[0].message.content;
     const tokensUsed = data.usage?.total_tokens || 0;
 
-    console.log('OpenAI response received:', { tokensUsed, messageLength: assistantMessage.length });
+    // 3. Log after OpenAI response with status
+    console.log('✅ OpenAI response received:', {
+      status: response.status,
+      tokensUsed,
+      messageLength: assistantMessage.length,
+      responseTimeMs: debugInfo.timing.openai_call_ms,
+      conversationId,
+      model: data.model,
+      finishReason: data.choices[0].finish_reason
+    });
+
+    debugInfo.processing_steps.push('OpenAI response received successfully');
+    debugInfo.metadata.tokens_used = tokensUsed;
+    debugInfo.metadata.assistant_message_length = assistantMessage.length;
+    debugInfo.metadata.finish_reason = data.choices[0].finish_reason;
 
     // Analyze message for OCEAN signals and insights
+    debugInfo.processing_steps.push('Analyzing message for insights');
+    const insightsStartTime = Date.now();
     const insights = analyzeMessageForInsights(message, assistantMessage);
+    debugInfo.timing.insights_analysis_ms = Date.now() - insightsStartTime;
+
+    // 4. Log before saving to DB with conversation ID
+    console.log('💾 Saving to database:', {
+      conversationId,
+      assistantMessageLength: assistantMessage.length,
+      tokensUsed,
+      insightsGenerated: Object.keys(insights).length,
+      timestamp: new Date().toISOString()
+    });
+
+    debugInfo.processing_steps.push('Starting database save operations');
 
     // Save assistant message
+    const saveAssistantStartTime = Date.now();
     const { error: saveAssistantError } = await supabase
       .from('messages')
       .insert({
@@ -152,17 +337,36 @@ serve(async (req) => {
         metadata: { 
           timestamp: new Date().toISOString(),
           insights,
-          ocean_analysis: insights.ocean_signals
+          ocean_analysis: insights.ocean_signals,
+          debug_info: {
+            processing_time_ms: Date.now() - startTime,
+            tokens_used: tokensUsed
+          }
         },
         tokens_used: tokensUsed
       });
 
+    debugInfo.timing.assistant_message_save_ms = Date.now() - saveAssistantStartTime;
+
     if (saveAssistantError) {
-      console.error('Error saving assistant message:', saveAssistantError);
-      throw new Error('Failed to save assistant message');
+      console.error('❌ Error saving assistant message:', {
+        error: saveAssistantError,
+        conversationId,
+        details: saveAssistantError.message
+      });
+      debugInfo.processing_steps.push(`Assistant message save error: ${saveAssistantError.message}`);
+      throw new Error(`Failed to save assistant message: ${saveAssistantError.message}`);
     }
 
+    console.log('✅ Assistant message saved successfully:', {
+      conversationId,
+      saveTimeMs: debugInfo.timing.assistant_message_save_ms
+    });
+
+    debugInfo.processing_steps.push('Assistant message saved successfully');
+
     // Update conversation with latest insights
+    const updateConversationStartTime = Date.now();
     const { error: updateConversationError } = await supabase
       .from('conversations')
       .update({
@@ -172,22 +376,101 @@ serve(async (req) => {
       })
       .eq('id', conversationId);
 
+    debugInfo.timing.conversation_update_ms = Date.now() - updateConversationStartTime;
+
     if (updateConversationError) {
-      console.error('Error updating conversation:', updateConversationError);
+      console.error('⚠️ Error updating conversation:', {
+        error: updateConversationError,
+        conversationId,
+        details: updateConversationError.message
+      });
+      debugInfo.processing_steps.push(`Conversation update warning: ${updateConversationError.message}`);
+      // Don't throw error for conversation update failure
+    } else {
+      console.log('✅ Conversation updated successfully:', {
+        conversationId,
+        updateTimeMs: debugInfo.timing.conversation_update_ms
+      });
+      debugInfo.processing_steps.push('Conversation updated successfully');
     }
 
+    // Calculate total processing time
+    debugInfo.timing.total_processing_ms = Date.now() - startTime;
+    debugInfo.processing_steps.push('Processing completed successfully');
+
+    console.log('🎉 AI Chat function completed successfully:', {
+      conversationId,
+      totalTimeMs: debugInfo.timing.total_processing_ms,
+      tokensUsed,
+      stepsCompleted: debugInfo.processing_steps.length
+    });
+
+    // 6. Return debugging information in response
     return new Response(JSON.stringify({ 
       message: assistantMessage,
       tokensUsed,
-      insights 
+      insights,
+      debug: {
+        success: true,
+        processing_time_ms: debugInfo.timing.total_processing_ms,
+        steps_completed: debugInfo.processing_steps,
+        timing_breakdown: debugInfo.timing,
+        metadata: debugInfo.metadata,
+        timestamp: new Date().toISOString()
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in ai-chat function:', error);
+    const totalTime = Date.now() - startTime;
+    
+    // 5. Enhanced error handling with clear messages
+    console.error('❌ Error in ai-chat function:', {
+      error: error.message,
+      errorType: error.constructor.name,
+      conversationId: debugInfo.metadata?.conversation_id || 'unknown',
+      userId: debugInfo.metadata?.user_id || 'unknown',
+      processingTimeMs: totalTime,
+      stepsCompleted: debugInfo.processing_steps?.length || 0,
+      lastStep: debugInfo.processing_steps?.[debugInfo.processing_steps.length - 1] || 'none',
+      timestamp: new Date().toISOString(),
+      stack: error.stack?.split('\n').slice(0, 5).join('\n') // First 5 lines of stack trace
+    });
+
+    // Determine error category for better debugging
+    let errorCategory = 'unknown';
+    let userFriendlyMessage = 'An unexpected error occurred';
+    
+    if (error.message.includes('Missing required fields')) {
+      errorCategory = 'validation';
+      userFriendlyMessage = 'Request is missing required information';
+    } else if (error.message.includes('OpenAI')) {
+      errorCategory = 'openai_api';
+      userFriendlyMessage = 'AI service is temporarily unavailable';
+    } else if (error.message.includes('Failed to fetch') || error.message.includes('Database')) {
+      errorCategory = 'database';
+      userFriendlyMessage = 'Database connection issue';
+    } else if (error.message.includes('Failed to save')) {
+      errorCategory = 'storage';
+      userFriendlyMessage = 'Unable to save conversation data';
+    }
+
     return new Response(JSON.stringify({ 
-      error: error.message || 'Internal server error' 
+      error: userFriendlyMessage,
+      debug: {
+        success: false,
+        error_category: errorCategory,
+        error_message: error.message,
+        error_type: error.constructor.name,
+        processing_time_ms: totalTime,
+        steps_completed: debugInfo.processing_steps || [],
+        timing_breakdown: debugInfo.timing || {},
+        metadata: debugInfo.metadata || {},
+        timestamp: new Date().toISOString(),
+        conversation_id: debugInfo.metadata?.conversation_id || null,
+        user_id: debugInfo.metadata?.user_id || null
+      }
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
