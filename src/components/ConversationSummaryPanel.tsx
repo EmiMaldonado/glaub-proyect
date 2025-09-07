@@ -15,6 +15,7 @@ interface ConversationSummaryPanelProps {
   isSessionCompleted: boolean;
   onSendSummary: () => void;
   formatTime: (seconds: number) => string;
+  isCompact?: boolean;
 }
 
 const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
@@ -25,7 +26,8 @@ const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
   messagesCount,
   isSessionCompleted,
   onSendSummary,
-  formatTime
+  formatTime,
+  isCompact = false
 }) => {
   const categorizedSummary = React.useMemo(() => {
     if (!conversationSummary) return null;
@@ -60,24 +62,24 @@ const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
   const formatProgress = (value: number) => Math.round(value * 100);
 
   return (
-    <div className="w-96 bg-card/30 backdrop-blur-sm border-l border-border h-full">
-      <div className="p-4 border-b">
+    <div className={`${isCompact ? 'w-60' : 'w-96'} bg-card/30 backdrop-blur-sm border-l border-border h-full`}>
+      <div className={`${isCompact ? 'p-3' : 'p-4'} border-b`}>
         <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold text-foreground">Resumen e Insights</h3>
+          <Brain className={`${isCompact ? 'h-4 w-4' : 'h-5 w-5'} text-primary`} />
+          <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-semibold text-foreground`}>Resumen e Insights</h3>
         </div>
       </div>
       
       <ScrollArea className="h-[calc(100vh-5rem)]">
-        <div className="p-4 space-y-6">
+        <div className={`${isCompact ? 'p-3 space-y-3' : 'p-4 space-y-6'}`}>
           
           {/* Session Overview */}
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <FileText className="h-4 w-4 text-primary" />
-              <h4 className="text-sm font-medium">Información de Sesión</h4>
+          <Card className={`${isCompact ? 'p-3' : 'p-4'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className={`${isCompact ? 'h-3 w-3' : 'h-4 w-4'} text-primary`} />
+              <h4 className={`${isCompact ? 'text-xs' : 'text-sm'} font-medium`}>Información de Sesión</h4>
             </div>
-            <div className="space-y-2 text-sm">
+            <div className={`space-y-1 ${isCompact ? 'text-xs' : 'text-sm'}`}>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Duración</span>
                 <span className="font-medium">{formatTime(sessionTime)}</span>

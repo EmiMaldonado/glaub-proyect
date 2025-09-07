@@ -8,7 +8,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useTherapeuticAnalysis } from '@/hooks/useTherapeuticAnalysis';
 import SessionStatusPanel from '@/components/SessionStatusPanel';
-import VoiceRecordingInterface from '@/components/VoiceRecordingInterface';
+import ConversationInterface from '@/components/ConversationInterface';
 import ConversationSummaryPanel from '@/components/ConversationSummaryPanel';
 import ConfirmationModal from '@/components/ConfirmationModal';
 
@@ -37,6 +37,9 @@ const Conversation: React.FC = () => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
+  const [textInput, setTextInput] = useState('');
+  const [currentTranscription, setCurrentTranscription] = useState('');
+  const [inputMode, setInputMode] = useState<'audio' | 'text' | 'both'>('both');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
@@ -97,6 +100,27 @@ const Conversation: React.FC = () => {
       title: autoTTS ? "🔇 Síntesis de voz desactivada" : "🔊 Síntesis de voz activada",
       description: autoTTS ? "Los mensajes no se reproducirán automáticamente" : "Los mensajes se reproducirán automáticamente",
     });
+  };
+
+  // Handle input mode change
+  const handleInputModeChange = (mode: 'audio' | 'text' | 'both') => {
+    setInputMode(mode);
+    console.log('Input mode changed to:', mode);
+    toast({
+      title: "Modo de entrada actualizado",
+      description: `Ahora puedes usar ${mode === 'audio' ? 'solo voz' : mode === 'text' ? 'solo texto' : 'voz y texto'}`,
+    });
+  };
+
+  // Handle text input
+  const handleTextInputChange = (text: string) => {
+    setTextInput(text);
+  };
+
+  const handleSendTextMessage = () => {
+    if (!textInput.trim()) return;
+    handleSendMessage(textInput.trim());
+    setTextInput('');
   };
 
   // Initialize or resume conversation
@@ -402,7 +426,12 @@ const Conversation: React.FC = () => {
   };
 
   const handleVoiceTranscription = (text: string) => {
-    handleSendMessage(text);
+    setCurrentTranscription(text);
+    // Simulate processing delay then send message
+    setTimeout(() => {
+      handleSendMessage(text);
+      setCurrentTranscription('');
+    }, 500);
   };
 
   const handleSendSummary = () => {
@@ -448,31 +477,38 @@ const Conversation: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="flex h-screen">
         
-        {/* Left Panel - Session Status */}
+        {/* Center Panel - Conversation Interface */}
+        <ConversationInterface
+          messages={messages}
+          isRecording={isRecording}
+          isSessionActive={isSessionActive}
+          isLoading={isLoading}
+          isAISpeaking={isSpeaking}
+          currentTranscription={currentTranscription}
+          textInput={textInput}
+          inputMode={inputMode}
+          onStartRecording={handleStartRecording}
+          onStopRecording={handleStopRecording}
+          onEndSession={handleEndSession}
+          onVoiceTranscription={handleVoiceTranscription}
+          onTextInputChange={handleTextInputChange}
+          onSendTextMessage={handleSendTextMessage}
+          formatTime={formatTime}
+          sessionTime={sessionTime}
+        />
+
+        {/* Right Panel - Session Status */}
         <SessionStatusPanel
           sessionTime={sessionTime}
           isSessionActive={isSessionActive}
           isRecording={isRecording}
           autoTTS={autoTTS}
+          inputMode={inputMode}
           onToggleTTS={handleToggleTTS}
+          onInputModeChange={handleInputModeChange}
           sessionQuality={sessionQuality}
           formatTime={formatTime}
           getTimeRemaining={getTimeRemaining}
-        />
-
-        {/* Center Panel - Voice Recording Interface */}
-        <VoiceRecordingInterface
-          isRecording={isRecording}
-          isSessionActive={isSessionActive}
-          isLoading={isLoading}
-          currentAIMessage={currentAIMessage}
-          isAISpeaking={isSpeaking}
-          onStartRecording={handleStartRecording}
-          onStopRecording={handleStopRecording}
-          onEndSession={handleEndSession}
-          onVoiceTranscription={handleVoiceTranscription}
-          formatTime={formatTime}
-          sessionTime={sessionTime}
         />
 
         {/* Right Panel - Conversation Summary */}
@@ -485,6 +521,7 @@ const Conversation: React.FC = () => {
           isSessionCompleted={conversation?.status === 'completed'}
           onSendSummary={handleSendSummary}
           formatTime={formatTime}
+          isCompact={true}
         />
 
         {/* Confirmation Modal */}
