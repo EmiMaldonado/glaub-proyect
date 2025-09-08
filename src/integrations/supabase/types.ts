@@ -62,6 +62,53 @@ export type Database = {
         }
         Relationships: []
       }
+      invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_at: string
+          manager_id: string
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          manager_id: string
+          status?: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          manager_id?: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -100,6 +147,36 @@ export type Database = {
           },
         ]
       }
+      OCEAN_phrases_traingdata: {
+        Row: {
+          "A key": number | null
+          "C key": number | null
+          "E key": number | null
+          id: number
+          "N key": number | null
+          "O key": number | null
+          Sentence: string | null
+        }
+        Insert: {
+          "A key"?: number | null
+          "C key"?: number | null
+          "E key"?: number | null
+          id?: number
+          "N key"?: number | null
+          "O key"?: number | null
+          Sentence?: string | null
+        }
+        Update: {
+          "A key"?: number | null
+          "C key"?: number | null
+          "E key"?: number | null
+          id?: number
+          "N key"?: number | null
+          "O key"?: number | null
+          Sentence?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -107,6 +184,7 @@ export type Database = {
           display_name: string | null
           full_name: string | null
           id: string
+          manager_id: string | null
           organization: string | null
           role: string | null
           updated_at: string
@@ -118,6 +196,7 @@ export type Database = {
           display_name?: string | null
           full_name?: string | null
           id?: string
+          manager_id?: string | null
           organization?: string | null
           role?: string | null
           updated_at?: string
@@ -129,10 +208,64 @@ export type Database = {
           display_name?: string | null
           full_name?: string | null
           id?: string
+          manager_id?: string | null
           organization?: string | null
           role?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      "training data - conversation": {
+        Row: {
+          anger: boolean | null
+          anticipation: boolean | null
+          disgust: boolean | null
+          fear: boolean | null
+          ID: number
+          joy: boolean | null
+          negative: boolean | null
+          positive: boolean | null
+          sadness: boolean | null
+          surprise: boolean | null
+          trust: boolean | null
+          word: string | null
+        }
+        Insert: {
+          anger?: boolean | null
+          anticipation?: boolean | null
+          disgust?: boolean | null
+          fear?: boolean | null
+          ID?: number
+          joy?: boolean | null
+          negative?: boolean | null
+          positive?: boolean | null
+          sadness?: boolean | null
+          surprise?: boolean | null
+          trust?: boolean | null
+          word?: string | null
+        }
+        Update: {
+          anger?: boolean | null
+          anticipation?: boolean | null
+          disgust?: boolean | null
+          fear?: boolean | null
+          ID?: number
+          joy?: boolean | null
+          negative?: boolean | null
+          positive?: boolean | null
+          sadness?: boolean | null
+          surprise?: boolean | null
+          trust?: boolean | null
+          word?: string | null
         }
         Relationships: []
       }
