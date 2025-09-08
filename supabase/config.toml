@@ -8,3 +8,12 @@ verify_jwt = false
 
 [edge_functions.speech-to-text]
 verify_jwt = false
+
+[edge_functions.send-invitation]
+verify_jwt = true
+
+[edge_functions.accept-invitation]
+verify_jwt = false
+
+[edge_functions.complete-invitation]
+verify_jwt = true

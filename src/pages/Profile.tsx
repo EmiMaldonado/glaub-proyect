@@ -9,6 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from 'recharts';
 import { Brain, Share2, Calendar, TrendingUp, Users, MessageSquare, Lightbulb, Target, Sparkles } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import TeamManagement from '@/components/TeamManagement';
 
 interface OceanData {
   openness: number;
@@ -34,6 +35,7 @@ const Profile: React.FC = () => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
@@ -43,6 +45,19 @@ const Profile: React.FC = () => {
 
   const fetchProfileData = async () => {
     try {
+      // Fetch user's Supabase profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+      } else {
+        setUserProfile(profile);
+      }
+
       // Fetch user conversations with OCEAN data
       const { data: conversations, error } = await supabase
         .from('conversations')
@@ -493,8 +508,13 @@ const Profile: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+        </div>
+        
+        {/* Team Management Section */}
+        <div className="mt-8">
+          <TeamManagement userProfile={userProfile} />
+        </div>
       </div>
-    </div>
   );
 };
 

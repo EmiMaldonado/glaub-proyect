@@ -1,22 +1,26 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, Mail, Lock, User, ArrowLeft } from "lucide-react";
+import { Brain, Mail, Lock, User, ArrowLeft, Users } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { toast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const { signIn, signUp, resetPassword, user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'signin';
+  const invitationToken = searchParams.get('invitation_token');
+  const invitationEmail = searchParams.get('email');
   
   const [formData, setFormData] = useState({
-    email: "",
+    email: invitationEmail || "",
     password: "",
     fullName: "",
     confirmPassword: "",
@@ -64,7 +68,42 @@ const Auth = () => {
     try {
       const { error } = await signUp(formData.email, formData.password, formData.fullName);
       if (!error) {
-        // Stay on auth page to show success message
+        // If there's an invitation token, complete the invitation process
+        if (invitationToken) {
+          try {
+            // Wait for the user to be available (after successful signup)
+            const { data: { user: newUser }, error: userError } = await supabase.auth.getUser();
+            
+            if (newUser && !userError) {
+              const { data, error: invitationError } = await supabase.functions.invoke('complete-invitation', {
+                body: { 
+                  token: invitationToken,
+                  user_id: newUser.id 
+                },
+              });
+
+              if (invitationError) {
+                console.error('Error completing invitation:', invitationError);
+                toast({
+                  title: "Cuenta creada",
+                  description: "Tu cuenta se creó exitosamente, pero hubo un problema al procesar la invitación. Contacta a tu manager.",
+                  variant: "destructive",
+                });
+              } else {
+                toast({
+                  title: "¡Bienvenido al equipo!",
+                  description: `Te has unido exitosamente al equipo de ${data.manager_name || 'tu manager'}.`,
+                });
+                navigate('/dashboard');
+              }
+            }
+          } catch (invitationError) {
+            console.error('Error completing invitation:', invitationError);
+          }
+        } else {
+          // Regular signup without invitation
+          navigate('/dashboard');
+        }
       }
     } finally {
       setIsLoading(false);
@@ -214,10 +253,24 @@ const Auth = () => {
             
             <TabsContent value="signup">
               <CardHeader className="text-center">
-                <CardTitle>Crea tu cuenta</CardTitle>
-                <CardDescription>
-                  Únete y comienza a descubrir tu personalidad
-                </CardDescription>
+                {invitationToken ? (
+                  <>
+                    <div className="mx-auto w-12 h-12 bg-therapeutic-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <Users className="h-6 w-6 text-therapeutic-primary" />
+                    </div>
+                    <CardTitle>Únete al Equipo</CardTitle>
+                    <CardDescription>
+                      Has sido invitado a unirte a un equipo en EmpathAI. Crea tu cuenta para comenzar.
+                    </CardDescription>
+                  </>
+                ) : (
+                  <>
+                    <CardTitle>Crea tu cuenta</CardTitle>
+                    <CardDescription>
+                      Únete y comienza a descubrir tu personalidad
+                    </CardDescription>
+                  </>
+                )}
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSignUp} className="space-y-4">
@@ -249,6 +302,7 @@ const Auth = () => {
                         onChange={handleInputChange}
                         placeholder="tu@email.com"
                         className="pl-10"
+                        disabled={!!invitationEmail}
                         required
                       />
                     </div>
