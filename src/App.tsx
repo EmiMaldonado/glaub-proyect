@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
 import Conversation from "./pages/Conversation";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -64,10 +65,7 @@ const App = () => (
                 <Route path="/profile" element={
                   <AuthGuard>
                     <Navigation />
-                    <div className="container mx-auto px-4 py-8">
-                      <h1 className="text-2xl font-bold">Perfil</h1>
-                      <p>Esta funcionalidad se implementará en el siguiente nivel.</p>
-                    </div>
+                    <Profile />
                   </AuthGuard>
                 } />
                 <Route path="/settings" element={
