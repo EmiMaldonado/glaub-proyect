@@ -216,20 +216,20 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
           )}
 
           {messages.map((message) => (
-            <div key={message.id} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`flex gap-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+            <div key={message.id} className={`flex gap-2 sm:gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`flex gap-2 sm:gap-3 max-w-[90%] sm:max-w-[80%] md:max-w-[70%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                   message.role === 'user' 
                     ? 'bg-primary text-primary-foreground' 
                     : 'bg-muted'
                 }`}>
                   {message.role === 'user' ? (
-                    <User className="h-4 w-4" />
+                    <User className="h-3 w-3 sm:h-4 sm:w-4" />
                   ) : (
-                    <Brain className={`h-4 w-4 ${isAISpeaking ? 'animate-pulse text-primary' : ''}`} />
+                    <Brain className={`h-3 w-3 sm:h-4 sm:w-4 ${isAISpeaking ? 'animate-pulse text-primary' : ''}`} />
                   )}
                 </div>
-                <Card className={`p-3 ${
+                <Card className={`p-2 sm:p-3 ${
                   message.role === 'user' 
                     ? 'bg-primary text-primary-foreground' 
                     : 'bg-card'
