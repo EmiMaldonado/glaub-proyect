@@ -91,7 +91,31 @@ const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
           </Card>
 
           {/* Real-time Progress */}
-          {conversationContext}
+          {conversationContext && (
+            <Card className={`${isCompact ? 'p-3' : 'p-4'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className={`${isCompact ? 'h-3 w-3' : 'h-4 w-4'} text-primary`} />
+                <h4 className={`${isCompact ? 'text-xs' : 'text-sm'} font-medium`}>Progreso en Tiempo Real</h4>
+              </div>
+              <div className={`space-y-2 ${isCompact ? 'text-xs' : 'text-sm'}`}>
+                {conversationContext.stage && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Etapa</span>
+                    <Badge variant="outline" className="text-xs">{conversationContext.stage.name}</Badge>
+                  </div>
+                )}
+                {conversationContext.progress && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Progreso</span>
+                      <span className="font-medium">{formatProgress(conversationContext.progress.overall)}%</span>
+                    </div>
+                    <Progress value={conversationContext.progress.overall * 100} className="h-1.5" />
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Key Insights */}
           {conversationContext?.keyInsights?.length > 0 && <Card className="p-4">
