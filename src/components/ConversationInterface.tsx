@@ -23,14 +23,14 @@ interface ConversationInterfaceProps {
   isAISpeaking: boolean;
   currentTranscription: string;
   textInput: string;
-  inputMode: 'audio' | 'text' | 'both';
+  inputMode: 'audio' | 'text';
   onStartRecording: () => void;
   onStopRecording: () => void;
   onEndSession: () => void;
   onVoiceTranscription: (text: string) => void;
   onTextInputChange: (text: string) => void;
   onSendTextMessage: () => void;
-  onInputModeChange: (mode: 'audio' | 'text' | 'both') => void;
+  onInputModeChange: (mode: 'audio' | 'text') => void;
   formatTime: (seconds: number) => string;
   sessionTime: number;
 }
@@ -129,14 +129,6 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
                   >
                     <Keyboard className="h-4 w-4" />
                     Solo Texto
-                  </Button>
-                  <Button 
-                    variant={inputMode === 'both' ? 'default' : 'outline'}
-                    onClick={() => onInputModeChange('both')}
-                    className="gap-2"
-                  >
-                    <Volume2 className="h-4 w-4" />
-                    Ambos
                   </Button>
                 </div>
               </div>
@@ -294,7 +286,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
             <div className="flex items-end gap-3">
               
               {/* Voice Input */}
-              {(inputMode === 'audio' || inputMode === 'both') && (
+              {inputMode === 'audio' && (
                 <div className="flex items-center gap-2">
                   <Button {...buttonConfig}>
                     {buttonConfig.icon}
@@ -309,7 +301,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
               )}
 
               {/* Text Input */}
-              {(inputMode === 'text' || inputMode === 'both') && (
+              {inputMode === 'text' && (
                 <div className="flex-1 flex gap-2">
                   <Textarea
                     value={textInput}
@@ -346,7 +338,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
       )}
 
       {/* Voice Input Component */}
-      {(inputMode === 'audio' || inputMode === 'both') && (
+      {inputMode === 'audio' && (
         <div className="flex justify-center pt-4">
           <VoiceInput 
             onTranscription={onVoiceTranscription}

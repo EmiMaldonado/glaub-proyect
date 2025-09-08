@@ -41,7 +41,7 @@ const Conversation: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState('');
   const [textInput, setTextInput] = useState('');
   const [currentTranscription, setCurrentTranscription] = useState('');
-  const [inputMode, setInputMode] = useState<'audio' | 'text' | 'both'>('both');
+  const [inputMode, setInputMode] = useState<'audio' | 'text'>('text');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
@@ -107,12 +107,12 @@ const Conversation: React.FC = () => {
   };
 
   // Handle input mode change
-  const handleInputModeChange = (mode: 'audio' | 'text' | 'both') => {
+  const handleInputModeChange = (mode: 'audio' | 'text') => {
     setInputMode(mode);
     console.log('Input mode changed to:', mode);
     toast({
       title: "Modo de entrada actualizado",
-      description: `Ahora puedes usar ${mode === 'audio' ? 'solo voz' : mode === 'text' ? 'solo texto' : 'voz y texto'}`,
+      description: `Ahora puedes usar ${mode === 'audio' ? 'solo voz' : 'solo texto'}`,
     });
   };
 

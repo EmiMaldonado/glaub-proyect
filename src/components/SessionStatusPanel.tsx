@@ -10,9 +10,9 @@ interface SessionStatusPanelProps {
   isSessionActive: boolean;
   isRecording: boolean;
   autoTTS: boolean;
-  inputMode: 'audio' | 'text' | 'both';
+  inputMode: 'audio' | 'text';
   onToggleTTS: () => void;
-  onInputModeChange: (mode: 'audio' | 'text' | 'both') => void;
+  onInputModeChange: (mode: 'audio' | 'text') => void;
   sessionQuality: {
     audioQuality: number;
     connectionStability: number;
@@ -90,7 +90,7 @@ const SessionStatusPanel: React.FC<SessionStatusPanelProps> = ({
             <h4 className="text-xs font-medium">Modo de Entrada</h4>
           </div>
           <div className="space-y-2">
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-2 gap-1">
               <Button
                 onClick={() => onInputModeChange('audio')}
                 variant={inputMode === 'audio' ? "default" : "outline"}
@@ -107,17 +107,9 @@ const SessionStatusPanel: React.FC<SessionStatusPanelProps> = ({
               >
                 <Keyboard className="h-3 w-3" />
               </Button>
-              <Button
-                onClick={() => onInputModeChange('both')}
-                variant={inputMode === 'both' ? "default" : "outline"}
-                size="sm"
-                className="h-8 text-xs"
-              >
-                <MessageSquare className="h-3 w-3" />
-              </Button>
             </div>
             <div className="text-xs text-center text-muted-foreground">
-              {inputMode === 'audio' ? 'Solo voz' : inputMode === 'text' ? 'Solo texto' : 'Voz y texto'}
+              {inputMode === 'audio' ? 'Solo voz' : 'Solo texto'}
             </div>
           </div>
         </Card>
