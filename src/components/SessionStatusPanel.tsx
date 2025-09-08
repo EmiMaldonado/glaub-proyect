@@ -119,21 +119,6 @@ const SessionStatusPanel: React.FC<SessionStatusPanelProps> = ({
             <div className="text-xs text-center text-muted-foreground">
               {inputMode === 'audio' ? 'Solo voz' : inputMode === 'text' ? 'Solo texto' : 'Voz y texto'}
             </div>
-            
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div className="flex items-center gap-1">
-                {autoTTS ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
-                <span className="text-xs">TTS</span>
-              </div>
-              <Button
-                onClick={onToggleTTS}
-                variant={autoTTS ? "default" : "outline"}
-                size="sm"
-                className="h-6 px-2 text-xs"
-              >
-                {autoTTS ? "ON" : "OFF"}
-              </Button>
-            </div>
           </div>
         </Card>
 

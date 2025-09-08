@@ -2,7 +2,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Square } from 'lucide-react';
 
-const VoiceInput: React.FC = () => {
+interface VoiceInputProps {
+  onTranscription?: (text: string) => void;
+  disabled?: boolean;
+  showTestButton?: boolean;
+}
+
+const VoiceInput: React.FC<VoiceInputProps> = ({ 
+  onTranscription, 
+  disabled = false, 
+  showTestButton = false 
+}) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0); // 🆕 Estado para nivel de audio
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -80,6 +90,8 @@ const VoiceInput: React.FC = () => {
   };
 
   const toggleRecording = () => {
+    if (disabled) return;
+    
     if (isRecording) {
       stopRecording();
     } else {
@@ -99,6 +111,7 @@ const VoiceInput: React.FC = () => {
           onClick={toggleRecording}
           variant={isRecording ? 'destructive' : 'default'}
           size="lg"
+          disabled={disabled}
           className="relative z-10 transition-all duration-200"
           style={{
             transform: `scale(${isRecording ? 1.05 : 1})`,
