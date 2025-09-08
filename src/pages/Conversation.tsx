@@ -11,6 +11,8 @@ import SessionStatusPanel from '@/components/SessionStatusPanel';
 import ConversationInterface from '@/components/ConversationInterface';
 import ConversationSummaryPanel from '@/components/ConversationSummaryPanel';
 import ConfirmationModal from '@/components/ConfirmationModal';
+import RealtimeChat from '@/components/RealtimeChat';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Message {
   id: string;
@@ -48,6 +50,8 @@ const Conversation: React.FC = () => {
   const [autoTTS, setAutoTTS] = useState(true);
   const [intelligentAlertShown, setIntelligentAlertShown] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [chatMode, setChatMode] = useState<'traditional' | 'realtime'>('realtime');
+  const [isRealtimeSpeaking, setIsRealtimeSpeaking] = useState(false);
   const [currentAIMessage, setCurrentAIMessage] = useState('');
   const [conversationSummary, setConversationSummary] = useState('');
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -477,26 +481,43 @@ const Conversation: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="flex h-screen">
         
-        {/* Center Panel - Conversation Interface */}
-        <ConversationInterface
-          messages={messages}
-          isRecording={isRecording}
-          isSessionActive={isSessionActive}
-          isLoading={isLoading}
-          isAISpeaking={isSpeaking}
-          currentTranscription={currentTranscription}
-          textInput={textInput}
-          inputMode={inputMode}
-          onStartRecording={handleStartRecording}
-          onStopRecording={handleStopRecording}
-          onEndSession={handleEndSession}
-          onVoiceTranscription={handleVoiceTranscription}
-          onTextInputChange={handleTextInputChange}
-          onSendTextMessage={handleSendTextMessage}
-          onInputModeChange={handleInputModeChange}
-          formatTime={formatTime}
-          sessionTime={sessionTime}
-        />
+        {/* Center Panel - Chat Interface */}
+        <div className="flex-1 flex flex-col">
+          <Tabs value={chatMode} onValueChange={(value) => setChatMode(value as 'traditional' | 'realtime')} className="h-full flex flex-col">
+            <div className="border-b px-4 py-2">
+              <TabsList className="grid w-full max-w-md grid-cols-2">
+                <TabsTrigger value="realtime">Chat en Tiempo Real</TabsTrigger>
+                <TabsTrigger value="traditional">Chat Tradicional</TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <TabsContent value="realtime" className="flex-1 mt-0 p-4">
+              <RealtimeChat onSpeakingChange={setIsRealtimeSpeaking} />
+            </TabsContent>
+            
+            <TabsContent value="traditional" className="flex-1 mt-0">
+              <ConversationInterface
+                messages={messages}
+                isRecording={isRecording}
+                isSessionActive={isSessionActive}
+                isLoading={isLoading}
+                isAISpeaking={isSpeaking}
+                currentTranscription={currentTranscription}
+                textInput={textInput}
+                inputMode={inputMode}
+                onStartRecording={handleStartRecording}
+                onStopRecording={handleStopRecording}
+                onEndSession={handleEndSession}
+                onVoiceTranscription={handleVoiceTranscription}
+                onTextInputChange={handleTextInputChange}
+                onSendTextMessage={handleSendTextMessage}
+                onInputModeChange={handleInputModeChange}
+                formatTime={formatTime}
+                sessionTime={sessionTime}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
 
         {/* Right Panel - Session Status */}
         <SessionStatusPanel
