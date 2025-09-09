@@ -110,22 +110,59 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <Card key={index} className="shadow-soft">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.description}</p>
-                </div>
-                <stat.icon className={`h-8 w-8 ${stat.color}`} />
+      {/* Summary Highlights & Profile */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <Card className="md:col-span-2 shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <span>Últimos Insights</span>
+            </CardTitle>
+            <CardDescription>
+              Highlights de tu conversación más reciente
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              No hay conversaciones completadas aún. Inicia tu primera conversación para ver insights personalizados aquí.
+            </div>
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+              <MessageCircle className="h-3 w-3" />
+              <span>Los insights aparecerán después de completar una conversación</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Settings className="h-5 w-5 text-secondary" />
+              <span>Mi Perfil</span>
+            </CardTitle>
+            <CardDescription>
+              Gestiona tu información personal
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Completa tu perfil para una experiencia más personalizada
+              </p>
+              <div className="flex flex-col space-y-2">
+                <Button variant="outline" className="w-full" asChild>
+                  <Link to="/profile">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Ver Perfil
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" className="w-full text-xs" disabled>
+                  <Users className="mr-1 h-3 w-3" />
+                  Gestión de Equipo
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Getting Started */}
