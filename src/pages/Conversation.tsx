@@ -9,6 +9,7 @@ import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useTherapeuticAnalysis } from '@/hooks/useTherapeuticAnalysis';
 import SessionStatusPanel from '@/components/SessionStatusPanel';
 import ConversationInterface from '@/components/ConversationInterface';
+import ModernChatInterface from '@/components/ModernChatInterface';
 import ConversationSummaryPanel from '@/components/ConversationSummaryPanel';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import RealtimeChat from '@/components/RealtimeChat';
