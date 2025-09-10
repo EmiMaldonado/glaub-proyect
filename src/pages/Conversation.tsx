@@ -42,7 +42,7 @@ const Conversation: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState('');
   const [textInput, setTextInput] = useState('');
   const [currentTranscription, setCurrentTranscription] = useState('');
-  const [inputMode, setInputMode] = useState<'audio' | 'text'>('text');
+  const [inputMode, setInputMode] = useState<'voice' | 'text'>('text');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
@@ -57,6 +57,7 @@ const Conversation: React.FC = () => {
   const [conversationSummary, setConversationSummary] = useState('');
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [interactionProgress, setInteractionProgress] = useState(23);
   const [sessionQuality, setSessionQuality] = useState({
     audioQuality: 0.85,
     connectionStability: 0.92,
@@ -108,14 +109,22 @@ const Conversation: React.FC = () => {
   };
 
   // Handle input mode change
-  const handleInputModeChange = (mode: 'audio' | 'text') => {
+  const handleInputModeChange = (mode: 'voice' | 'text') => {
     setInputMode(mode);
     console.log('Input mode changed to:', mode);
     toast({
       title: "Modo de entrada actualizado",
-      description: `Ahora puedes usar ${mode === 'audio' ? 'solo voz' : 'solo texto'}`,
+      description: `Ahora puedes usar ${mode === 'voice' ? 'solo voz' : 'solo texto'}`,
     });
   };
+
+  // Update interaction progress based on messages
+  useEffect(() => {
+    const messageCount = messages.length;
+    const minRequired = 10; // Minimum messages for full interaction
+    const progress = Math.min(100, Math.max(23, (messageCount / minRequired) * 100));
+    setInteractionProgress(progress);
+  }, [messages]);
 
   // Handle text input
   const handleTextInputChange = (text: string) => {
@@ -479,103 +488,56 @@ const Conversation: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="flex h-screen">
-        
-        {/* Center Panel - Chat Interface */}
-        <div className="flex-1 flex flex-col">
-          <Tabs value={chatMode} onValueChange={(value) => setChatMode(value as 'traditional' | 'realtime')} className="h-full flex flex-col">
-            <div className="border-b px-4 py-2">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="realtime">Chat en Tiempo Real</TabsTrigger>
-                <TabsTrigger value="traditional">Chat Tradicional</TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <TabsContent value="realtime" className="flex-1 mt-0 p-4">
-              <RealtimeChat onSpeakingChange={setIsRealtimeSpeaking} />
-            </TabsContent>
-            
-            <TabsContent value="traditional" className="flex-1 mt-0">
-              <ConversationInterface
-                messages={messages}
-                isRecording={isRecording}
-                isSessionActive={isSessionActive}
-                isLoading={isLoading}
-                isAISpeaking={isSpeaking}
-                currentTranscription={currentTranscription}
-                textInput={textInput}
-                inputMode={inputMode}
-                onStartRecording={handleStartRecording}
-                onStopRecording={handleStopRecording}
-                onEndSession={handleEndSession}
-                onVoiceTranscription={handleVoiceTranscription}
-                onTextInputChange={handleTextInputChange}
-                onSendTextMessage={handleSendTextMessage}
-                onInputModeChange={handleInputModeChange}
-                formatTime={formatTime}
-                sessionTime={sessionTime}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
+    <div className="h-screen">
+      <ModernChatInterface
+        messages={messages.map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.created_at
+        }))}
+        isRecording={isRecording}
+        isLoading={isLoading}
+        isAISpeaking={isSpeaking}
+        inputMode={inputMode}
+        textInput={textInput}
+        interactionProgress={interactionProgress}
+        userName={user?.email?.split('@')[0] || "Usuario"}
+        onSendMessage={handleSendMessage}
+        onStartRecording={handleStartRecording}
+        onStopRecording={handleStopRecording}
+        onTextInputChange={handleTextInputChange}
+        onModeSelect={handleInputModeChange}
+      />
 
-        {/* Right Panel - Session Status */}
-        <SessionStatusPanel
-          sessionTime={sessionTime}
-          isSessionActive={isSessionActive}
-          isRecording={isRecording}
-          autoTTS={autoTTS}
-          inputMode={inputMode}
-          onToggleTTS={handleToggleTTS}
-          onInputModeChange={handleInputModeChange}
-          sessionQuality={sessionQuality}
-          formatTime={formatTime}
-          getTimeRemaining={getTimeRemaining}
-        />
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={() => setShowConfirmationModal(false)}
+        onConfirm={handleConfirmSendSummary}
+        categorizedSummary={categorizedSummary}
+      />
 
-        {/* Right Panel - Conversation Summary */}
-        <ConversationSummaryPanel
-          conversationSummary={conversationSummary}
-          conversationContext={conversationContext}
-          oceanSignals={conversation?.ocean_signals}
-          sessionTime={sessionTime}
-          messagesCount={messages.length}
-          isSessionCompleted={conversation?.status === 'completed'}
-          onSendSummary={handleSendSummary}
-          formatTime={formatTime}
-          isCompact={true}
-        />
-
-        {/* Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={showConfirmationModal}
-          onClose={() => setShowConfirmationModal(false)}
-          onConfirm={handleConfirmSendSummary}
-          categorizedSummary={categorizedSummary}
-        />
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. Se eliminará permanentemente toda la conversación y sus datos asociados.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={handleDeleteConversation} 
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar conversación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente toda la conversación y sus datos asociados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConversation} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
