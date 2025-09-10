@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
 import Conversation from "./pages/Conversation";
 import Profile from "./pages/Profile";
+import OnboardingFlow from "@/components/OnboardingFlow";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,14 @@ const App = () => (
                       <h1 className="text-2xl font-bold">Historial</h1>
                       <p>Esta funcionalidad se implementará en el siguiente nivel.</p>
                     </div>
+                  </AuthGuard>
+                } />
+                <Route path="/onboarding" element={
+                  <AuthGuard>
+                    <OnboardingFlow onComplete={(data) => {
+                      console.log('Onboarding completed with data:', data);
+                      window.location.href = '/dashboard';
+                    }} />
                   </AuthGuard>
                 } />
                 <Route path="/profile" element={
