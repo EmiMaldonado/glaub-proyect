@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Menu, Mic, MicOff, Send, PenTool, User, Brain, Paperclip, Square, Volume2, ArrowLeft } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import VoiceRecorder from '@/components/VoiceRecorder';
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -229,28 +230,15 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                       <Send className="w-4 h-4" />
                     </Button>
                   </div> : (/* Voice Mode */
-            <div className="flex flex-col items-center space-y-4">
-                    {isRecording ? <div className="relative">
-                        <Button onClick={onStopRecording} className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 text-white animate-pulse">
-                          <Square className="w-8 h-8" />
-                        </Button>
-                        <div className="absolute -inset-4 border-2 border-red-300 rounded-full animate-ping opacity-30"></div>
-                        <div className="absolute -inset-8 border border-red-200 rounded-full animate-ping opacity-20"></div>
-                      </div> : <Button onClick={onStartRecording} className="w-20 h-20 rounded-full bg-gradient-to-r from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white">
-                        <Mic className="w-8 h-8" />
-                      </Button>}
-                    <div className="text-center">
-                      <p className="font-medium text-gray-900">
-                        {isRecording ? 'Recording...' : 'Tap to speak'}
-                      </p>
-                      {isRecording && <div className="flex items-center justify-center mt-2 space-x-2">
-                          <div className="w-2 h-4 bg-red-500 rounded animate-pulse"></div>
-                          <div className="w-2 h-6 bg-red-400 rounded animate-pulse delay-75"></div>
-                          <div className="w-2 h-3 bg-red-500 rounded animate-pulse delay-150"></div>
-                          <div className="w-2 h-5 bg-red-400 rounded animate-pulse delay-200"></div>
-                        </div>}
-                    </div>
-                  </div>)}
+            <VoiceRecorder
+              onRecordingStart={onStartRecording}
+              onRecordingStop={onStopRecording}
+              onRecordingComplete={(audioBlob) => {
+                // Handle audio blob for future OpenAI integration
+                console.log('Audio recording completed:', audioBlob);
+              }}
+            />
+          )}
               </div>
             </div>
           </>)}
