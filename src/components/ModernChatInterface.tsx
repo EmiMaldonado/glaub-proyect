@@ -19,7 +19,7 @@ interface ModernChatInterfaceProps {
   isRecording: boolean;
   isLoading: boolean;
   isAISpeaking: boolean;
-  inputMode: 'text' | 'voice';
+  inputMode: 'text' | 'voice' | 'realtime';
   textInput: string;
   interactionProgress: number;
   userName?: string;
@@ -27,7 +27,7 @@ interface ModernChatInterfaceProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   onTextInputChange: (text: string) => void;
-  onModeSelect: (mode: 'text' | 'voice') => void;
+  onModeSelect: (mode: 'text' | 'voice' | 'realtime') => void;
   onEndSession?: () => void;
   onTranscriptionComplete?: (transcription: string) => void;
 }
@@ -69,7 +69,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
       handleSendText();
     }
   };
-  const handleModeSelect = (mode: 'text' | 'voice') => {
+  const handleModeSelect = (mode: 'text' | 'voice' | 'realtime') => {
     onModeSelect(mode);
     setShowWelcome(false);
   };
@@ -96,13 +96,17 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
           
           {/* Center Section - Mode Toggle */}
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <Button variant={inputMode === 'voice' ? 'default' : 'ghost'} size="sm" onClick={() => onModeSelect('voice')} className="text-xs px-3 py-1 h-7">
+            <Button variant={inputMode === 'voice' ? 'default' : 'ghost'} size="sm" onClick={() => onModeSelect('voice')} className="text-xs px-2 py-1 h-7">
               <Mic className="h-3 w-3 mr-1" />
               Voz
             </Button>
-            <Button variant={inputMode === 'text' ? 'default' : 'ghost'} size="sm" onClick={() => onModeSelect('text')} className="text-xs px-3 py-1 h-7">
+            <Button variant={inputMode === 'text' ? 'default' : 'ghost'} size="sm" onClick={() => onModeSelect('text')} className="text-xs px-2 py-1 h-7">
               <PenTool className="h-3 w-3 mr-1" />
-              Mensaje
+              Texto
+            </Button>
+            <Button variant={inputMode === 'realtime' ? 'default' : 'ghost'} size="sm" onClick={() => onModeSelect('realtime')} className="text-xs px-2 py-1 h-7">
+              ⚡
+              RT
             </Button>
           </div>
           

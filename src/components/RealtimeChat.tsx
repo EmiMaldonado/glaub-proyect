@@ -1,272 +1,135 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Mic, MicOff, Send, Loader2, Volume2, VolumeX } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { RealtimeChat as RealtimeChatClient, RealtimeMessage } from '@/utils/RealtimeAudio';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { Mic, MicOff, Send, Volume2, VolumeX, User, Brain } from 'lucide-react';
-import { AudioRecorder, encodeAudioForAPI, playAudioData } from '@/utils/RealtimeAudio';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  isAudio?: boolean;
-}
 
 interface RealtimeChatProps {
+  onMessageUpdate?: (messages: RealtimeMessage[]) => void;
   onSpeakingChange?: (speaking: boolean) => void;
+  className?: string;
 }
 
-const RealtimeChat: React.FC<RealtimeChatProps> = ({ onSpeakingChange }) => {
-  const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
+const RealtimeChat: React.FC<RealtimeChatProps> = ({
+  onMessageUpdate,
+  onSpeakingChange,
+  className = ''
+}) => {
+  const [messages, setMessages] = useState<RealtimeMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [textInput, setTextInput] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
   const [currentTranscript, setCurrentTranscript] = useState('');
+  const [textInput, setTextInput] = useState('');
+  const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
   
-  const wsRef = useRef<WebSocket | null>(null);
-  const audioRecorderRef = useRef<AudioRecorder | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const clientRef = useRef<RealtimeChatClient | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  const initializeAudioContext = async () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-      
-      // Resume audio context if suspended
-      if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume();
-      }
-    }
-  };
+  const handleMessage = useCallback((message: RealtimeMessage) => {
+    console.log('New message:', message);
+    setMessages(prev => {
+      const updated = [...prev, message];
+      onMessageUpdate?.(updated);
+      return updated;
+    });
+  }, [onMessageUpdate]);
 
-  const connectToChat = async () => {
-    try {
-      await initializeAudioContext();
-      
-      // Extract project ref from window location
-      const hostname = window.location.hostname;
-      let projectRef = '';
-      
-      if (hostname.includes('.lovable.dev')) {
-        // Development environment
-        projectRef = hostname.replace('.sandbox.lovable.dev', '').replace('.lovable.dev', '');
-      } else if (hostname.includes('.supabase.co')) {
-        // Production environment
-        projectRef = hostname.replace('.supabase.co', '');
-      } else {
-        // Fallback - try to extract from any subdomain
-        projectRef = hostname.split('.')[0];
-      }
-      
-      const wsUrl = `wss://${projectRef}.functions.supabase.co/realtime-chat`;
-      
-      console.log('Connecting to:', wsUrl);
-      wsRef.current = new WebSocket(wsUrl);
+  const handleSpeakingChange = useCallback((speaking: boolean) => {
+    console.log('Speaking state changed:', speaking);
+    setIsSpeaking(speaking);
+    onSpeakingChange?.(speaking);
+  }, [onSpeakingChange]);
 
-      wsRef.current.onopen = () => {
-        console.log('Connected to realtime chat');
-        setIsConnected(true);
-        toast({
-          title: "Conectado",
-          description: "Chat en tiempo real activado",
-        });
-      };
-
-      wsRef.current.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        console.log('Received message:', data.type);
-
-        switch (data.type) {
-          case 'response.audio.delta':
-            if (audioContextRef.current && data.delta) {
-              try {
-                const binaryString = atob(data.delta);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                  bytes[i] = binaryString.charCodeAt(i);
-                }
-                await playAudioData(audioContextRef.current, bytes);
-                setIsSpeaking(true);
-                onSpeakingChange?.(true);
-              } catch (error) {
-                console.error('Error playing audio:', error);
-              }
-            }
-            break;
-
-          case 'response.audio.done':
-            setIsSpeaking(false);
-            onSpeakingChange?.(false);
-            break;
-
-          case 'response.audio_transcript.delta':
-            if (data.delta) {
-              setCurrentTranscript(prev => prev + data.delta);
-            }
-            break;
-
-          case 'response.audio_transcript.done':
-            if (currentTranscript) {
-              setMessages(prev => [...prev, {
-                id: Date.now().toString(),
-                role: 'assistant',
-                content: currentTranscript,
-                timestamp: new Date(),
-                isAudio: true
-              }]);
-              setCurrentTranscript('');
-            }
-            break;
-
-          case 'conversation.item.input_audio_transcription.completed':
-            if (data.transcript) {
-              setMessages(prev => [...prev, {
-                id: Date.now().toString(),
-                role: 'user',
-                content: data.transcript,
-                timestamp: new Date(),
-                isAudio: true
-              }]);
-            }
-            break;
-
-          case 'error':
-            console.error('Chat error:', data.message);
-            toast({
-              title: "Error",
-              description: data.message,
-              variant: "destructive",
-            });
-            break;
-        }
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        toast({
-          title: "Error de conexión",
-          description: "No se pudo conectar al chat",
-          variant: "destructive",
-        });
-      };
-
-      wsRef.current.onclose = () => {
-        console.log('WebSocket closed');
-        setIsConnected(false);
-        setIsRecording(false);
-        setIsSpeaking(false);
-        onSpeakingChange?.(false);
-      };
-
-    } catch (error) {
-      console.error('Error connecting to chat:', error);
+  const handleConnectionChange = useCallback((connected: boolean) => {
+    console.log('Connection state changed:', connected);
+    setIsConnected(connected);
+    setIsConnecting(false);
+    
+    if (connected) {
+      setIsRecording(true);
       toast({
-        title: "Error",
-        description: "No se pudo inicializar el chat",
-        variant: "destructive",
+        title: "🎙️ Connected",
+        description: "Voice interface is ready",
+      });
+    } else {
+      setIsRecording(false);
+      toast({
+        title: "Disconnected",
+        description: "Voice interface connection lost",
+        variant: "destructive"
+      });
+    }
+  }, []);
+
+  const handleTranscriptUpdate = useCallback((transcript: string) => {
+    console.log('Transcript update:', transcript);
+    setCurrentTranscript(transcript);
+  }, []);
+
+  const startConversation = async () => {
+    if (isConnecting || isConnected) return;
+    
+    setIsConnecting(true);
+    
+    try {
+      clientRef.current = new RealtimeChatClient(
+        handleMessage,
+        handleSpeakingChange,
+        handleConnectionChange,
+        handleTranscriptUpdate
+      );
+      
+      await clientRef.current.connect();
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      setIsConnecting(false);
+      toast({
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : 'Failed to connect',
+        variant: "destructive"
       });
     }
   };
 
-  const disconnectFromChat = () => {
-    if (audioRecorderRef.current) {
-      audioRecorderRef.current.stop();
-      audioRecorderRef.current = null;
+  const endConversation = () => {
+    if (clientRef.current) {
+      clientRef.current.disconnect();
+      clientRef.current = null;
     }
-    
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-    
     setIsConnected(false);
     setIsRecording(false);
     setIsSpeaking(false);
-    onSpeakingChange?.(false);
-  };
-
-  const startRecording = async () => {
-    if (!wsRef.current || !audioContextRef.current) return;
-
-    try {
-      audioRecorderRef.current = new AudioRecorder((audioData) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          const encodedAudio = encodeAudioForAPI(audioData);
-          wsRef.current.send(JSON.stringify({
-            type: 'input_audio_buffer.append',
-            audio: encodedAudio
-          }));
-        }
-      });
-
-      await audioRecorderRef.current.start();
-      setIsRecording(true);
-      
-      toast({
-        title: "Grabando",
-        description: "Habla ahora...",
-      });
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo acceder al micrófono",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const stopRecording = () => {
-    if (audioRecorderRef.current) {
-      audioRecorderRef.current.stop();
-      audioRecorderRef.current = null;
-    }
-    setIsRecording(false);
+    setCurrentTranscript('');
   };
 
   const sendTextMessage = () => {
-    if (!wsRef.current || !textInput.trim()) return;
-
-    const message = {
-      type: 'conversation.item.create',
-      item: {
-        type: 'message',
-        role: 'user',
-        content: [
-          {
-            type: 'input_text',
-            text: textInput
-          }
-        ]
-      }
-    };
-
-    wsRef.current.send(JSON.stringify(message));
-    wsRef.current.send(JSON.stringify({ type: 'response.create' }));
-
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: 'user',
-      content: textInput,
-      timestamp: new Date(),
-      isAudio: false
-    }]);
-
-    setTextInput('');
+    if (!textInput.trim() || !isConnected || !clientRef.current) return;
+    
+    try {
+      clientRef.current.sendTextMessage(textInput.trim());
+      setTextInput('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -276,84 +139,158 @@ const RealtimeChat: React.FC<RealtimeChatProps> = ({ onSpeakingChange }) => {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (clientRef.current) {
+        clientRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Audio visualization bars
+  const generateAudioBars = () => {
+    const bars = [];
+    const numBars = 20;
+    
+    for (let i = 0; i < numBars; i++) {
+      const height = isSpeaking || isRecording 
+        ? Math.random() * 32 + 8 
+        : 8;
+      
+      bars.push(
+        <div
+          key={i}
+          className="bg-primary transition-all duration-200 rounded-full"
+          style={{
+            width: '3px',
+            height: `${height}px`,
+            opacity: isSpeaking || isRecording ? 0.8 : 0.3
+          }}
+        />
+      );
+    }
+    
+    return bars;
+  };
+
   return (
-    <Card className="h-full flex flex-col">
-      {/* Header */}
+    <div className={`flex flex-col h-full ${className}`}>
+      {/* Connection Status */}
       <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Chat en Tiempo Real</h3>
-          {isSpeaking && (
-            <div className="flex items-center gap-1 text-primary">
-              <Volume2 className="h-4 w-4 animate-pulse" />
-              <span className="text-sm">Hablando...</span>
+        <div className="flex items-center space-x-2">
+          <Badge variant={isConnected ? 'default' : 'secondary'}>
+            {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Disconnected'}
+          </Badge>
+          
+          {(isSpeaking || isRecording) && (
+            <div className="flex items-center space-x-1">
+              {isSpeaking ? <Volume2 className="w-4 h-4 text-primary" /> : <Mic className="w-4 h-4 text-success" />}
+              <div className="flex items-center space-x-1 h-8">
+                {generateAudioBars()}
+              </div>
             </div>
           )}
         </div>
-        
-        {!isConnected ? (
-          <Button onClick={connectToChat} size="sm">
-            Conectar
+
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setInputMode(inputMode === 'voice' ? 'text' : 'voice')}
+            disabled={!isConnected}
+          >
+            {inputMode === 'voice' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </Button>
-        ) : (
-          <Button onClick={disconnectFromChat} variant="outline" size="sm">
-            Desconectar
-          </Button>
-        )}
+          
+          {!isConnected ? (
+            <Button 
+              onClick={startConversation} 
+              disabled={isConnecting}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                'Start Conversation'
+              )}
+            </Button>
+          ) : (
+            <Button 
+              onClick={endConversation}
+              variant="outline"
+            >
+              End Conversation
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages Area */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message) => (
-            <div key={message.id} className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`flex gap-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  message.role === 'user' 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted'
-                }`}>
-                  {message.role === 'user' ? (
-                    <User className="h-4 w-4" />
-                  ) : (
-                    <Brain className="h-4 w-4" />
-                  )}
-                </div>
-                <Card className={`p-3 ${
-                  message.role === 'user' 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-card'
-                }`}>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium">
-                        {message.role === 'user' ? 'Tú' : 'Psicólogo Virtual'}
-                      </span>
-                      {message.isAudio && (
-                        <Volume2 className="h-3 w-3 opacity-70" />
+            <div
+              key={message.id}
+              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <Card className={`max-w-[80%] ${
+                message.type === 'user' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-secondary'
+              }`}>
+                <CardContent className="p-3">
+                  <div className="flex items-start space-x-2">
+                    {message.type === 'assistant' && (
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-semibold text-primary-foreground">
+                        AI
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {message.audioTranscript && (
+                        <Badge variant="outline" className="mt-2 text-xs">
+                          Voice
+                        </Badge>
                       )}
+                      <p className="text-xs opacity-70 mt-1">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </p>
                     </div>
-                    <p className="text-sm leading-relaxed">{message.content}</p>
                   </div>
-                </Card>
-              </div>
+                </CardContent>
+              </Card>
             </div>
           ))}
           
           {/* Current transcript display */}
           {currentTranscript && (
-            <div className="flex gap-3 justify-start opacity-70">
-              <div className="flex gap-3 max-w-[80%]">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-muted">
-                  <Brain className="h-4 w-4 animate-pulse" />
-                </div>
-                <Card className="p-3 bg-card border-primary/20">
-                  <div className="space-y-1">
-                    <span className="text-xs font-medium text-primary">Transcribiendo...</span>
-                    <p className="text-sm leading-relaxed">{currentTranscript}</p>
+            <div className="flex justify-center">
+              <Badge variant="outline" className="text-xs animate-pulse">
+                {currentTranscript}
+              </Badge>
+            </div>
+          )}
+          
+          {/* AI thinking indicator */}
+          {isSpeaking && (
+            <div className="flex justify-start">
+              <Card className="bg-secondary">
+                <CardContent className="p-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-semibold text-primary-foreground">
+                      AI
+                    </div>
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
                   </div>
-                </Card>
-              </div>
+                </CardContent>
+              </Card>
             </div>
           )}
           
@@ -361,42 +298,38 @@ const RealtimeChat: React.FC<RealtimeChatProps> = ({ onSpeakingChange }) => {
         </div>
       </ScrollArea>
 
-      {/* Input Area */}
-      {isConnected && (
-        <div className="border-t p-4">
-          <div className="flex items-end gap-3">
-            {/* Voice Input */}
-            <Button
-              onClick={isRecording ? stopRecording : startRecording}
-              variant={isRecording ? "destructive" : "outline"}
+      {/* Text Input Mode */}
+      {inputMode === 'text' && isConnected && (
+        <div className="p-4 border-t">
+          <div className="flex space-x-2">
+            <Input
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message..."
+              className="flex-1"
+            />
+            <Button 
+              onClick={sendTextMessage}
+              disabled={!textInput.trim()}
               size="icon"
-              className={isRecording ? "animate-pulse" : ""}
             >
-              {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              <Send className="w-4 h-4" />
             </Button>
-
-            {/* Text Input */}
-            <div className="flex-1 flex gap-2">
-              <Textarea
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Escribe tu mensaje aquí..."
-                className="min-h-[40px] max-h-32 resize-none"
-                disabled={!isConnected}
-              />
-              <Button 
-                onClick={sendTextMessage}
-                disabled={!textInput.trim() || !isConnected}
-                size="icon"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
         </div>
       )}
-    </Card>
+
+      {/* Voice Mode Status */}
+      {inputMode === 'voice' && isConnected && (
+        <div className="p-4 border-t text-center">
+          <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+            <Mic className="w-4 h-4" />
+            <span>{isRecording ? 'Listening...' : 'Voice mode active'}</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

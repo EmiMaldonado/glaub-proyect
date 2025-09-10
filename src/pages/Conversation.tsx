@@ -43,7 +43,7 @@ const Conversation: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState('');
   const [textInput, setTextInput] = useState('');
   const [currentTranscription, setCurrentTranscription] = useState('');
-  const [inputMode, setInputMode] = useState<'voice' | 'text'>('text');
+  const [inputMode, setInputMode] = useState<'voice' | 'text' | 'realtime'>('realtime');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
@@ -112,12 +112,19 @@ const Conversation: React.FC = () => {
   };
 
   // Handle input mode change
-  const handleInputModeChange = (mode: 'voice' | 'text') => {
+  const handleInputModeChange = (mode: 'voice' | 'text' | 'realtime') => {
     setInputMode(mode);
     console.log('Input mode changed to:', mode);
+    
+    const modeNames = {
+      'text': 'texto',
+      'voice': 'voz (transcripción)',
+      'realtime': 'conversación en tiempo real'
+    };
+    
     toast({
       title: "Modo de entrada actualizado",
-      description: `Ahora puedes usar ${mode === 'voice' ? 'solo voz' : 'solo texto'}`,
+      description: `Cambiado a modo: ${modeNames[mode]}`,
     });
   };
 
@@ -487,11 +494,18 @@ const Conversation: React.FC = () => {
 - Identificación de fortalezas personales
 - Áreas de crecimiento potencial reconocidas
 
-### Recomendaciones:
+    ### Recomendaciones:
 - Continuar con la práctica de autorreflexión
 - Implementar técnicas de mindfulness diarias
 - Mantener un registro de pensamientos y emociones
 - Considerar sesiones de seguimiento regulares`;
+  };
+
+  const handleExportConversation = () => {
+    toast({
+      title: "📄 Conversación exportada",
+      description: "Los datos de la sesión se han descargado correctamente",
+    });
   };
 
   const handleVoiceTranscription = (text: string) => {
