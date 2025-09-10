@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import AuthGuard from "@/components/AuthGuard";
@@ -17,6 +17,20 @@ import Profile from "./pages/Profile";
 import OnboardingFlow from "@/components/OnboardingFlow";
 
 const queryClient = new QueryClient();
+
+// Separate component to use useNavigate hook
+const OnboardingRoute = () => {
+  const navigate = useNavigate();
+  
+  return (
+    <AuthGuard>
+      <OnboardingFlow onComplete={(data) => {
+        console.log('Onboarding completed with data:', data);
+        navigate('/dashboard');
+      }} />
+    </AuthGuard>
+  );
+};
 
 const App = () => (
   <ErrorBoundary>
@@ -63,14 +77,7 @@ const App = () => (
                     </div>
                   </AuthGuard>
                 } />
-                <Route path="/onboarding" element={
-                  <AuthGuard>
-                    <OnboardingFlow onComplete={(data) => {
-                      console.log('Onboarding completed with data:', data);
-                      window.location.href = '/dashboard';
-                    }} />
-                  </AuthGuard>
-                } />
+                <Route path="/onboarding" element={<OnboardingRoute />} />
                 <Route path="/profile" element={
                   <AuthGuard>
                     <Navigation />

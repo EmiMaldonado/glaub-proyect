@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -297,7 +298,7 @@ const Profile: React.FC = () => {
             Completa tu primera sesión para generar tu perfil personalizado.
           </p>
           <Button asChild>
-            <a href="/conversation">Iniciar Primera Sesión</a>
+            <Link to="/conversation">Iniciar Primera Sesión</Link>
           </Button>
         </Card>
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -46,6 +47,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
   const [showWelcome, setShowWelcome] = useState(messages.length === 0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const navigate = useNavigate();
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: 'smooth'
@@ -82,7 +84,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
             <Button variant="ghost" size="sm" className="lg:hidden">
               <Menu className="h-5 w-5" />
             </Button>
-            <Button variant="default" size="sm" onClick={() => window.history.back()} className="bg-blue-500 hover:bg-blue-600 text-white">
+            <Button variant="default" size="sm" onClick={() => navigate('/dashboard')} className="bg-primary hover:bg-primary-600 text-primary-foreground">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-lg font-medium text-gray-900">Chat With AI</h1>
@@ -216,29 +218,41 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
             {/* Input Area */}
             <div className="bg-white border-t p-4">
               <div className="max-w-4xl mx-auto">
-                {inputMode === 'text' ? <div className="flex items-end space-x-3">
+                {inputMode === 'text' ? (
+                  <div className="flex items-end space-x-3">
                     <Button variant="ghost" size="sm">
                       <Paperclip className="w-4 h-4" />
                     </Button>
                     <div className="flex-1 relative">
-                      <Textarea ref={textareaRef} value={textInput} onChange={e => onTextInputChange(e.target.value)} onKeyPress={handleKeyPress} placeholder="Write your message" className="min-h-[48px] max-h-32 resize-none bg-gray-50 border-gray-200 rounded-lg" disabled={isLoading} />
+                      <Textarea 
+                        ref={textareaRef} 
+                        value={textInput} 
+                        onChange={e => onTextInputChange(e.target.value)} 
+                        onKeyPress={handleKeyPress} 
+                        placeholder="Write your message" 
+                        className="min-h-[48px] max-h-32 resize-none bg-gray-50 border-gray-200 rounded-lg" 
+                        disabled={isLoading} 
+                      />
                     </div>
-                    <Button variant="ghost" size="sm">
-                      <Mic className="w-4 h-4" />
-                    </Button>
-                    <Button onClick={handleSendText} disabled={!textInput.trim() || isLoading} className="bg-gray-800 hover:bg-gray-900 text-white w-10 h-10 rounded-lg">
+                    <Button 
+                      onClick={handleSendText} 
+                      disabled={!textInput.trim() || isLoading} 
+                      className="bg-primary hover:bg-primary-600 text-primary-foreground w-10 h-10 rounded-lg"
+                    >
                       <Send className="w-4 h-4" />
                     </Button>
-                  </div> : (/* Voice Mode */
-            <VoiceRecorder
-              onRecordingStart={onStartRecording}
-              onRecordingStop={onStopRecording}
-              onRecordingComplete={(audioBlob) => {
-                // Handle audio blob for future OpenAI integration
-                console.log('Audio recording completed:', audioBlob);
-              }}
-            />
-          )}
+                  </div>
+                ) : (
+                  /* Voice Mode */
+                  <VoiceRecorder
+                    onRecordingStart={onStartRecording}
+                    onRecordingStop={onStopRecording}
+                    onRecordingComplete={(audioBlob) => {
+                      // Handle audio blob for future OpenAI integration
+                      console.log('Audio recording completed:', audioBlob);
+                    }}
+                  />
+                )}
               </div>
             </div>
           </>)}

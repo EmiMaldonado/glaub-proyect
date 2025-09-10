@@ -1,4 +1,4 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Brain, Home, ArrowLeft } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
@@ -35,7 +36,7 @@ const NotFound = () => {
                 Volver al Inicio
               </Link>
             </Button>
-            <Button variant="outline" onClick={() => window.history.back()} className="w-full">
+            <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Página Anterior
             </Button>
