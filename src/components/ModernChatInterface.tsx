@@ -4,28 +4,14 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Menu, 
-  Mic, 
-  MicOff, 
-  Send, 
-  PenTool, 
-  User, 
-  Brain,
-  Paperclip,
-  Square,
-  Volume2,
-  ArrowLeft
-} from 'lucide-react';
+import { Menu, Mic, MicOff, Send, PenTool, User, Brain, Paperclip, Square, Volume2, ArrowLeft } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
-
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
 }
-
 interface ModernChatInterfaceProps {
   messages: Message[];
   isRecording: boolean;
@@ -41,7 +27,6 @@ interface ModernChatInterfaceProps {
   onTextInputChange: (text: string) => void;
   onModeSelect: (mode: 'text' | 'voice') => void;
 }
-
 const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
   messages,
   isRecording,
@@ -60,39 +45,34 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
   const [showWelcome, setShowWelcome] = useState(messages.length === 0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'smooth'
+    });
   }, [messages]);
-
   const handleSendText = () => {
     if (!textInput.trim()) return;
     onSendMessage(textInput);
     onTextInputChange('');
     setShowWelcome(false);
   };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendText();
     }
   };
-
   const handleModeSelect = (mode: 'text' | 'voice') => {
     onModeSelect(mode);
     setShowWelcome(false);
   };
-
   const getProgressMessage = () => {
     if (interactionProgress < 15) {
       return "Interaction Progress: Continue chatting to prevent session timeout";
     }
     return `Interaction Progress: ${interactionProgress}% - Continue chatting to prevent session timeout`;
   };
-
-  return (
-    <div className="flex flex-col h-screen bg-gray-50">
+  return <div className="flex flex-col h-screen bg-gray-50">
       {/* Main Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between max-w-4xl mx-auto relative">
@@ -109,37 +89,18 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
           
           {/* Center Section - Mode Toggle */}
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <Button
-              variant={inputMode === 'voice' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => onModeSelect('voice')}
-              className="text-xs px-3 py-1 h-7"
-            >
+            <Button variant={inputMode === 'voice' ? 'default' : 'ghost'} size="sm" onClick={() => onModeSelect('voice')} className="text-xs px-3 py-1 h-7">
               <Mic className="h-3 w-3 mr-1" />
               Voz
             </Button>
-            <Button
-              variant={inputMode === 'text' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => onModeSelect('text')}
-              className="text-xs px-3 py-1 h-7"
-            >
+            <Button variant={inputMode === 'text' ? 'default' : 'ghost'} size="sm" onClick={() => onModeSelect('text')} className="text-xs px-3 py-1 h-7">
               <PenTool className="h-3 w-3 mr-1" />
               Mensaje
             </Button>
           </div>
           
           {/* Right Section */}
-          <div className="flex items-center space-x-3">
-            <Button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">
-              Upgrade
-            </Button>
-            <div className="hidden md:flex space-x-1">
-              <div className="w-2 h-2 bg-gray-300 rounded-sm"></div>
-              <div className="w-2 h-2 bg-gray-300 rounded-sm"></div>
-              <div className="w-2 h-2 bg-gray-300 rounded-sm"></div>
-            </div>
-          </div>
+          
         </div>
       </header>
 
@@ -148,16 +109,9 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center space-x-3">
             <div className="flex-1">
-              <Progress 
-                value={interactionProgress} 
-                className="h-2 bg-gray-200" 
-              />
+              <Progress value={interactionProgress} className="h-2 bg-gray-200" />
             </div>
-            <span className={`text-sm whitespace-nowrap ${
-              interactionProgress < 15 
-                ? 'text-amber-600 animate-pulse' 
-                : 'text-gray-600'
-            }`}>
+            <span className={`text-sm whitespace-nowrap ${interactionProgress < 15 ? 'text-amber-600 animate-pulse' : 'text-gray-600'}`}>
               {getProgressMessage()}
             </span>
           </div>
@@ -166,9 +120,8 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
-        {showWelcome ? (
-          /* Welcome State */
-          <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
+        {showWelcome ? (/* Welcome State */
+      <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
             <div className="text-center space-y-8 max-w-2xl">
               {/* Avatar */}
               <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center">
@@ -189,10 +142,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
               {/* Interaction Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Text Card */}
-                <Card 
-                  className="p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
-                  onClick={() => handleModeSelect('text')}
-                >
+                <Card className="p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1" onClick={() => handleModeSelect('text')}>
                   <div className="space-y-4">
                     <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
                       <PenTool className="w-6 h-6 text-gray-600" />
@@ -209,10 +159,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                 </Card>
                 
                 {/* Voice Card */}
-                <Card 
-                  className="p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
-                  onClick={() => handleModeSelect('voice')}
-                >
+                <Card className="p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1" onClick={() => handleModeSelect('voice')}>
                   <div className="space-y-4">
                     <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
                       <Mic className="w-6 h-6 text-gray-600" />
@@ -229,43 +176,26 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                 </Card>
               </div>
             </div>
-          </div>
-        ) : (
-          /* Chat Mode */
-          <>
+          </div>) : (/* Chat Mode */
+      <>
             <ScrollArea className="flex-1 p-4">
               <div className="max-w-4xl mx-auto space-y-4">
-                {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {messages.map(message => <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`flex items-start space-x-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        message.role === 'user' ? 'bg-blue-500' : 'bg-white border border-gray-200'
-                      }`}>
-                        {message.role === 'user' ? (
-                          <User className="w-4 h-4 text-white" />
-                        ) : (
-                          <Brain className={`w-4 h-4 ${isAISpeaking ? 'text-purple-500 animate-pulse' : 'text-gray-600'}`} />
-                        )}
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${message.role === 'user' ? 'bg-blue-500' : 'bg-white border border-gray-200'}`}>
+                        {message.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Brain className={`w-4 h-4 ${isAISpeaking ? 'text-purple-500 animate-pulse' : 'text-gray-600'}`} />}
                       </div>
-                      <div className={`px-4 py-3 rounded-lg ${
-                        message.role === 'user' 
-                          ? 'bg-blue-500 text-white' 
-                          : 'bg-white border border-gray-200'
-                      }`}>
+                      <div className={`px-4 py-3 rounded-lg ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white border border-gray-200'}`}>
                         <p className="text-sm leading-relaxed">{message.content}</p>
-                        {message.role === 'assistant' && isAISpeaking && (
-                          <div className="flex items-center mt-2 text-purple-500">
+                        {message.role === 'assistant' && isAISpeaking && <div className="flex items-center mt-2 text-purple-500">
                             <Volume2 className="w-3 h-3 mr-1 animate-pulse" />
                             <span className="text-xs">Speaking...</span>
-                          </div>
-                        )}
+                          </div>}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
                 
-                {isLoading && (
-                  <div className="flex justify-start">
+                {isLoading && <div className="flex justify-start">
                     <div className="flex items-start space-x-3">
                       <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
                         <Brain className="w-4 h-4 text-gray-600 animate-pulse" />
@@ -277,8 +207,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  </div>}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
@@ -286,77 +215,46 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
             {/* Input Area */}
             <div className="bg-white border-t p-4">
               <div className="max-w-4xl mx-auto">
-                {inputMode === 'text' ? (
-                  <div className="flex items-end space-x-3">
+                {inputMode === 'text' ? <div className="flex items-end space-x-3">
                     <Button variant="ghost" size="sm">
                       <Paperclip className="w-4 h-4" />
                     </Button>
                     <div className="flex-1 relative">
-                      <Textarea
-                        ref={textareaRef}
-                        value={textInput}
-                        onChange={(e) => onTextInputChange(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="Write your message"
-                        className="min-h-[48px] max-h-32 resize-none bg-gray-50 border-gray-200 rounded-lg"
-                        disabled={isLoading}
-                      />
+                      <Textarea ref={textareaRef} value={textInput} onChange={e => onTextInputChange(e.target.value)} onKeyPress={handleKeyPress} placeholder="Write your message" className="min-h-[48px] max-h-32 resize-none bg-gray-50 border-gray-200 rounded-lg" disabled={isLoading} />
                     </div>
                     <Button variant="ghost" size="sm">
                       <Mic className="w-4 h-4" />
                     </Button>
-                    <Button 
-                      onClick={handleSendText}
-                      disabled={!textInput.trim() || isLoading}
-                      className="bg-gray-800 hover:bg-gray-900 text-white w-10 h-10 rounded-lg"
-                    >
+                    <Button onClick={handleSendText} disabled={!textInput.trim() || isLoading} className="bg-gray-800 hover:bg-gray-900 text-white w-10 h-10 rounded-lg">
                       <Send className="w-4 h-4" />
                     </Button>
-                  </div>
-                ) : (
-                  /* Voice Mode */
-                  <div className="flex flex-col items-center space-y-4">
-                    {isRecording ? (
-                      <div className="relative">
-                        <Button
-                          onClick={onStopRecording}
-                          className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 text-white animate-pulse"
-                        >
+                  </div> : (/* Voice Mode */
+            <div className="flex flex-col items-center space-y-4">
+                    {isRecording ? <div className="relative">
+                        <Button onClick={onStopRecording} className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 text-white animate-pulse">
                           <Square className="w-8 h-8" />
                         </Button>
                         <div className="absolute -inset-4 border-2 border-red-300 rounded-full animate-ping opacity-30"></div>
                         <div className="absolute -inset-8 border border-red-200 rounded-full animate-ping opacity-20"></div>
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={onStartRecording}
-                        className="w-20 h-20 rounded-full bg-gradient-to-r from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white"
-                      >
+                      </div> : <Button onClick={onStartRecording} className="w-20 h-20 rounded-full bg-gradient-to-r from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white">
                         <Mic className="w-8 h-8" />
-                      </Button>
-                    )}
+                      </Button>}
                     <div className="text-center">
                       <p className="font-medium text-gray-900">
                         {isRecording ? 'Recording...' : 'Tap to speak'}
                       </p>
-                      {isRecording && (
-                        <div className="flex items-center justify-center mt-2 space-x-2">
+                      {isRecording && <div className="flex items-center justify-center mt-2 space-x-2">
                           <div className="w-2 h-4 bg-red-500 rounded animate-pulse"></div>
                           <div className="w-2 h-6 bg-red-400 rounded animate-pulse delay-75"></div>
                           <div className="w-2 h-3 bg-red-500 rounded animate-pulse delay-150"></div>
                           <div className="w-2 h-5 bg-red-400 rounded animate-pulse delay-200"></div>
-                        </div>
-                      )}
+                        </div>}
                     </div>
-                  </div>
-                )}
+                  </div>)}
               </div>
             </div>
-          </>
-        )}
+          </>)}
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default ModernChatInterface;
