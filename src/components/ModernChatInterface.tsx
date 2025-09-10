@@ -29,6 +29,7 @@ interface ModernChatInterfaceProps {
   onTextInputChange: (text: string) => void;
   onModeSelect: (mode: 'text' | 'voice') => void;
   onEndSession?: () => void;
+  onTranscriptionComplete?: (transcription: string) => void;
 }
 const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
   messages,
@@ -44,7 +45,8 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
   onStopRecording,
   onTextInputChange,
   onModeSelect,
-  onEndSession
+  onEndSession,
+  onTranscriptionComplete
 }) => {
   const [showWelcome, setShowWelcome] = useState(messages.length === 0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -264,6 +266,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                       // Handle audio blob for future OpenAI integration
                       console.log('Audio recording completed:', audioBlob);
                     }}
+                    onTranscriptionComplete={onTranscriptionComplete}
                   />
                 )}
               </div>

@@ -2,24 +2,29 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Square } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import TranscriptionProcessor from './TranscriptionProcessor';
 
 interface VoiceRecorderProps {
   onRecordingComplete?: (audioBlob: Blob) => void;
   onRecordingStart?: () => void;
   onRecordingStop?: () => void;
+  onTranscriptionComplete?: (transcription: string) => void;
 }
 
-type RecordingState = 'idle' | 'recording' | 'stopped';
+type RecordingState = 'idle' | 'recording' | 'stopped' | 'processing';
 
 const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   onRecordingComplete,
   onRecordingStart,
-  onRecordingStop
+  onRecordingStop,
+  onTranscriptionComplete
 }) => {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [timer, setTimer] = useState(0);
   const [audioLevel, setAudioLevel] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [currentTranscription, setCurrentTranscription] = useState('');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -146,8 +151,9 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioBlob);
+        setRecordingState('processing');
         onRecordingComplete?.(audioBlob);
-        setRecordingState('stopped');
       };
 
       mediaRecorder.start(100); // Collect data every 100ms
@@ -195,8 +201,24 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
     toast({
       title: "⏹️ Grabación detenida",
-      description: "Audio guardado correctamente",
+      description: "Procesando audio...",
     });
+  };
+
+  const handleRecordingComplete = (audioBlob: Blob) => {
+    setAudioBlob(audioBlob);
+    onRecordingComplete?.(audioBlob);
+  };
+
+  const handleTranscriptionComplete = (transcription: string) => {
+    setCurrentTranscription(transcription);
+    onTranscriptionComplete?.(transcription);
+    setRecordingState('stopped');
+  };
+
+  const handleInsightsGenerated = (insights: any) => {
+    console.log('Insights generated:', insights);
+    // Here you could store insights in state or send to backend
   };
 
   const handleToggleRecording = () => {
@@ -204,10 +226,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       startRecording();
     } else if (recordingState === 'recording') {
       stopRecording();
-    } else {
+    } else if (recordingState === 'stopped') {
       // Reset to idle state
       setRecordingState('idle');
       setTimer(0);
+      setAudioBlob(null);
     }
   };
 
@@ -245,7 +268,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 p-8">
+    <div className="flex flex-col items-center justify-center space-y-6 p-4 max-w-6xl mx-auto">
       {/* Main Recording Button */}
       <div className="relative">
         {/* Pulsing background for recording state */}
@@ -291,13 +314,16 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         {recordingState === 'recording' && (
           <p className="text-lg font-medium text-primary animate-pulse">Recording...</p>
         )}
+        {recordingState === 'processing' && (
+          <p className="text-lg font-medium text-warning">Processing audio...</p>
+        )}
         {recordingState === 'stopped' && (
-          <p className="text-lg font-medium text-success">Recording complete</p>
+          <p className="text-lg font-medium text-success">Ready for new recording</p>
         )}
       </div>
 
       {/* Timer Display */}
-      {(recordingState === 'recording' || recordingState === 'stopped') && (
+      {(recordingState === 'recording' || recordingState === 'stopped' || recordingState === 'processing') && (
         <div className="text-2xl font-mono font-bold text-primary">
           {formatTime(timer)}
         </div>
@@ -307,6 +333,17 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       {recordingState === 'recording' && (
         <div className="flex items-center justify-center space-x-1 h-12">
           {generateWaveform()}
+        </div>
+      )}
+
+      {/* Transcription and Insights Processing */}
+      {(recordingState === 'processing' || audioBlob) && (
+        <div className="w-full max-w-4xl">
+          <TranscriptionProcessor
+            audioBlob={audioBlob}
+            onTranscriptionComplete={handleTranscriptionComplete}
+            onInsightsGenerated={handleInsightsGenerated}
+          />
         </div>
       )}
 

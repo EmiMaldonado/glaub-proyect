@@ -564,6 +564,7 @@ const Conversation: React.FC = () => {
         onTextInputChange={handleTextInputChange}
         onModeSelect={handleInputModeChange}
         onEndSession={handleEndSessionRequest}
+        onTranscriptionComplete={handleVoiceTranscription}
       />
 
       {/* Session Management Alerts */}
