@@ -13,6 +13,7 @@ import ModernChatInterface from '@/components/ModernChatInterface';
 import ConversationSummaryPanel from '@/components/ConversationSummaryPanel';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import RealtimeChat from '@/components/RealtimeChat';
+import { SessionEndConfirmation, NavigationWarning } from '@/components/SessionAlerts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Message {
@@ -57,6 +58,8 @@ const Conversation: React.FC = () => {
   const [conversationSummary, setConversationSummary] = useState('');
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showSessionEndConfirmation, setShowSessionEndConfirmation] = useState(false);
+  const [showNavigationWarning, setShowNavigationWarning] = useState(false);
   const [interactionProgress, setInteractionProgress] = useState(23);
   const [sessionQuality, setSessionQuality] = useState({
     audioQuality: 0.85,
@@ -117,6 +120,39 @@ const Conversation: React.FC = () => {
       description: `Ahora puedes usar ${mode === 'voice' ? 'solo voz' : 'solo texto'}`,
     });
   };
+
+  // Navigation warning handler
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isSessionActive && messages.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+        setShowNavigationWarning(true);
+        return '';
+      }
+    };
+
+    const handlePopState = () => {
+      if (isSessionActive && messages.length > 0) {
+        setShowNavigationWarning(true);
+        // Push the current state back to prevent navigation
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+
+    if (isSessionActive) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      window.addEventListener('popstate', handlePopState);
+      
+      // Push initial state to handle back button
+      window.history.pushState(null, '', window.location.pathname);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isSessionActive, messages.length]);
 
   // Update interaction progress based on messages
   useEffect(() => {
@@ -232,7 +268,7 @@ const Conversation: React.FC = () => {
           
           // Auto-end at 15 minutes
           if (minutes >= 15) {
-            handleEndSession();
+            handleEndSessionRequest();
             return prev;
           }
           
@@ -383,6 +419,25 @@ const Conversation: React.FC = () => {
     });
   };
 
+  const handleEndSessionRequest = () => {
+    setShowSessionEndConfirmation(true);
+  };
+
+  const handleConfirmEndSession = () => {
+    setShowSessionEndConfirmation(false);
+    handleEndSession();
+  };
+
+  const handleNavigationStay = () => {
+    setShowNavigationWarning(false);
+  };
+
+  const handleNavigationLeave = () => {
+    setShowNavigationWarning(false);
+    setIsSessionActive(false);
+    navigate('/dashboard');
+  };
+
   const handleDeleteConversation = async () => {
     if (!conversation) return;
     
@@ -508,6 +563,20 @@ const Conversation: React.FC = () => {
         onStopRecording={handleStopRecording}
         onTextInputChange={handleTextInputChange}
         onModeSelect={handleInputModeChange}
+        onEndSession={handleEndSessionRequest}
+      />
+
+      {/* Session Management Alerts */}
+      <SessionEndConfirmation
+        isOpen={showSessionEndConfirmation}
+        onClose={() => setShowSessionEndConfirmation(false)}
+        onConfirm={handleConfirmEndSession}
+      />
+
+      <NavigationWarning
+        isOpen={showNavigationWarning}
+        onStay={handleNavigationStay}
+        onLeave={handleNavigationLeave}
       />
 
       {/* Confirmation Modal */}

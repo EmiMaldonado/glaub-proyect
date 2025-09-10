@@ -28,6 +28,7 @@ interface ModernChatInterfaceProps {
   onStopRecording: () => void;
   onTextInputChange: (text: string) => void;
   onModeSelect: (mode: 'text' | 'voice') => void;
+  onEndSession?: () => void;
 }
 const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
   messages,
@@ -42,7 +43,8 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
   onStartRecording,
   onStopRecording,
   onTextInputChange,
-  onModeSelect
+  onModeSelect,
+  onEndSession
 }) => {
   const [showWelcome, setShowWelcome] = useState(messages.length === 0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -103,7 +105,18 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
           </div>
           
           {/* Right Section */}
-          
+          <div className="flex items-center space-x-2">
+            {messages.length > 0 && onEndSession && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEndSession}
+                className="text-xs px-3 py-1 h-7 text-error border-error/20 hover:bg-error/5"
+              >
+                End Session
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
