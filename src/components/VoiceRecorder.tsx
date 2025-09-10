@@ -230,7 +230,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       bars.push(
         <div
           key={i}
-          className="bg-blue-400 transition-all duration-100"
+          className="bg-primary transition-all duration-100"
           style={{
             width: '3px',
             height: `${height}px`,
@@ -251,7 +251,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         {/* Pulsing background for recording state */}
         {recordingState === 'recording' && (
           <div 
-            className="absolute inset-0 bg-blue-500 rounded-full animate-pulse"
+            className="absolute inset-0 bg-primary rounded-full animate-pulse"
             style={{
               transform: `scale(${1.2 + audioLevel * 0.3})`,
               opacity: 0.3
@@ -262,12 +262,12 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         <Button
           onClick={handleToggleRecording}
           disabled={permissionGranted === false}
-          className={`relative z-10 w-32 h-32 rounded-full transition-all duration-300 ${
+          className={`relative z-10 w-32 h-32 rounded-full transition-all duration-300 shadow-primary ${
             recordingState === 'idle'
-              ? 'bg-blue-500 hover:bg-blue-600 text-white'
+              ? 'bg-primary hover:bg-primary-600 text-primary-foreground'
               : recordingState === 'recording'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-500 hover:bg-gray-600 text-white'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary hover:bg-secondary-hover text-secondary-foreground'
           }`}
           style={{
             transform: recordingState === 'recording' 
@@ -276,7 +276,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
           }}
         >
           {recordingState === 'recording' ? (
-            <Square className="w-8 h-8 text-red-500" />
+            <Square className="w-8 h-8 text-error" />
           ) : (
             <Mic className="w-8 h-8" />
           )}
@@ -286,19 +286,19 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       {/* Status Text */}
       <div className="text-center">
         {recordingState === 'idle' && (
-          <p className="text-lg font-medium text-gray-700">Tap to record</p>
+          <p className="text-lg font-medium text-foreground">Tap to record</p>
         )}
         {recordingState === 'recording' && (
-          <p className="text-lg font-medium text-blue-600 animate-pulse">Recording...</p>
+          <p className="text-lg font-medium text-primary animate-pulse">Recording...</p>
         )}
         {recordingState === 'stopped' && (
-          <p className="text-lg font-medium text-green-600">Recording complete</p>
+          <p className="text-lg font-medium text-success">Recording complete</p>
         )}
       </div>
 
       {/* Timer Display */}
       {(recordingState === 'recording' || recordingState === 'stopped') && (
-        <div className="text-2xl font-mono font-bold text-blue-600">
+        <div className="text-2xl font-mono font-bold text-primary">
           {formatTime(timer)}
         </div>
       )}
@@ -312,7 +312,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
       {/* Permission Error State */}
       {permissionGranted === false && (
-        <div className="text-center text-red-500 max-w-sm">
+        <div className="text-center text-error max-w-sm">
           <p className="text-sm">
             Se necesita acceso al micrófono para usar esta función. 
             Por favor, permite el acceso y recarga la página.
