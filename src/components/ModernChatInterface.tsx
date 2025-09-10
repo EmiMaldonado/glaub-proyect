@@ -124,8 +124,8 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
       <div className="flex-1 flex items-center justify-center bg-gray-50 p-8">
             <div className="text-center space-y-8 max-w-2xl">
               {/* Avatar */}
-              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center">
-                <Brain className="w-8 h-8 text-white" />
+              <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-r from-primary to-primary-glow flex items-center justify-center shadow-elegant">
+                <Brain className="w-12 h-12 text-white" />
               </div>
               
               {/* Welcome Text */}
