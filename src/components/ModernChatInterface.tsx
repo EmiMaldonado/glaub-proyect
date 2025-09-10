@@ -81,7 +81,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
             <Button variant="ghost" size="sm" className="lg:hidden">
               <Menu className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+            <Button variant="default" size="sm" onClick={() => window.history.back()} className="bg-blue-500 hover:bg-blue-600 text-white">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-lg font-medium text-gray-900">Chat With AI</h1>
