@@ -14,7 +14,8 @@ import {
   Brain,
   Paperclip,
   Square,
-  Volume2
+  Volume2,
+  ArrowLeft
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -94,13 +95,38 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Main Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
+        <div className="flex items-center justify-between max-w-4xl mx-auto relative">
           {/* Left Section */}
           <div className="flex items-center space-x-3">
             <Button variant="ghost" size="sm" className="lg:hidden">
               <Menu className="h-5 w-5" />
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
             <h1 className="text-lg font-medium text-gray-900">Chat With AI</h1>
+          </div>
+          
+          {/* Center Section - Mode Toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <Button
+              variant={inputMode === 'voice' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => onModeSelect('voice')}
+              className="text-xs px-3 py-1 h-7"
+            >
+              <Mic className="h-3 w-3 mr-1" />
+              Voz
+            </Button>
+            <Button
+              variant={inputMode === 'text' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => onModeSelect('text')}
+              className="text-xs px-3 py-1 h-7"
+            >
+              <PenTool className="h-3 w-3 mr-1" />
+              Mensaje
+            </Button>
           </div>
           
           {/* Right Section */}
