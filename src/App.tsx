@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
 import Conversation from "./pages/Conversation";
 import Profile from "./pages/Profile";
+import SessionRecap from "./pages/SessionRecap";
 import OnboardingFlow from "@/components/OnboardingFlow";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,11 @@ const App = () => (
                   <AuthGuard>
                     <Navigation />
                     <Profile />
+                  </AuthGuard>
+                } />
+                <Route path="/session-recap" element={
+                  <AuthGuard>
+                    <SessionRecap />
                   </AuthGuard>
                 } />
                 <Route path="/settings" element={
