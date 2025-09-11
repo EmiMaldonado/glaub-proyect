@@ -37,7 +37,7 @@ const ServerError = () => {
             </Button>
           </div>
           <div className="text-xs text-muted-foreground">
-            Si el problema persiste, contacta a soporte@personainsights.com
+            Si el problema persiste, contacta a soporte@glaub.com
           </div>
         </CardContent>
       </Card>

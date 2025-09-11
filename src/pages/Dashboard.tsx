@@ -173,7 +173,7 @@ const Dashboard = () => {
             <span>Primeros Pasos</span>
           </CardTitle>
           <CardDescription>
-            Te ayudamos a comenzar con PersonaInsights
+            Te ayudamos a comenzar con Gläub
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
