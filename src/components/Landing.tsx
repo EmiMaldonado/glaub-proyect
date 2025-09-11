@@ -1,247 +1,245 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Users, Shield, TrendingUp, MessageCircle, Target, CheckCircle, ArrowRight } from "lucide-react";
+import { User, Users, Building, MessageCircle, Brain, Shield, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import heroImage from "@/assets/hero-image.jpg";
 
 const Landing = () => {
   return (
-    <div className="min-h-screen">{/* Navigation is handled by App.tsx */}
+    <div className="min-h-screen">
+      {/* Header */}
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-border">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <img 
+              src="/logo-color.svg" 
+              alt="Gläub" 
+              className="h-8 w-auto"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = 'none';
+                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block';
+              }}
+            />
+            <span className="text-xl font-bold text-foreground hidden">Gläub</span>
+          </div>
+          <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center">
+            <span className="text-white text-sm font-medium">EM</span>
+          </div>
+        </div>
+      </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <Badge variant="secondary" className="w-fit">
-                🚀 Ahora en Beta
-              </Badge>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                Descubre la personalidad de tu equipo a través de 
-                <span className="bg-gradient-hero bg-clip-text text-transparent"> conversaciones empáticas</span>
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-2xl">
-                Una plataforma que ayuda a empresas y managers a comprender las soft skills y personalidad 
-                de empleados y candidatos mediante IA conversacional, generando insights basados en ciencia 
-                para motivar y desarrollar mejor a cada persona.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="empathy" size="lg" className="text-lg px-8" asChild>
+      <section className="relative min-h-screen flex items-center bg-gradient-to-br from-primary to-primary-600">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-primary-600/90"></div>
+        <div className="relative container mx-auto px-4 py-16 text-center text-white">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <Badge className="bg-warning text-warning-foreground px-4 py-2 text-sm font-medium rounded-full">
+              ⚠️ This is not a real company, this is Master's thesis project
+            </Badge>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+              Build Stronger Teams, One Conversation at a Time
+            </h1>
+            
+            <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto">
+              Get personalized insights to help every individual thrive. It's not about evaluating, it's about understanding.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                size="lg" 
+                className="bg-primary text-primary-foreground hover:bg-primary-700 text-lg px-8"
+                asChild
+              >
                 <Link to="/auth?mode=signup">
-                  Empezar Conversación
-                  <ArrowRight className="h-5 w-5" />
+                  Start conversation →
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8" asChild>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-primary text-lg px-8"
+                asChild
+              >
                 <Link to="/auth">
-                  Ver Demo
+                  Register
                 </Link>
               </Button>
-            </div>
-            <div className="flex items-center space-x-8 text-sm text-muted-foreground">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                <span>10-15 min por sesión</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                <span>Control total de privacidad</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                <span>Basado en modelo OCEAN</span>
-              </div>
-            </div>
-          </div>
-          <div className="relative">
-            <img 
-              src={heroImage}
-              alt="Plataforma de insights de personalidad"
-              className="rounded-2xl shadow-strong w-full h-auto"
-            />
-            <div className="absolute -top-4 -right-4 bg-accent text-accent-foreground px-4 py-2 rounded-full text-sm font-medium shadow-medium">
-              🧠 IA Empática
             </div>
           </div>
         </div>
       </section>
 
-      {/* Value Propositions */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center space-y-4 mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground">
-            Para cada miembro de tu organización
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Una solución completa que beneficia a empleados, managers y empresas
-          </p>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="shadow-soft hover:shadow-medium transition-smooth">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
-                <Users className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <CardTitle>Para Empleados/Candidatos</CardTitle>
-              <CardDescription>Autoconocimiento sin sentirse evaluado</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Conversaciones empáticas y naturales</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Desarrollo personal basado en evidencia</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Control total sobre información compartida</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Historial de evolución personal</span>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Benefits Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center space-y-4 mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground">
+              For every member of the company
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Discover a comprehensive solution that benefits employees, managers, and companies alike
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <User className="h-8 w-8 text-primary-foreground" />
+                </div>
+                <CardTitle className="text-xl font-semibold">For Employees</CardTitle>
+                <CardDescription>Self-awareness without feeling evaluated</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Natural, empathetic conversations</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Evidence-based personal development</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Complete control over shared information</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Personal evolution history</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-soft hover:shadow-medium transition-smooth">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-hero rounded-lg flex items-center justify-center mb-4">
-                <Target className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <CardTitle>Para Managers</CardTitle>
-              <CardDescription>Insights accionables para motivar mejor</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Recomendaciones específicas por persona</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Dashboard centralizado del equipo</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Preparación efectiva para 1-1s</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Estrategias de motivación personalizadas</span>
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-primary-foreground" />
+                </div>
+                <CardTitle className="text-xl font-semibold">For Managers</CardTitle>
+                <CardDescription>Actionable insights to better motivate</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Person-specific recommendations</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Centralized team dashboard</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Effective 1-1 preparation</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Personalized motivation strategies</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-soft hover:shadow-medium transition-smooth">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-accent rounded-lg flex items-center justify-center mb-4">
-                <TrendingUp className="h-6 w-6 text-accent-foreground" />
-              </div>
-              <CardTitle>Para Empresas</CardTitle>
-              <CardDescription>Cultura organizacional mejorada</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Mejor fit cultural en contrataciones</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Desarrollo de talento más efectivo</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Reducción de rotación</span>
-              </div>
-              <div className="flex items-start space-x-3">
-                <CheckCircle className="h-4 w-4 text-primary mt-1 flex-shrink-0" />
-                <span className="text-sm">Equipos más productivos y satisfechos</span>
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Building className="h-8 w-8 text-primary-foreground" />
+                </div>
+                <CardTitle className="text-xl font-semibold">For Companies</CardTitle>
+                <CardDescription>Improve organizational culture</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Better cultural fit in hiring</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">More effective talent development</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">Reduced turnover</span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                  <span className="text-sm">More productive and satisfied teams</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
 
       {/* How it Works */}
-      <section className="container mx-auto px-4 py-16 bg-muted/30 rounded-3xl my-16">
-        <div className="text-center space-y-4 mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground">
-            Cómo funciona
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Un proceso simple y empático en tres pasos
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto shadow-medium">
-              <MessageCircle className="h-8 w-8 text-primary-foreground" />
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center space-y-4 mb-16">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              <MessageCircle className="h-6 w-6 text-primary" />
+              <span className="text-lg font-medium text-primary">How it works</span>
             </div>
-            <h3 className="text-xl font-semibold text-foreground">1. Conversación Natural</h3>
-            <p className="text-muted-foreground">
-              Charla de 10-15 minutos con nuestra IA empática. Sin preguntas intimidantes, 
-              solo una conversación fluida y natural.
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground">
+              A simple and empathetic three-step process
+            </h2>
           </div>
 
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-gradient-hero rounded-full flex items-center justify-center mx-auto shadow-medium">
-              <Brain className="h-8 w-8 text-primary-foreground" />
+          <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+            <div className="text-center space-y-6">
+              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-primary-foreground">
+                1
+              </div>
+              <h3 className="text-2xl font-semibold text-foreground">Natural Conversation</h3>
+              <p className="text-muted-foreground text-lg leading-relaxed">
+                10-15 minute empathetic chat with our AI. No intimidating questions, 
+                just a fluid and natural conversation.
+              </p>
             </div>
-            <h3 className="text-xl font-semibold text-foreground">2. Análisis OCEAN</h3>
-            <p className="text-muted-foreground">
-              Generamos tu perfil de personalidad basado en el modelo científico Big Five (OCEAN), 
-              con insights profundos y recomendaciones personalizadas.
-            </p>
-          </div>
 
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-gradient-accent rounded-full flex items-center justify-center mx-auto shadow-medium">
-              <Shield className="h-8 w-8 text-accent-foreground" />
+            <div className="text-center space-y-6">
+              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-primary-foreground">
+                2
+              </div>
+              <h3 className="text-2xl font-semibold text-foreground">OCEAN Analysis and Insights</h3>
+              <p className="text-muted-foreground text-lg leading-relaxed">
+                We generate your personality profile based on the scientific Big Five (OCEAN) model, 
+                with deep insights and personalized recommendations.
+              </p>
             </div>
-            <h3 className="text-xl font-semibold text-foreground">3. Control Total</h3>
-            <p className="text-muted-foreground">
-              Tú decides qué compartir y con quién. Control granular de privacidad 
-              y transparencia completa sobre tus datos.
-            </p>
-          </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center space-y-8 bg-gradient-hero rounded-3xl p-12 text-primary-foreground shadow-strong">
-          <h2 className="text-3xl md:text-4xl font-bold">
-            ¿Listo para conocer mejor a tu equipo?
-          </h2>
-          <p className="text-lg opacity-90 max-w-2xl mx-auto">
-            Únete a la beta gratuita y descubre cómo las conversaciones empáticas 
-            pueden transformar la forma en que entiendes y motivas a tu equipo.
-          </p>
-          <Button variant="accent" size="lg" className="text-lg px-8 shadow-medium" asChild>
-            <Link to="/auth?mode=signup">
-              Comenzar Beta Gratuita
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-          </Button>
+            <div className="text-center space-y-6">
+              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-primary-foreground">
+                3
+              </div>
+              <h3 className="text-2xl font-semibold text-foreground">Share with Total Control</h3>
+              <p className="text-muted-foreground text-lg leading-relaxed">
+                You decide what to share and with whom. Granular privacy control 
+                and complete transparency about your data.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 border-t">
-        <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <div className="flex items-center space-x-2">
-            <Brain className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-foreground">PersonaInsights</span>
+      <footer className="py-12 bg-gray-900 text-white">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/logo-dark.svg" 
+                alt="Gläub" 
+                className="h-8 w-auto"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block';
+                }}
+              />
+              <span className="text-xl font-bold hidden">Gläub</span>
+            </div>
+            <p className="text-sm text-gray-400 text-center">
+              This platform is part of a Master's thesis research project exploring AI-driven personality insights in workplace settings.
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © 2025 PersonaInsights. Desarrollando el futuro de la comprensión humana.
-          </p>
         </div>
       </footer>
     </div>
