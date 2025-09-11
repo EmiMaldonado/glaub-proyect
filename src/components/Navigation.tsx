@@ -24,21 +24,9 @@ const Navigation = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
-          
           <Link to="/" className="flex items-center space-x-2">
-  <img 
-    src="/logo-color.svg" 
-    alt="Gläub" 
-    className="h-8 w-auto"
-    onError={(e) => {
-      e.target.style.display = 'none';
-      e.target.nextSibling.style.display = 'flex';
-    }}
-  />
-  <div className="hidden">
-    <Brain className="h-8 w-8 text-primary" />
-    <span className="text-xl font-bold text-foreground">Gläub</span>
-            </div>
+            <Brain className="h-8 w-8 text-primary" />
+            <span className="text-xl font-bold text-foreground">Gläub</span>
           </Link>
           
           <div className="flex items-center space-x-4">
