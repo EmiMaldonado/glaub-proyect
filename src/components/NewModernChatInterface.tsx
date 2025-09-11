@@ -86,11 +86,20 @@ const NewModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
 
       {/* Messages Area or Realtime Chat */}
       {inputMode === 'realtime' ? (
-        <RealtimeChat 
-          onMessageUpdate={setRealtimeMessages}
-          onSpeakingChange={setIsAISpeaking}
-          className="flex-1"
-        />
+        <div className="flex-1">
+          <RealtimeChat 
+            onTranscriptionUpdate={(text: string, isUser: boolean) => {
+              const newMessage = {
+                id: Date.now().toString(),
+                role: isUser ? 'user' : 'assistant',
+                content: text,
+                created_at: new Date().toISOString()
+              };
+              setRealtimeMessages(prev => [...prev, newMessage]);
+            }}
+            onSpeakingChange={setIsAISpeaking}
+          />
+        </div>
       ) : (
         <>
           <ScrollArea className="flex-1 p-4">
