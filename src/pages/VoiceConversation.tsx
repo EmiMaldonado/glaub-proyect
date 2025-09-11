@@ -251,7 +251,7 @@ const VoiceConversation: React.FC = () => {
         description: "La sesión de voz ha sido guardada",
       });
 
-      navigate('/dashboard');
+      navigate(`/session-summary?conversation_id=${conversation.id}`);
     } catch (error) {
       console.error('Error ending session:', error);
       toast({

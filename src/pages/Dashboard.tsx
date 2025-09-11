@@ -1,7 +1,9 @@
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { 
   MessageCircle, 
   Brain, 
@@ -10,43 +12,94 @@ import {
   Calendar,
   Plus,
   History,
-  Settings
+  Settings,
+  Target,
+  Lightbulb,
+  Share2,
+  UserCheck
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Progress } from "@/components/ui/progress";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [lastConversation, setLastConversation] = useState<any>(null);
+  const [oceanProfile, setOceanProfile] = useState<any>(null);
+  const [sharingSettings, setSharingSettings] = useState({
+    profile: false,
+    insights: false,
+    strengths: false,
+    opportunities: false,
+    manager: false,
+    team: false
+  });
+  const [stats, setStats] = useState({
+    totalConversations: 0,
+    completedConversations: 0,
+    sharedInsights: 0,
+    teamMembers: 0
+  });
 
-  const stats = [
-    {
-      title: "Conversaciones",
-      value: "0",
-      description: "Total realizadas",
-      icon: MessageCircle,
-      color: "text-primary"
-    },
-    {
-      title: "Perfil OCEAN",
-      value: "Pendiente",
-      description: "Estado actual",
-      icon: Brain,
-      color: "text-secondary"
-    },
-    {
-      title: "Insights",
-      value: "0",
-      description: "Compartidos",
-      icon: TrendingUp,
-      color: "text-accent"
-    },
-    {
-      title: "Equipo",
-      value: "0",
-      description: "Miembros",
-      icon: Users,
-      color: "text-muted-foreground"
+  useEffect(() => {
+    if (user) {
+      loadDashboardData();
     }
-  ];
+  }, [user]);
+
+  const loadDashboardData = async () => {
+    if (!user) return;
+
+    try {
+      // Load conversations count
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id, status, insights, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      // Load last conversation with insights
+      const { data: lastConv } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          key_insights (
+            insights,
+            personality_notes,
+            next_steps
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (lastConv) {
+        setLastConversation(lastConv);
+        if (lastConv.insights) {
+          setOceanProfile(lastConv.insights);
+        }
+      }
+
+      setStats({
+        totalConversations: conversations?.length || 0,
+        completedConversations: conversations?.filter(c => c.status === 'completed').length || 0,
+        sharedInsights: 0, // TODO: implement sharing tracking
+        teamMembers: 0 // TODO: implement team member count
+      });
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    }
+  };
+
+  const handleSharingToggle = (setting: string) => {
+    setSharingSettings(prev => ({
+      ...prev,
+      [setting]: !prev[setting as keyof typeof prev]
+    }));
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
@@ -56,182 +109,291 @@ const Dashboard = () => {
           ¡Hola, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! 👋
         </h1>
         <p className="text-lg text-muted-foreground">
-          Bienvenido a tu dashboard personal. Aquí puedes ver tu progreso y comenzar nuevas conversaciones.
+          Tu espacio personal para el autoconocimiento y desarrollo profesional.
         </p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card className="shadow-soft hover:shadow-medium transition-smooth">
-          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <MessageCircle className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <CardTitle className="text-lg">Nueva Conversación</CardTitle>
-            </div>
-            <Badge variant="secondary" className="ml-auto">
-              10-15 min
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="mb-4">
-              Inicia una conversación empática con nuestra IA para descubrir nuevos insights sobre tu personalidad.
-            </CardDescription>
-            <Button variant="empathy" className="w-full" asChild>
-              <Link to="/conversation">
-                <Plus className="mr-2 h-4 w-4" />
-                Comenzar Conversación
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-soft hover:shadow-medium transition-smooth">
-          <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-hero rounded-lg flex items-center justify-center">
-                <History className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <CardTitle className="text-lg">Historial</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="mb-4">
-              Revisa tus conversaciones anteriores y observa la evolución de tu perfil OCEAN a lo largo del tiempo.
-            </CardDescription>
-            <Button variant="outline" className="w-full" asChild>
-              <Link to="/history">
-                <Calendar className="mr-2 h-4 w-4" />
-                Ver Historial
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Summary Highlights & Profile */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <Card className="md:col-span-2 shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <span>Últimos Insights</span>
-            </CardTitle>
-            <CardDescription>
-              Highlights de tu conversación más reciente
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-sm text-muted-foreground">
-              No hay conversaciones completadas aún. Inicia tu primera conversación para ver insights personalizados aquí.
-            </div>
-            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-              <MessageCircle className="h-3 w-3" />
-              <span>Los insights aparecerán después de completar una conversación</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Settings className="h-5 w-5 text-secondary" />
-              <span>Mi Perfil</span>
-            </CardTitle>
-            <CardDescription>
-              Gestiona tu información personal
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Completa tu perfil para una experiencia más personalizada
+      {/* Section 1: Nueva Conversación - Prominent */}
+      <Card className="bg-gradient-primary text-primary-foreground shadow-elegant">
+        <CardContent className="p-8">
+          <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              <h2 className="text-2xl font-bold">Nueva Conversación</h2>
+              <p className="text-primary-foreground/90">
+                Inicia una sesión de 10-15 minutos para descubrir nuevos insights sobre tu personalidad
               </p>
-              <div className="flex flex-col space-y-2">
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to="/profile">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Ver Perfil
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="sm" className="w-full text-xs" disabled>
-                  <Users className="mr-1 h-3 w-3" />
-                  Gestión de Equipo
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Getting Started */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Brain className="h-5 w-5 text-primary" />
-            <span>Primeros Pasos</span>
-          </CardTitle>
-          <CardDescription>
-            Te ayudamos a comenzar con Gläub
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-bold">
-                  1
-                </div>
-                <h3 className="font-semibold">Completa tu perfil</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Añade información básica para personalizar tu experiencia.
-              </p>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/profile">
-                  <Settings className="mr-1 h-3 w-3" />
-                  Ir al perfil
-                </Link>
-              </Button>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-secondary rounded-full flex items-center justify-center text-secondary-foreground text-sm font-bold">
-                  2
-                </div>
-                <h3 className="font-semibold">Primera conversación</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Inicia tu primera conversación para generar tu perfil OCEAN.
-              </p>
-              <Button variant="outline" size="sm" asChild>
+              <Button 
+                variant="secondary" 
+                size="lg" 
+                className="mt-4"
+                asChild
+              >
                 <Link to="/conversation">
-                  <MessageCircle className="mr-1 h-3 w-3" />
-                  Comenzar
+                  <Plus className="mr-2 h-5 w-5" />
+                  Comenzar Ahora
                 </Link>
               </Button>
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center text-accent-foreground text-sm font-bold">
-                  3
-                </div>
-                <h3 className="font-semibold">Invita a tu equipo</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Invita a miembros de tu equipo para obtener insights grupales.
-              </p>
-              <Button variant="outline" size="sm" disabled>
-                <Users className="mr-1 h-3 w-3" />
-                Próximamente
-              </Button>
+            <div className="hidden md:block">
+              <MessageCircle className="h-16 w-16 text-primary-foreground/20" />
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Section 2: Tu Última Reunión */}
+      <Card className="shadow-soft">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Tu Última Reunión
+            </CardTitle>
+            <CardDescription>
+              {lastConversation ? 
+                `Completada el ${new Date(lastConversation.created_at).toLocaleDateString()}` :
+                'Aún no has completado ninguna conversación'
+              }
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch 
+              checked={sharingSettings.insights}
+              onCheckedChange={() => handleSharingToggle('insights')}
+            />
+            <span className="text-sm text-muted-foreground">Compartir con Manager</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {lastConversation ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Duración:</span>
+                  <p className="font-medium">{lastConversation.duration_minutes || 15} min</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Tipo:</span>
+                  <p className="font-medium">Conversación Completa</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Insights:</span>
+                  <p className="font-medium">{lastConversation.key_insights?.insights?.length || 3} generados</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/history">
+                  <History className="mr-1 h-3 w-3" />
+                  Ver Historial Completo
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              Completa tu primera conversación para ver un resumen aquí
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 3: Tu Perfil OCEAN */}
+      <Card className="shadow-soft">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-secondary" />
+              Tu Perfil OCEAN
+            </CardTitle>
+            <CardDescription>
+              Dimensiones de personalidad basadas en tus conversaciones
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch 
+              checked={sharingSettings.profile}
+              onCheckedChange={() => handleSharingToggle('profile')}
+            />
+            <span className="text-sm text-muted-foreground">Compartir con Manager</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {oceanProfile ? (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
+                <div className="text-xs text-muted-foreground">Apertura</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
+                <div className="text-xs text-muted-foreground">Responsabilidad</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
+                <div className="text-xs text-muted-foreground">Extraversión</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
+                <div className="text-xs text-muted-foreground">Amabilidad</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
+                <div className="text-xs text-muted-foreground">Estabilidad</div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              Completa una conversación para generar tu perfil OCEAN personalizado
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 4: Puntos Fuertes y Oportunidades */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-green-600" />
+                Puntos Fuertes
+              </CardTitle>
+              <CardDescription>
+                Tus principales fortalezas identificadas
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={sharingSettings.strengths}
+                onCheckedChange={() => handleSharingToggle('strengths')}
+              />
+              <span className="text-sm text-muted-foreground">Compartir</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {lastConversation?.key_insights?.insights ? (
+              <ul className="space-y-2">
+                {lastConversation.key_insights.insights.slice(0, 3).map((insight: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-2 flex-shrink-0" />
+                    <span className="text-sm">{insight}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Completa una conversación para identificar tus fortalezas
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-amber-600" />
+                Oportunidades de Crecimiento
+              </CardTitle>
+              <CardDescription>
+                Áreas para tu desarrollo profesional
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={sharingSettings.opportunities}
+                onCheckedChange={() => handleSharingToggle('opportunities')}
+              />
+              <span className="text-sm text-muted-foreground">Compartir</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {lastConversation?.key_insights?.next_steps ? (
+              <ul className="space-y-2">
+                {lastConversation.key_insights.next_steps.slice(0, 3).map((step: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-2 flex-shrink-0" />
+                    <span className="text-sm">{step}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Los pasos recomendados aparecerán después de tu primera conversación
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 5: Trabajar con tu Manager y Construir tu Equipo */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-blue-600" />
+                Trabajar con tu Manager
+              </CardTitle>
+              <CardDescription>
+                Mejora la comunicación y colaboración
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={sharingSettings.manager}
+                onCheckedChange={() => handleSharingToggle('manager')}
+              />
+              <span className="text-sm text-muted-foreground">Compartir</span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Comparte insights seleccionados con tu manager para mejorar la comunicación y el desarrollo profesional.
+            </p>
+            <Button variant="outline" size="sm" disabled>
+              <Share2 className="mr-1 h-3 w-3" />
+              Enviar Invitación
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-purple-600" />
+                Construir tu Equipo
+              </CardTitle>
+              <CardDescription>
+                Insights grupales y dinámicas de equipo
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={sharingSettings.team}
+                onCheckedChange={() => handleSharingToggle('team')}
+              />
+              <span className="text-sm text-muted-foreground">Compartir</span>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-muted-foreground">Miembros del equipo:</span>
+                <span className="font-medium">{stats.teamMembers}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Insights compartidos:</span>
+                <span className="font-medium">{stats.sharedInsights}</span>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" disabled>
+              <Users className="mr-1 h-3 w-3" />
+              Gestionar Equipo
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

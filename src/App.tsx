@@ -16,6 +16,8 @@ import ChatConversation from "./pages/ChatConversation";
 import VoiceConversation from "./pages/VoiceConversation";
 import Profile from "./pages/Profile";
 import SessionRecap from "./pages/SessionRecap";
+import SessionSummary from "./pages/SessionSummary";
+import ConversationSelector from "./pages/ConversationSelector";
 import OnboardingFlow from "@/components/OnboardingFlow";
 
 const queryClient = new QueryClient();
@@ -65,6 +67,11 @@ const App = () => (
                     <Dashboard />
                   </AuthGuard>
                 } />
+                <Route path="/conversation" element={
+                  <AuthGuard>
+                    <ConversationSelector />
+                  </AuthGuard>
+                } />
                 <Route path="/conversation/chat" element={
                   <AuthGuard>
                     <ChatConversation />
@@ -73,6 +80,11 @@ const App = () => (
                 <Route path="/conversation/voice" element={
                   <AuthGuard>
                     <VoiceConversation />
+                  </AuthGuard>
+                } />
+                <Route path="/session-summary" element={
+                  <AuthGuard>
+                    <SessionSummary />
                   </AuthGuard>
                 } />
                 <Route path="/history" element={

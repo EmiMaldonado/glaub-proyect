@@ -217,7 +217,7 @@ const ChatConversation: React.FC = () => {
         description: "La conversación ha sido guardada",
       });
 
-      navigate('/dashboard');
+      navigate(`/session-summary?conversation_id=${conversation.id}`);
     } catch (error) {
       console.error('Error ending session:', error);
       toast({
