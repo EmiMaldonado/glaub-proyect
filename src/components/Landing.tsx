@@ -3,29 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { User, Users, Building, MessageCircle, Brain, Shield, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-
 const Landing = () => {
-  return (
-    <div className="min-h-screen">
+  return <div className="min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <img 
-              src="/logo-color.svg" 
-              alt="Gläub" 
-              className="h-8 w-auto"
-              onError={(e) => {
-                (e.currentTarget as HTMLElement).style.display = 'none';
-                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block';
-              }}
-            />
-            <span className="text-xl font-bold text-foreground hidden">Gläub</span>
-          </div>
-          <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-medium">EM</span>
-          </div>
-        </div>
+        
       </header>
 
       {/* Hero Section */}
@@ -46,21 +28,12 @@ const Landing = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="bg-primary text-primary-foreground hover:bg-primary-700 text-lg px-8"
-                asChild
-              >
+              <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary-700 text-lg px-8" asChild>
                 <Link to="/auth?mode=signup">
                   Start conversation →
                 </Link>
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-primary text-lg px-8"
-                asChild
-              >
+              <Button variant="outline" size="lg" className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-primary text-lg px-8" asChild>
                 <Link to="/auth">
                   Register
                 </Link>
@@ -225,15 +198,10 @@ const Landing = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center space-y-4">
             <div className="flex items-center space-x-3">
-              <img 
-                src="/logo-dark.svg" 
-                alt="Gläub" 
-                className="h-8 w-auto"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block';
-                }}
-              />
+              <img src="/logo-dark.svg" alt="Gläub" className="h-8 w-auto" onError={e => {
+              (e.currentTarget as HTMLElement).style.display = 'none';
+              (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block';
+            }} />
               <span className="text-xl font-bold hidden">Gläub</span>
             </div>
             <p className="text-sm text-gray-400 text-center">
@@ -242,8 +210,6 @@ const Landing = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Landing;
