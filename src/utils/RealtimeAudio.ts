@@ -8,6 +8,8 @@ export class AudioRecorder {
 
   async start() {
     try {
+      console.log('[AudioRecorder] Starting recording...');
+      
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 24000,
@@ -32,13 +34,17 @@ export class AudioRecorder {
       
       this.source.connect(this.processor);
       this.processor.connect(this.audioContext.destination);
+      
+      console.log('[AudioRecorder] Recording started successfully');
     } catch (error) {
-      console.error('Error accessing microphone:', error);
+      console.error('[AudioRecorder] Error accessing microphone:', error);
       throw error;
     }
   }
 
   stop() {
+    console.log('[AudioRecorder] Stopping recording...');
+    
     if (this.source) {
       this.source.disconnect();
       this.source = null;
@@ -55,6 +61,8 @@ export class AudioRecorder {
       this.audioContext.close();
       this.audioContext = null;
     }
+    
+    console.log('[AudioRecorder] Recording stopped');
   }
 }
 
@@ -81,6 +89,7 @@ const createWavFromPCM = (pcmData: Uint8Array): Uint8Array => {
   // Convert bytes to 16-bit samples
   const int16Data = new Int16Array(pcmData.length / 2);
   for (let i = 0; i < pcmData.length; i += 2) {
+    // Little endian byte order
     int16Data[i / 2] = (pcmData[i + 1] << 8) | pcmData[i];
   }
   
@@ -100,10 +109,11 @@ const createWavFromPCM = (pcmData: Uint8Array): Uint8Array => {
   const bitsPerSample = 16;
   const blockAlign = (numChannels * bitsPerSample) / 8;
   const byteRate = sampleRate * blockAlign;
+  const dataSize = int16Data.byteLength;
 
   // Write WAV header
   writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + int16Data.byteLength, true);
+  view.setUint32(4, 36 + dataSize, true);
   writeString(view, 8, 'WAVE');
   writeString(view, 12, 'fmt ');
   view.setUint32(16, 16, true);
@@ -114,7 +124,7 @@ const createWavFromPCM = (pcmData: Uint8Array): Uint8Array => {
   view.setUint16(32, blockAlign, true);
   view.setUint16(34, bitsPerSample, true);
   writeString(view, 36, 'data');
-  view.setUint32(40, int16Data.byteLength, true);
+  view.setUint32(40, dataSize, true);
 
   // Combine header and data
   const wavArray = new Uint8Array(wavHeader.byteLength + int16Data.byteLength);
@@ -160,7 +170,7 @@ class AudioQueue {
       source.onended = () => this.playNext();
       source.start(0);
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('[AudioQueue] Error playing audio:', error);
       this.playNext(); // Continue with next segment even if current fails
     }
   }
@@ -186,192 +196,93 @@ export const clearAudioQueue = () => {
   }
 };
 
-export interface RealtimeMessage {
-  id: string;
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  audioTranscript?: string;
-}
-
 export class RealtimeChat {
   private ws: WebSocket | null = null;
+  private audioRecorder: AudioRecorder | null = null;
   private audioContext: AudioContext | null = null;
-  private recorder: AudioRecorder | null = null;
-  private isConnected = false;
-  private currentTranscript = '';
-  private currentResponse = '';
+  private onMessage: (message: any) => void;
+  private onConnectionChange: (status: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
 
   constructor(
-    private onMessage: (message: RealtimeMessage) => void,
-    private onSpeakingChange: (speaking: boolean) => void,
-    private onConnectionChange: (connected: boolean) => void,
-    private onTranscriptUpdate: (transcript: string) => void
-  ) {}
+    onMessage: (message: any) => void,
+    onConnectionChange: (status: 'connecting' | 'connected' | 'disconnected' | 'error') => void
+  ) {
+    this.onMessage = onMessage;
+    this.onConnectionChange = onConnectionChange;
+  }
 
   async connect() {
     try {
+      console.log('[RealtimeChat] Connecting to realtime chat...');
+      this.onConnectionChange('connecting');
+
+      // Initialize audio context
       this.audioContext = new AudioContext({ sampleRate: 24000 });
-      
-      // Connect to our Supabase Edge Function
-      const wsUrl = `wss://bmrifufykczudfxomenr.functions.supabase.co/realtime-chat`;
-      console.log('Connecting to:', wsUrl);
-      
-      this.ws = new WebSocket(wsUrl);
-      
+
+      // Connect to WebSocket
+      this.ws = new WebSocket('wss://bmrifufykczudfxomenr.functions.supabase.co/realtime-chat');
+
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
-        this.isConnected = true;
-        this.onConnectionChange(true);
+        console.log('[RealtimeChat] WebSocket connected');
+        this.onConnectionChange('connected');
       };
 
       this.ws.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('Received event:', data.type);
-          
-          await this.handleRealtimeEvent(data);
-        } catch (error) {
-          console.error('Error handling message:', error);
-        }
-      };
+          console.log('[RealtimeChat] Received message:', data.type);
 
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        this.onConnectionChange(false);
-      };
-
-      this.ws.onclose = () => {
-        console.log('WebSocket closed');
-        this.isConnected = false;
-        this.onConnectionChange(false);
-        this.cleanup();
-      };
-
-      // Start audio recording
-      this.recorder = new AudioRecorder((audioData) => {
-        if (this.isConnected && this.ws) {
-          const encodedAudio = encodeAudioForAPI(audioData);
-          this.ws.send(JSON.stringify({
-            type: 'input_audio_buffer.append',
-            audio: encodedAudio
-          }));
-        }
-      });
-
-      await this.recorder.start();
-      console.log('Audio recording started');
-
-    } catch (error) {
-      console.error('Error connecting:', error);
-      throw error;
-    }
-  }
-
-  private async handleRealtimeEvent(data: any) {
-    switch (data.type) {
-      case 'session.created':
-        console.log('Session created');
-        break;
-
-      case 'session.updated':
-        console.log('Session updated');
-        break;
-
-      case 'input_audio_buffer.speech_started':
-        console.log('Speech started');
-        this.currentTranscript = '';
-        break;
-
-      case 'input_audio_buffer.speech_stopped':
-        console.log('Speech stopped');
-        break;
-
-      case 'conversation.item.input_audio_transcription.completed':
-        console.log('Transcription completed:', data.transcript);
-        this.currentTranscript = data.transcript;
-        this.onTranscriptUpdate(data.transcript);
-        
-        // Add user message
-        this.onMessage({
-          id: data.item_id,
-          type: 'user',
-          content: data.transcript,
-          timestamp: new Date().toISOString(),
-          audioTranscript: data.transcript
-        });
-        break;
-
-      case 'response.created':
-        console.log('Response created');
-        this.currentResponse = '';
-        break;
-
-      case 'response.output_item.added':
-        console.log('Output item added');
-        break;
-
-      case 'response.content_part.added':
-        console.log('Content part added');
-        break;
-
-      case 'response.audio_transcript.delta':
-        this.currentResponse += data.delta;
-        this.onTranscriptUpdate(this.currentResponse);
-        break;
-
-      case 'response.audio_transcript.done':
-        console.log('Audio transcript done:', this.currentResponse);
-        
-        // Add assistant message
-        this.onMessage({
-          id: data.item_id,
-          type: 'assistant',
-          content: this.currentResponse,
-          timestamp: new Date().toISOString(),
-          audioTranscript: this.currentResponse
-        });
-        break;
-
-      case 'response.audio.delta':
-        if (this.audioContext && data.delta) {
-          try {
+          if (data.type === 'response.audio.delta' && data.delta) {
+            // Play audio data
             const binaryString = atob(data.delta);
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) {
               bytes[i] = binaryString.charCodeAt(i);
             }
-            await playAudioData(this.audioContext, bytes);
-            this.onSpeakingChange(true);
-          } catch (error) {
-            console.error('Error playing audio:', error);
+            if (this.audioContext) {
+              await playAudioData(this.audioContext, bytes);
+            }
           }
+
+          this.onMessage(data);
+        } catch (error) {
+          console.error('[RealtimeChat] Error processing message:', error);
         }
-        break;
+      };
 
-      case 'response.audio.done':
-        console.log('Audio response done');
-        this.onSpeakingChange(false);
-        break;
+      this.ws.onerror = (error) => {
+        console.error('[RealtimeChat] WebSocket error:', error);
+        this.onConnectionChange('error');
+      };
 
-      case 'response.done':
-        console.log('Response completed');
-        this.onSpeakingChange(false);
-        break;
+      this.ws.onclose = () => {
+        console.log('[RealtimeChat] WebSocket closed');
+        this.onConnectionChange('disconnected');
+      };
 
-      case 'error':
-        console.error('OpenAI error:', data);
-        break;
+      // Start audio recording
+      this.audioRecorder = new AudioRecorder((audioData) => {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          const encoded = encodeAudioForAPI(audioData);
+          this.ws.send(JSON.stringify({
+            type: 'input_audio_buffer.append',
+            audio: encoded
+          }));
+        }
+      });
 
-      case 'connection_closed':
-        console.log('OpenAI connection closed:', data.reason);
-        break;
+      await this.audioRecorder.start();
+
+    } catch (error) {
+      console.error('[RealtimeChat] Connection error:', error);
+      this.onConnectionChange('error');
+      throw error;
     }
   }
 
-  sendTextMessage(text: string) {
-    if (!this.isConnected || !this.ws) {
-      throw new Error('Not connected');
+  sendMessage(text: string) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket not connected');
     }
 
     const event = {
@@ -390,39 +301,27 @@ export class RealtimeChat {
 
     this.ws.send(JSON.stringify(event));
     this.ws.send(JSON.stringify({ type: 'response.create' }));
-
-    // Add user message immediately
-    this.onMessage({
-      id: `user-${Date.now()}`,
-      type: 'user',
-      content: text,
-      timestamp: new Date().toISOString()
-    });
   }
 
   disconnect() {
-    console.log('Disconnecting...');
-    this.isConnected = false;
-    this.cleanup();
-  }
-
-  private cleanup() {
-    if (this.recorder) {
-      this.recorder.stop();
-      this.recorder = null;
-    }
+    console.log('[RealtimeChat] Disconnecting...');
     
+    if (this.audioRecorder) {
+      this.audioRecorder.stop();
+      this.audioRecorder = null;
+    }
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
-    
+
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
     }
-    
+
     clearAudioQueue();
-    this.onSpeakingChange(false);
+    this.onConnectionChange('disconnected');
   }
 }

@@ -1,336 +1,319 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Mic, MicOff, Send, Loader2, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
+import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { toast } from '@/hooks/use-toast';
-import { RealtimeChat as RealtimeChatClient, RealtimeMessage } from '@/utils/RealtimeAudio';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface RealtimeChatProps {
-  onMessageUpdate?: (messages: RealtimeMessage[]) => void;
-  onSpeakingChange?: (speaking: boolean) => void;
-  className?: string;
+  onTranscriptionUpdate: (text: string, isUser: boolean) => void;
+  onSpeakingChange: (isSpeaking: boolean) => void;
+  conversationId?: string;
+  userId?: string;
 }
 
-const RealtimeChat: React.FC<RealtimeChatProps> = ({
-  onMessageUpdate,
+interface TranscriptItem {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+}
+
+const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
+  onTranscriptionUpdate,
   onSpeakingChange,
-  className = ''
+  conversationId,
+  userId
 }) => {
-  const [messages, setMessages] = useState<RealtimeMessage[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [isRecording, setIsRecording] = useState(false);
-  const [currentTranscript, setCurrentTranscript] = useState('');
-  const [textInput, setTextInput] = useState('');
-  const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
-  
-  const clientRef = useRef<RealtimeChatClient | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isAISpeaking, setIsAISpeaking] = useState(false);
+  const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
+  const [currentUserTranscript, setCurrentUserTranscript] = useState('');
+  const [currentAITranscript, setCurrentAITranscript] = useState('');
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+  const realtimeChatRef = useRef<RealtimeChat | null>(null);
+  const userTranscriptRef = useRef('');
+  const aiTranscriptRef = useRef('');
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+  const handleMessage = useCallback((message: any) => {
+    console.log('[RealtimeChat] Message received:', message.type);
 
-  const handleMessage = useCallback((message: RealtimeMessage) => {
-    console.log('New message:', message);
-    setMessages(prev => {
-      const updated = [...prev, message];
-      onMessageUpdate?.(updated);
-      return updated;
-    });
-  }, [onMessageUpdate]);
+    switch (message.type) {
+      case 'session.created':
+        console.log('[RealtimeChat] Session created');
+        setIsRecording(true);
+        toast({
+          title: "🎙️ Conversación iniciada",
+          description: "Puedes comenzar a hablar ahora",
+        });
+        break;
 
-  const handleSpeakingChange = useCallback((speaking: boolean) => {
-    console.log('Speaking state changed:', speaking);
-    setIsSpeaking(speaking);
-    onSpeakingChange?.(speaking);
-  }, [onSpeakingChange]);
+      case 'input_audio_buffer.speech_started':
+        console.log('[RealtimeChat] User started speaking');
+        setCurrentUserTranscript('');
+        userTranscriptRef.current = '';
+        break;
 
-  const handleConnectionChange = useCallback((connected: boolean) => {
-    console.log('Connection state changed:', connected);
-    setIsConnected(connected);
-    setIsConnecting(false);
-    
-    if (connected) {
-      setIsRecording(true);
-      toast({
-        title: "🎙️ Connected",
-        description: "Voice interface is ready",
-      });
-    } else {
-      setIsRecording(false);
-      toast({
-        title: "Disconnected",
-        description: "Voice interface connection lost",
-        variant: "destructive"
-      });
+      case 'input_audio_buffer.speech_stopped':
+        console.log('[RealtimeChat] User stopped speaking');
+        if (userTranscriptRef.current.trim()) {
+          const transcript: TranscriptItem = {
+            id: Date.now().toString(),
+            text: userTranscriptRef.current.trim(),
+            isUser: true,
+            timestamp: new Date()
+          };
+          setTranscripts(prev => [...prev, transcript]);
+          onTranscriptionUpdate(userTranscriptRef.current.trim(), true);
+          setCurrentUserTranscript('');
+          userTranscriptRef.current = '';
+        }
+        break;
+
+      case 'conversation.item.input_audio_transcription.completed':
+        if (message.transcript) {
+          userTranscriptRef.current = message.transcript;
+          setCurrentUserTranscript(message.transcript);
+        }
+        break;
+
+      case 'response.audio.delta':
+        setIsAISpeaking(true);
+        onSpeakingChange(true);
+        break;
+
+      case 'response.audio.done':
+        setIsAISpeaking(false);
+        onSpeakingChange(false);
+        if (aiTranscriptRef.current.trim()) {
+          const transcript: TranscriptItem = {
+            id: Date.now().toString() + '-ai',
+            text: aiTranscriptRef.current.trim(),
+            isUser: false,
+            timestamp: new Date()
+          };
+          setTranscripts(prev => [...prev, transcript]);
+          onTranscriptionUpdate(aiTranscriptRef.current.trim(), false);
+          setCurrentAITranscript('');
+          aiTranscriptRef.current = '';
+        }
+        break;
+
+      case 'response.audio_transcript.delta':
+        if (message.delta) {
+          aiTranscriptRef.current += message.delta;
+          setCurrentAITranscript(aiTranscriptRef.current);
+        }
+        break;
+
+      case 'response.audio_transcript.done':
+        console.log('[RealtimeChat] AI transcript completed:', aiTranscriptRef.current);
+        break;
+
+      case 'error':
+        console.error('[RealtimeChat] Error:', message.error);
+        toast({
+          title: "Error",
+          description: message.error || "Error en la conexión",
+          variant: "destructive",
+        });
+        break;
+
+      default:
+        console.log('[RealtimeChat] Unhandled message type:', message.type);
+    }
+  }, [onTranscriptionUpdate, onSpeakingChange]);
+
+  const handleConnectionChange = useCallback((status: 'connecting' | 'connected' | 'disconnected' | 'error') => {
+    console.log('[RealtimeChat] Connection status changed:', status);
+    setConnectionStatus(status);
+
+    switch (status) {
+      case 'connecting':
+        toast({
+          title: "Conectando...",
+          description: "Estableciendo conexión de voz",
+        });
+        break;
+      case 'connected':
+        toast({
+          title: "✅ Conectado",
+          description: "Conexión de voz establecida",
+        });
+        break;
+      case 'error':
+        setIsRecording(false);
+        setIsAISpeaking(false);
+        toast({
+          title: "Error de conexión",
+          description: "No se pudo establecer la conexión de voz",
+          variant: "destructive",
+        });
+        break;
+      case 'disconnected':
+        setIsRecording(false);
+        setIsAISpeaking(false);
+        break;
     }
   }, []);
 
-  const handleTranscriptUpdate = useCallback((transcript: string) => {
-    console.log('Transcript update:', transcript);
-    setCurrentTranscript(transcript);
-  }, []);
-
   const startConversation = async () => {
-    if (isConnecting || isConnected) return;
-    
-    setIsConnecting(true);
-    
     try {
-      clientRef.current = new RealtimeChatClient(
-        handleMessage,
-        handleSpeakingChange,
-        handleConnectionChange,
-        handleTranscriptUpdate
-      );
-      
-      await clientRef.current.connect();
+      realtimeChatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
+      await realtimeChatRef.current.connect();
     } catch (error) {
-      console.error('Error starting conversation:', error);
-      setIsConnecting(false);
+      console.error('[RealtimeChat] Failed to start conversation:', error);
       toast({
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : 'Failed to connect',
-        variant: "destructive"
+        title: "Error",
+        description: "No se pudo iniciar la conversación de voz",
+        variant: "destructive",
       });
     }
   };
 
   const endConversation = () => {
-    if (clientRef.current) {
-      clientRef.current.disconnect();
-      clientRef.current = null;
+    if (realtimeChatRef.current) {
+      realtimeChatRef.current.disconnect();
+      realtimeChatRef.current = null;
     }
-    setIsConnected(false);
-    setIsRecording(false);
-    setIsSpeaking(false);
-    setCurrentTranscript('');
-  };
-
-  const sendTextMessage = () => {
-    if (!textInput.trim() || !isConnected || !clientRef.current) return;
-    
-    try {
-      clientRef.current.sendTextMessage(textInput.trim());
-      setTextInput('');
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendTextMessage();
-    }
+    setTranscripts([]);
+    setCurrentUserTranscript('');
+    setCurrentAITranscript('');
+    userTranscriptRef.current = '';
+    aiTranscriptRef.current = '';
   };
 
   useEffect(() => {
     return () => {
-      if (clientRef.current) {
-        clientRef.current.disconnect();
+      if (realtimeChatRef.current) {
+        realtimeChatRef.current.disconnect();
       }
     };
   }, []);
 
-  // Audio visualization bars
-  const generateAudioBars = () => {
-    const bars = [];
-    const numBars = 20;
-    
-    for (let i = 0; i < numBars; i++) {
-      const height = isSpeaking || isRecording 
-        ? Math.random() * 32 + 8 
-        : 8;
-      
-      bars.push(
-        <div
-          key={i}
-          className="bg-primary transition-all duration-200 rounded-full"
-          style={{
-            width: '3px',
-            height: `${height}px`,
-            opacity: isSpeaking || isRecording ? 0.8 : 0.3
-          }}
-        />
-      );
+  const getConnectionStatusColor = () => {
+    switch (connectionStatus) {
+      case 'connected': return 'text-green-500';
+      case 'connecting': return 'text-yellow-500';
+      case 'error': return 'text-red-500';
+      default: return 'text-gray-500';
     }
-    
-    return bars;
+  };
+
+  const getConnectionStatusText = () => {
+    switch (connectionStatus) {
+      case 'connected': return 'Conectado';
+      case 'connecting': return 'Conectando...';
+      case 'error': return 'Error de conexión';
+      default: return 'Desconectado';
+    }
   };
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className="flex flex-col items-center space-y-6">
       {/* Connection Status */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center space-x-2">
-          <Badge variant={isConnected ? 'default' : 'secondary'}>
-            {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Disconnected'}
-          </Badge>
-          
-          {(isSpeaking || isRecording) && (
-            <div className="flex items-center space-x-1">
-              {isSpeaking ? <Volume2 className="w-4 h-4 text-primary" /> : <Mic className="w-4 h-4 text-success" />}
-              <div className="flex items-center space-x-1 h-8">
-                {generateAudioBars()}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setInputMode(inputMode === 'voice' ? 'text' : 'voice')}
-            disabled={!isConnected}
-          >
-            {inputMode === 'voice' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </Button>
-          
-          {!isConnected ? (
-            <Button 
-              onClick={startConversation} 
-              disabled={isConnecting}
-              className="bg-primary hover:bg-primary/90"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                'Start Conversation'
-              )}
-            </Button>
-          ) : (
-            <Button 
-              onClick={endConversation}
-              variant="outline"
-            >
-              End Conversation
-            </Button>
-          )}
-        </div>
+      <div className={`flex items-center space-x-2 ${getConnectionStatusColor()}`}>
+        <div className="w-2 h-2 rounded-full bg-current animate-pulse"></div>
+        <span className="text-sm font-medium">{getConnectionStatusText()}</span>
       </div>
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+      {/* Recording Button */}
+      <div className="relative">
+        {connectionStatus !== 'connected' ? (
+          <Button
+            onClick={startConversation}
+            disabled={connectionStatus === 'connecting'}
+            className="w-24 h-24 rounded-full bg-primary hover:bg-primary/90 text-white shadow-lg"
+          >
+            {connectionStatus === 'connecting' ? (
+              <Loader2 className="w-8 h-8 animate-spin" />
+            ) : (
+              <Mic className="w-8 h-8" />
+            )}
+          </Button>
+        ) : (
+          <div className="relative">
+            <Button
+              onClick={endConversation}
+              className={`w-24 h-24 rounded-full shadow-lg transition-all ${
+                isRecording && !isAISpeaking
+                  ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                  : 'bg-gray-500 hover:bg-gray-600'
+              }`}
             >
-              <Card className={`max-w-[80%] ${
-                message.type === 'user' 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-secondary'
-              }`}>
-                <CardContent className="p-3">
-                  <div className="flex items-start space-x-2">
-                    {message.type === 'assistant' && (
-                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-semibold text-primary-foreground">
-                        AI
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      {message.audioTranscript && (
-                        <Badge variant="outline" className="mt-2 text-xs">
-                          Voice
-                        </Badge>
-                      )}
-                      <p className="text-xs opacity-70 mt-1">
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
-          
-          {/* Current transcript display */}
-          {currentTranscript && (
-            <div className="flex justify-center">
-              <Badge variant="outline" className="text-xs animate-pulse">
-                {currentTranscript}
-              </Badge>
-            </div>
-          )}
-          
-          {/* AI thinking indicator */}
-          {isSpeaking && (
-            <div className="flex justify-start">
-              <Card className="bg-secondary">
-                <CardContent className="p-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-semibold text-primary-foreground">
-                      AI
-                    </div>
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
-
-      {/* Text Input Mode */}
-      {inputMode === 'text' && isConnected && (
-        <div className="p-4 border-t">
-          <div className="flex space-x-2">
-            <Input
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="flex-1"
-            />
-            <Button 
-              onClick={sendTextMessage}
-              disabled={!textInput.trim()}
-              size="icon"
-            >
-              <Send className="w-4 h-4" />
+              {isAISpeaking ? (
+                <Volume2 className="w-8 h-8 text-white animate-pulse" />
+              ) : isRecording ? (
+                <Mic className="w-8 h-8 text-white" />
+              ) : (
+                <MicOff className="w-8 h-8 text-white" />
+              )}
             </Button>
+
+            {/* Waveform Animation */}
+            {isRecording && !isAISpeaking && (
+              <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-red-400 animate-ping"></div>
+            )}
+
+            {/* AI Speaking Animation */}
+            {isAISpeaking && (
+              <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-blue-400 animate-pulse"></div>
+            )}
           </div>
+        )}
+      </div>
+
+      {/* Status Text */}
+      <div className="text-center">
+        {isAISpeaking ? (
+          <p className="text-blue-600 font-medium animate-pulse">IA hablando...</p>
+        ) : isRecording ? (
+          <p className="text-red-600 font-medium">Escuchando...</p>
+        ) : connectionStatus === 'connected' ? (
+          <p className="text-gray-600">Presiona para finalizar</p>
+        ) : (
+          <p className="text-gray-600">Presiona para comenzar conversación de voz</p>
+        )}
+      </div>
+
+      {/* Live Transcriptions */}
+      {(currentUserTranscript || currentAITranscript) && (
+        <div className="w-full max-w-md bg-muted/50 rounded-lg p-4">
+          {currentUserTranscript && (
+            <div className="mb-2">
+              <span className="text-xs text-muted-foreground">Tú:</span>
+              <p className="text-sm text-primary">{currentUserTranscript}</p>
+            </div>
+          )}
+          {currentAITranscript && (
+            <div>
+              <span className="text-xs text-muted-foreground">IA:</span>
+              <p className="text-sm text-blue-600">{currentAITranscript}</p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Voice Mode Status */}
-      {inputMode === 'voice' && isConnected && (
-        <div className="p-4 border-t text-center">
-          <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-            <Mic className="w-4 h-4" />
-            <span>{isRecording ? 'Listening...' : 'Voice mode active'}</span>
-          </div>
+      {/* Transcript History */}
+      {transcripts.length > 0 && (
+        <div className="w-full max-w-md space-y-2 max-h-40 overflow-y-auto">
+          {transcripts.map((transcript) => (
+            <div
+              key={transcript.id}
+              className={`p-3 rounded-lg ${
+                transcript.isUser ? 'bg-primary/10 text-primary' : 'bg-blue-50 text-blue-700'
+              }`}
+            >
+              <p className="text-sm">{transcript.text}</p>
+              <span className="text-xs text-muted-foreground">
+                {transcript.timestamp.toLocaleTimeString()}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 };
 
-export default RealtimeChat;
+export default RealtimeChatInterface;

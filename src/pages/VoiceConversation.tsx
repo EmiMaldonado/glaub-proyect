@@ -4,9 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import VoiceRecorder from '@/components/VoiceRecorder';
+import RealtimeChatInterface from '@/components/RealtimeChat';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useConversationTimer } from '@/hooks/useConversationTimer';
 
 interface Message {
@@ -33,10 +33,10 @@ const VoiceConversation: React.FC = () => {
   const navigate = useNavigate();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [currentTranscription, setCurrentTranscription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [sessionTranscripts, setSessionTranscripts] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Session timer
@@ -62,9 +62,9 @@ const VoiceConversation: React.FC = () => {
   // Reset all state for new conversation
   const resetConversationState = () => {
     setMessages([]);
-    setIsRecording(false);
+    setSessionTranscripts([]);
+    setIsSpeaking(false);
     setIsLoading(false);
-    setCurrentTranscription('');
     setConversation(null);
     resetTimer();
   };
@@ -143,62 +143,47 @@ const VoiceConversation: React.FC = () => {
     }
   };
 
-  // Handle voice transcription complete
-  const handleTranscriptionComplete = async (transcription: string) => {
-    if (!transcription.trim() || !conversation || isLoading) return;
-
-    setCurrentTranscription('');
-    setIsLoading(true);
+  // Handle transcription updates from RealtimeChat
+  const handleTranscriptionUpdate = async (text: string, isUser: boolean) => {
+    if (!conversation || !text.trim()) return;
 
     try {
-      const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message: transcription.trim(),
-          conversationId: conversation.id,
-          userId: user?.id,
-          modalityType: 'voice'
-        }
-      });
+      // Save transcription as message to database
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversation.id,
+          role: isUser ? 'user' : 'assistant',
+          content: text.trim(),
+          metadata: { source: 'realtime_voice', timestamp: new Date().toISOString() }
+        });
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (error) {
+        console.error('Error saving transcription:', error);
+      } else {
+        console.log('Transcription saved:', { isUser, text: text.substring(0, 50) + '...' });
+        
+        // Add to session transcripts for immediate display
+        const newMessage: Message = {
+          id: `temp-${Date.now()}`,
+          role: isUser ? 'user' : 'assistant',
+          content: text.trim(),
+          created_at: new Date().toISOString()
+        };
+        
+        setSessionTranscripts(prev => [...prev, newMessage]);
       }
-
-      toast({
-        title: "✅ Mensaje de voz procesado",
-        description: "Tu mensaje ha sido transcrito y enviado",
-      });
-
     } catch (error) {
-      console.error('Error sending voice message:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo procesar el mensaje de voz",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      console.error('Error handling transcription:', error);
     }
   };
 
-  // Handle recording state
-  const handleStartRecording = () => {
-    setIsRecording(true);
-    if (!isTimerActive) {
+  // Handle speaking state changes
+  const handleSpeakingChange = (speaking: boolean) => {
+    setIsSpeaking(speaking);
+    if (speaking && !isTimerActive) {
       startTimer();
     }
-    toast({
-      title: "🎙️ Grabación iniciada",
-      description: "Habla claramente hacia el micrófono",
-    });
-  };
-
-  const handleStopRecording = () => {
-    setIsRecording(false);
-    toast({
-      title: "⏸️ Grabación pausada",
-      description: "Procesando tu mensaje de voz...",
-    });
   };
 
   // Initialize conversation on component mount
@@ -207,7 +192,7 @@ const VoiceConversation: React.FC = () => {
     createNewConversation();
   }, [user]);
 
-  // Real-time message updates
+  // Real-time message updates (for any other messages not from realtime)
   useEffect(() => {
     if (!conversation) return;
 
@@ -223,7 +208,14 @@ const VoiceConversation: React.FC = () => {
         },
         (payload) => {
           const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
+          // Only add if it's not already in session transcripts (avoid duplicates)
+          setSessionTranscripts(prev => {
+            const exists = prev.some(msg => 
+              msg.content === newMessage.content && 
+              Math.abs(new Date(msg.created_at).getTime() - new Date(newMessage.created_at).getTime()) < 1000
+            );
+            return exists ? prev : [...prev, newMessage];
+          });
         }
       )
       .subscribe();
@@ -233,10 +225,10 @@ const VoiceConversation: React.FC = () => {
     };
   }, [conversation]);
 
-  // Scroll to bottom when messages update
+  // Scroll to bottom when transcripts update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [sessionTranscripts]);
 
   // Handle end session
   async function handleEndSession() {
@@ -342,9 +334,9 @@ const VoiceConversation: React.FC = () => {
       <div className="flex-1 flex flex-col">
         <div className="flex-1 overflow-hidden p-4">
           <div className="max-w-4xl mx-auto h-full flex flex-col">
-            {/* Messages */}
+            {/* Transcripts */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-              {messages.map((message) => (
+              {sessionTranscripts.map((message) => (
                 <div
                   key={message.id}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -357,25 +349,23 @@ const VoiceConversation: React.FC = () => {
                     }`}
                   >
                     <p className="text-sm leading-relaxed">{message.content}</p>
+                    <span className="text-xs opacity-70">
+                      {new Date(message.created_at).toLocaleTimeString()}
+                    </span>
                   </div>
                 </div>
               ))}
               
-              {currentTranscription && (
-                <div className="flex justify-end">
-                  <div className="max-w-[80%] px-4 py-3 rounded-lg bg-primary/50 text-primary-foreground">
-                    <p className="text-sm leading-relaxed">{currentTranscription}</p>
-                    <span className="text-xs opacity-70">Transcribiendo...</span>
-                  </div>
-                </div>
-              )}
-              
-              {isLoading && (
+              {isSpeaking && (
                 <div className="flex justify-start">
-                  <div className="bg-muted px-4 py-3 rounded-lg">
+                  <div className="bg-blue-100 px-4 py-3 rounded-lg border-2 border-blue-200">
                     <div className="flex items-center space-x-2">
-                      <LoadingSpinner />
-                      <span className="text-sm text-muted-foreground">Procesando...</span>
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                      <span className="text-sm text-blue-700">IA hablando...</span>
                     </div>
                   </div>
                 </div>
@@ -384,31 +374,14 @@ const VoiceConversation: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Voice Recorder */}
+            {/* Realtime Voice Interface */}
             <div className="border-t bg-background p-6">
-              <div className="text-center space-y-4">
-                <VoiceRecorder
-                  onRecordingStart={handleStartRecording}
-                  onRecordingStop={handleStopRecording}
-                  onRecordingComplete={(audioBlob) => {
-                    console.log('Audio recording completed:', audioBlob);
-                  }}
-                  onTranscriptionComplete={handleTranscriptionComplete}
-                />
-                
-                <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
-                  <div className="flex items-center space-x-2">
-                    {isRecording ? (
-                      <MicOff className="h-4 w-4 text-red-500" />
-                    ) : (
-                      <Mic className="h-4 w-4" />
-                    )}
-                    <span>
-                      {isRecording ? 'Grabando...' : 'Presiona para hablar'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <RealtimeChatInterface
+                onTranscriptionUpdate={handleTranscriptionUpdate}
+                onSpeakingChange={handleSpeakingChange}
+                conversationId={conversation?.id}
+                userId={user?.id}
+              />
             </div>
           </div>
         </div>
