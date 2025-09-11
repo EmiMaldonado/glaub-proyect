@@ -109,6 +109,44 @@ export type Database = {
           },
         ]
       }
+      key_insights: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          insights: Json | null
+          next_steps: Json | null
+          personality_notes: Json | null
+          updated_at: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          insights?: Json | null
+          next_steps?: Json | null
+          personality_notes?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          insights?: Json | null
+          next_steps?: Json | null
+          personality_notes?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "key_insights_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string

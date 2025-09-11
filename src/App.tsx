@@ -12,7 +12,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
-import Conversation from "./pages/Conversation";
+import ChatConversation from "./pages/ChatConversation";
+import VoiceConversation from "./pages/VoiceConversation";
 import Profile from "./pages/Profile";
 import SessionRecap from "./pages/SessionRecap";
 import OnboardingFlow from "@/components/OnboardingFlow";
@@ -64,9 +65,14 @@ const App = () => (
                     <Dashboard />
                   </AuthGuard>
                 } />
-                <Route path="/conversation" element={
+                <Route path="/conversation/chat" element={
                   <AuthGuard>
-                    <Conversation />
+                    <ChatConversation />
+                  </AuthGuard>
+                } />
+                <Route path="/conversation/voice" element={
+                  <AuthGuard>
+                    <VoiceConversation />
                   </AuthGuard>
                 } />
                 <Route path="/history" element={

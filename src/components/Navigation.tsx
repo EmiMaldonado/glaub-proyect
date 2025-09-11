@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Brain, User, Settings, LogOut } from "lucide-react";
+import { Brain, User, Settings, LogOut, MessageCircle, Mic } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -35,9 +35,20 @@ const Navigation = () => {
                 <Button variant="ghost" asChild>
                   <Link to="/dashboard">Dashboard</Link>
                 </Button>
-                <Button variant="ghost" asChild>
-                  <Link to="/conversation">Nueva Conversación</Link>
-                </Button>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/conversation/chat">
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Chat
+                    </Link>
+                  </Button>
+                  <Button variant="default" size="sm" asChild>
+                    <Link to="/conversation/voice">
+                      <Mic className="h-4 w-4 mr-2" />
+                      Voz
+                    </Link>
+                  </Button>
+                </div>
                 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
