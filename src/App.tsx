@@ -95,8 +95,8 @@ const App = () => (
                   <AuthGuard>
                     <Navigation />
                     <div className="container mx-auto px-4 py-8">
-                      <h1 className="text-2xl font-bold">Historial</h1>
-                      <p>Esta funcionalidad se implementará en el siguiente nivel.</p>
+                      <h1 className="text-2xl font-bold">History</h1>
+                      <p>This functionality will be implemented in the next level.</p>
                     </div>
                   </AuthGuard>
                 } />
@@ -116,8 +116,8 @@ const App = () => (
                   <AuthGuard>
                     <Navigation />
                     <div className="container mx-auto px-4 py-8">
-                      <h1 className="text-2xl font-bold">Configuración</h1>
-                      <p>Esta funcionalidad se implementará en el siguiente nivel.</p>
+                      <h1 className="text-2xl font-bold">Settings</h1>
+                      <p>This functionality will be implemented in the next level.</p>
                     </div>
                   </AuthGuard>
                 } />

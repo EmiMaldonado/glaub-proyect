@@ -47,11 +47,20 @@ serve(async (req) => {
       throw new Error(`TTS API error: ${response.status}`);
     }
 
-    // Convert audio buffer to base64
+    // Convert audio buffer to base64 (process in chunks to prevent stack overflow)
     const arrayBuffer = await response.arrayBuffer();
-    const base64Audio = btoa(
-      String.fromCharCode(...new Uint8Array(arrayBuffer))
-    );
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Process in chunks to prevent "Maximum call stack size exceeded"
+    const chunkSize = 8192;
+    let binaryString = '';
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    
+    const base64Audio = btoa(binaryString);
 
     console.log('TTS response generated:', { audioSizeKB: Math.round(arrayBuffer.byteLength / 1024) });
 

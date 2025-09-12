@@ -49,12 +49,14 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Initialize with AI's first message
+  // Initialize with AI's first message and update when currentAIResponse changes
   useEffect(() => {
-    if (currentAIResponse && !messages.length) {
+    if (currentAIResponse) {
       setCurrentAIText(currentAIResponse);
-      // Auto-play AI's first message
-      playAIResponse(currentAIResponse);
+      // Auto-play AI's first message only if no messages exist yet
+      if (!messages.length) {
+        playAIResponse(currentAIResponse);
+      }
     }
   }, [currentAIResponse]);
 
