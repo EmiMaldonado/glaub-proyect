@@ -351,6 +351,10 @@ export type Database = {
         Args: { invitation_manager_id: string }
         Returns: boolean
       }
+      validate_reset_token: {
+        Args: { token_input: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

@@ -115,7 +115,24 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
-      await resetPassword(formData.email);
+      const { data, error } = await supabase.functions.invoke('forgot-password', {
+        body: { email: formData.email }
+      });
+
+      if (error) {
+        console.error("Forgot password error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to send reset link. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Reset Link Sent",
+        description: "If an account with that email exists, a reset link has been sent.",
+      });
       setShowResetPassword(false);
     } finally {
       setIsLoading(false);
