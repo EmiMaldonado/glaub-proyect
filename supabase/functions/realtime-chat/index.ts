@@ -40,11 +40,30 @@ serve(async (req) => {
         });
       }
 
-      // Handle POST requests for testing
+      // Handle POST requests for testing and API key retrieval
       if (req.method === 'POST') {
-        const { messages = [] } = await req.json();
+        const { messages = [], action } = await req.json();
         
-        // Test OpenAI connection
+        // Handle API key retrieval for direct OpenAI connection
+        if (action === 'get_api_key') {
+          const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+          if (!openAIApiKey) {
+            throw new Error('OPENAI_API_KEY not configured in edge function environment');
+          }
+          
+          return new Response(JSON.stringify({
+            success: true,
+            apiKey: openAIApiKey
+          }), {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          });
+        }
+        
+        // Test OpenAI connection (health check)
         const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
         if (!openAIApiKey) {
           throw new Error('OpenAI API key not configured');

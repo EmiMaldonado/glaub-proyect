@@ -26,6 +26,7 @@ class RealtimeChat {
   private isConnected = false;
   private audioQueue: Uint8Array[] = [];
   private isPlayingAudio = false;
+  private apiKey: string | null = null;
 
   constructor(
     private onMessage: (message: any) => void,
@@ -37,11 +38,11 @@ class RealtimeChat {
       this.onConnectionChange('connecting');
       this.stream = stream;
 
-      // Test edge function with proper auth headers
-      await this.testEdgeFunctionHealth();
+      // Get OpenAI API key from edge function
+      await this.getApiKey();
       
-      // Initialize WebSocket connection 
-      await this.connectWebSocket();
+      // Connect directly to OpenAI Realtime API
+      await this.connectToOpenAI();
       
     } catch (error) {
       console.error('Error in connect method:', error);
@@ -49,14 +50,14 @@ class RealtimeChat {
     }
   }
 
-  private async testEdgeFunctionHealth() {
+  private async getApiKey() {
     try {
-      console.log('🔍 Testing edge function health with proper authentication...');
+      console.log('🔑 Retrieving OpenAI API key from edge function...');
       
-      // Get Supabase anon key from client
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtcmlmdWZ5a2N6dWRmeG9tZW5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNzkzNTYsImV4cCI6MjA3Mjc1NTM1Nn0.TE9BEft4v-f_vIQkKQ39BHZzcvbwg93OXBXX6QaSUbY';
       
-      const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`, {
+      // Get API key from Supabase Edge Function
+      const response = await fetch('https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,122 +65,92 @@ class RealtimeChat {
           'apikey': supabaseAnonKey,
         },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: 'Health check' }]
+          action: 'get_api_key'
         })
       });
-      
-      console.log('🌐 Edge function response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-      
+
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(`Failed to get API key: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ Edge function health check passed:', data);
+      this.apiKey = data.apiKey;
+      
+      if (!this.apiKey) {
+        throw new Error('OpenAI API key not available in edge function response');
+      }
+      
+      console.log('✅ OpenAI API key retrieved successfully');
       
     } catch (error) {
-      console.error('❌ Edge function health check failed:', error);
-      throw new Error(`Edge function not available: ${error.message}`);
+      console.error('❌ Failed to get API key from edge function:', error);
+      // For now, we'll throw an error - the user needs to configure the API key in the edge function
+      throw new Error(`API key retrieval failed: ${error.message}. Please ensure OPENAI_API_KEY is configured in Supabase Edge Functions.`);
     }
   }
 
-  private async connectWebSocket(retryCount = 0) {
-    const maxRetries = 3;
-    
-    // Try both URL formats to see which one works
-    const wsUrls = [
-      `wss://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`,
-      `wss://bmrifufykczudfxomenr.functions.supabase.co/realtime-chat`
-    ];
-    
-    const wsUrl = wsUrls[retryCount % wsUrls.length];
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtcmlmdWZ5a2N6dWRmeG9tZW5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNzkzNTYsImV4cCI6MjA3Mjc1NTM1Nn0.TE9BEft4v-f_vIQkKQ39BHZzcvbwg93OXBXX6QaSUbY';
-    
-    console.log(`🔄 WebSocket connection attempt ${retryCount + 1}/${maxRetries + 1}`);
-    console.log(`📡 Trying URL: ${wsUrl}`);
-
-    return new Promise<void>((resolve, reject) => {
-      // Create WebSocket (browser WebSockets don't support custom headers)
-      this.ws = new WebSocket(wsUrl);
+  private async connectToOpenAI() {
+    try {
+      console.log('🔗 Connecting directly to OpenAI Realtime API...');
       
-      const connectionTimeout = setTimeout(() => {
-        console.error('❌ WebSocket connection timeout after 10 seconds');
-        this.ws?.close();
-        reject(new Error('Connection timeout'));
-      }, 10000);
+      // Connect to OpenAI WebSocket endpoint
+      const wsUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01';
+      
+      console.log('📡 WebSocket URL:', wsUrl);
+      console.log('🔐 Using OpenAI authentication protocol');
 
-      this.ws.onopen = () => {
-        clearTimeout(connectionTimeout);
-        console.log('✅ WebSocket connected successfully!');
-        console.log('🔗 Connected to:', wsUrl);
-        this.isConnected = true;
-        this.onConnectionChange('connected');
-        this.setupAudioProcessing();
-        resolve();
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          console.log('📨 Received WebSocket message:', event.data);
-          const message = JSON.parse(event.data);
-          this.handleMessage(message);
-        } catch (error) {
-          console.error('❌ Error parsing WebSocket message:', error);
-        }
-      };
-
-      this.ws.onclose = (event) => {
-        clearTimeout(connectionTimeout);
-        console.log('🔌 WebSocket connection closed:', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean
-        });
-        this.isConnected = false;
-        this.onConnectionChange('disconnected');
-      };
-
-      this.ws.onerror = (error) => {
-        clearTimeout(connectionTimeout);
-        console.error('❌ WebSocket error:', {
-          error,
-          url: wsUrl,
-          readyState: this.ws?.readyState,
-          readyStateText: this.getReadyStateText(),
-          retryCount
-        });
+      return new Promise<void>((resolve, reject) => {
+        // Create WebSocket with OpenAI authentication protocol
+        this.ws = new WebSocket(wsUrl, ['realtime', `openai-insecure-api-key.${this.apiKey}`]);
         
-        if (retryCount < maxRetries) {
-          const delay = (retryCount + 1) * 2000;
-          console.log(`🔄 Retrying in ${delay/1000} seconds with ${retryCount < wsUrls.length - 1 ? 'alternative URL' : 'same URL'}...`);
-          setTimeout(() => {
-            this.connectWebSocket(retryCount + 1).then(resolve).catch(reject);
-          }, delay);
-        } else {
-          console.error('❌ All WebSocket connection attempts failed');
-          this.onConnectionChange('error');
-          reject(new Error('WebSocket connection failed after multiple attempts with different URLs'));
-        }
-      };
-    });
-  }
+        const connectionTimeout = setTimeout(() => {
+          console.error('❌ OpenAI WebSocket connection timeout after 15 seconds');
+          this.ws?.close();
+          reject(new Error('OpenAI connection timeout'));
+        }, 15000);
 
-  private getReadyStateText(): string {
-    if (!this.ws) return 'NO_WEBSOCKET';
-    switch (this.ws.readyState) {
-      case WebSocket.CONNECTING: return 'CONNECTING';
-      case WebSocket.OPEN: return 'OPEN';
-      case WebSocket.CLOSING: return 'CLOSING';
-      case WebSocket.CLOSED: return 'CLOSED';
-      default: return 'UNKNOWN';
+        this.ws.onopen = () => {
+          clearTimeout(connectionTimeout);
+          console.log('✅ Connected to OpenAI Realtime API successfully!');
+          this.isConnected = true;
+          this.onConnectionChange('connected');
+          this.setupAudioProcessing();
+          resolve();
+        };
+
+        this.ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            console.log('📨 OpenAI message type:', message.type);
+            this.handleMessage(message);
+          } catch (error) {
+            console.error('❌ Error parsing OpenAI message:', error);
+          }
+        };
+
+        this.ws.onclose = (event) => {
+          clearTimeout(connectionTimeout);
+          console.log('🔌 OpenAI WebSocket closed:', {
+            code: event.code,
+            reason: event.reason,
+            wasClean: event.wasClean
+          });
+          this.isConnected = false;
+          this.onConnectionChange('disconnected');
+        };
+
+        this.ws.onerror = (error) => {
+          clearTimeout(connectionTimeout);
+          console.error('❌ OpenAI WebSocket error:', error);
+          this.onConnectionChange('error');
+          reject(new Error('OpenAI WebSocket connection failed - check API key and network connection'));
+        };
+      });
+    } catch (error) {
+      console.error('❌ Error connecting to OpenAI:', error);
+      throw error;
     }
   }
-
 
   private async setupAudioProcessing() {
     if (!this.stream) return;
@@ -203,11 +174,42 @@ class RealtimeChat {
       source.connect(processor);
       processor.connect(this.audioContext.destination);
       
-      this.onMessage({ type: 'session.created' });
+      // Send initial session configuration
+      this.sendSessionUpdate();
+      
     } catch (error) {
       console.error('Error setting up audio processing:', error);
       this.onConnectionChange('error');
     }
+  }
+
+  private sendSessionUpdate() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+    const sessionConfig = {
+      type: 'session.update',
+      session: {
+        modalities: ['text', 'audio'],
+        instructions: 'You are a helpful therapeutic assistant. Respond in a warm, empathetic, and supportive manner. Keep responses conversational and appropriate for voice interaction.',
+        voice: 'alloy',
+        input_audio_format: 'pcm16',
+        output_audio_format: 'pcm16',
+        input_audio_transcription: {
+          model: 'whisper-1'
+        },
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 1000
+        },
+        temperature: 0.8,
+        max_response_output_tokens: 4096
+      }
+    };
+
+    console.log('📤 Sending session configuration to OpenAI');
+    this.ws.send(JSON.stringify(sessionConfig));
   }
 
   private sendAudioData(audioData: Float32Array) {
@@ -244,23 +246,29 @@ class RealtimeChat {
   }
 
   private handleMessage(message: any) {
-    console.log('Received message:', message.type);
+    console.log('Processing OpenAI message:', message.type);
     
     switch (message.type) {
       case 'session.created':
+        console.log('✅ OpenAI session created');
+        this.onMessage({ type: 'session.created' });
+        break;
       case 'session.updated':
-        console.log('Session initialized');
+        console.log('✅ OpenAI session updated');
         break;
         
       case 'input_audio_buffer.speech_started':
+        console.log('🎤 User started speaking');
         this.onMessage({ type: 'input_audio_buffer.speech_started' });
         break;
         
       case 'input_audio_buffer.speech_stopped':
+        console.log('🎤 User stopped speaking');
         this.onMessage({ type: 'input_audio_buffer.speech_stopped' });
         break;
         
       case 'conversation.item.input_audio_transcription.completed':
+        console.log('📝 User transcription completed:', message.transcript);
         this.onMessage({
           type: 'conversation.item.input_audio_transcription.completed',
           transcript: message.transcript
@@ -268,6 +276,7 @@ class RealtimeChat {
         break;
         
       case 'response.audio.delta':
+        console.log('🔊 AI audio chunk received');
         this.onMessage({ type: 'response.audio.delta' });
         if (message.delta) {
           this.playAudioDelta(message.delta);
@@ -275,10 +284,12 @@ class RealtimeChat {
         break;
         
       case 'response.audio.done':
+        console.log('🔊 AI audio completed');
         this.onMessage({ type: 'response.audio.done' });
         break;
         
       case 'response.audio_transcript.delta':
+        console.log('📝 AI transcript chunk:', message.delta);
         this.onMessage({
           type: 'response.audio_transcript.delta',
           delta: message.delta
@@ -286,16 +297,20 @@ class RealtimeChat {
         break;
         
       case 'response.audio_transcript.done':
+        console.log('📝 AI transcript completed');
         this.onMessage({ type: 'response.audio_transcript.done' });
         break;
         
       case 'error':
-        console.error('OpenAI API error:', message);
+        console.error('❌ OpenAI API error:', message);
         this.onMessage({ type: 'error', error: message.error?.message || 'Unknown error' });
+        break;
+
+      default:
+        console.log('📨 Unhandled message type:', message.type);
         break;
     }
   }
-
 
   private async playAudioDelta(base64Audio: string) {
     if (!this.audioContext) return;
@@ -383,7 +398,7 @@ class RealtimeChat {
   }
 
   disconnect() {
-    console.log('Disconnecting RealtimeChat...');
+    console.log('🔌 Disconnecting from OpenAI Realtime API...');
     
     // Clear audio queue
     this.audioQueue = [];
@@ -427,8 +442,8 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
       case 'session.created':
         setIsRecording(true);
         toast({
-          title: "🎙️ Conversation Started",
-          description: "You can start speaking now",
+          title: "🎙️ Voice Connection Active",
+          description: "Connected to OpenAI Realtime API - you can start speaking",
         });
         break;
 
@@ -491,7 +506,7 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
       case 'error':
         toast({
           title: "Connection Error",
-          description: message.error || "Voice connection error",
+          description: message.error || "OpenAI Realtime API connection error",
           variant: "destructive",
         });
         break;
@@ -504,14 +519,14 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
     switch (status) {
       case 'connecting':
         toast({
-          title: "Connecting...",
-          description: "Testing edge function and establishing voice connection",
+          title: "Connecting to OpenAI...",
+          description: "Establishing direct connection to OpenAI Realtime API",
         });
         break;
       case 'connected':
         toast({
-          title: "✅ Connected",
-          description: "Voice connection established successfully",
+          title: "✅ Connected to OpenAI",
+          description: "Direct connection to OpenAI Realtime API established",
         });
         break;
       case 'error':
@@ -519,7 +534,7 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         setIsAISpeaking(false);
         toast({
           title: "Connection Failed", 
-          description: "Edge function authentication fixed. The connection should work now. Check console for details.",
+          description: "Failed to connect to OpenAI Realtime API. Please check your API key configuration.",
           variant: "destructive",
         });
         break;
@@ -531,7 +546,7 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
   }, []);
 
   const handleMicrophoneGranted = useCallback(async (stream: MediaStream) => {
-    console.log('Microphone permission granted, starting voice connection...');
+    console.log('🎤 Microphone permission granted, connecting to OpenAI...');
     setMicrophoneStream(stream);
     setMicrophoneGranted(true);
     
@@ -539,10 +554,10 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
       realtimeChatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
       await realtimeChatRef.current.connect(stream);
     } catch (error) {
-      console.error('Error starting conversation:', error);
+      console.error('Error starting OpenAI connection:', error);
       toast({
         title: "Connection Error",
-        description: "Failed to start voice conversation",
+        description: "Failed to connect to OpenAI Realtime API. Please check console for details.",
         variant: "destructive",
       });
     }
@@ -599,8 +614,8 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
 
   const getConnectionStatusText = () => {
     switch (connectionStatus) {
-      case 'connected': return 'Connected';
-      case 'connecting': return 'Connecting...';
+      case 'connected': return 'Connected to OpenAI';
+      case 'connecting': return 'Connecting to OpenAI...';
       case 'error': return 'Connection Error';
       case 'idle': return 'Ready to Connect';
       default: return 'Disconnected';
