@@ -56,6 +56,28 @@ const ResetPassword = () => {
     return <Navigate to="/auth" replace />;
   }
 
+  const validatePassword = (password: string) => {
+    if (password.length < 8) {
+      return "Password must be at least 8 characters long";
+    }
+    if (password.length > 128) {
+      return "Password must be less than 128 characters";
+    }
+    if (!/[a-z]/.test(password)) {
+      return "Password must contain at least one lowercase letter";
+    }
+    if (!/[A-Z]/.test(password)) {
+      return "Password must contain at least one uppercase letter";
+    }
+    if (!/[0-9]/.test(password)) {
+      return "Password must contain at least one number";
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)";
+    }
+    return null;
+  };
+
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -65,8 +87,9 @@ const ResetPassword = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -134,7 +157,7 @@ const ResetPassword = () => {
             </div>
             <CardTitle>Reset Your Password</CardTitle>
             <CardDescription>
-              Enter your new password below
+              Create a strong password with at least 8 characters including uppercase, lowercase, numbers, and special characters
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -150,7 +173,7 @@ const ResetPassword = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     className="pl-10"
-                    minLength={6}
+                    minLength={8}
                     required
                   />
                 </div>
@@ -184,7 +207,7 @@ const ResetPassword = () => {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isLoading || password !== confirmPassword || password.length < 6}
+                disabled={isLoading || password !== confirmPassword || validatePassword(password) !== null}
               >
                 {isLoading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
                 Update Password
