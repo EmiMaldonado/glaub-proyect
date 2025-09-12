@@ -201,9 +201,9 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-5-mini-2025-08-07', // Faster model
           messages: analysisMessages,
-          max_tokens: 1000,
+          max_completion_tokens: 1000, // Use max_completion_tokens for newer models
         }),
       });
 
@@ -366,9 +366,9 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
         'Content-Type': 'application/json',
       },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-5-mini-2025-08-07', // Faster model for better response times
           messages: chatMessages,
-          max_tokens: 200,
+          max_completion_tokens: 150, // Shorter for voice responses
           presence_penalty: 0.3,
           frequency_penalty: 0.3,
         }),
