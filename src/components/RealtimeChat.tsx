@@ -182,24 +182,24 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
 
   // Start conversation with specific stream (avoids race condition)
   const startConversationWithStream = async (stream: MediaStream) => {
-    if (!stream || !stream.active) {
-      console.error('Invalid microphone stream provided:', {
-        hasStream: !!stream,
-        streamActive: stream?.active,
-        audioTracks: stream?.getAudioTracks().length
-      });
+    if (!stream) {
+      console.error('No stream provided');
       toast({
         title: "Error de micrófono",
-        description: "Stream de micrófono inválido",
+        description: "No se proporcionó stream de micrófono",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate audio tracks
+    // Validate audio tracks exist
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) {
-      console.error('No audio tracks found in stream');
+      console.error('No audio tracks found in stream:', {
+        streamId: stream.id,
+        active: stream.active,
+        audioTracks: audioTracks.length
+      });
       toast({
         title: "Error de micrófono",
         description: "No se encontraron pistas de audio",
@@ -208,25 +208,32 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
       return;
     }
 
-    // Check if audio tracks are live
-    const liveTrack = audioTracks.find(track => track.readyState === 'live');
-    if (!liveTrack) {
-      console.error('No live audio tracks found:', audioTracks.map(t => ({ id: t.id, state: t.readyState })));
+    // Check if at least one audio track is working (don't rely on stream.active)
+    const workingTracks = audioTracks.filter(track => 
+      track.readyState === 'live' || track.readyState === 'ended'
+    );
+    
+    console.log('Stream validation passed:', {
+      streamId: stream.id,
+      streamActive: stream.active,
+      totalTracks: audioTracks.length,
+      workingTracks: workingTracks.length,
+      trackStates: audioTracks.map(t => ({ id: t.id, state: t.readyState, enabled: t.enabled }))
+    });
+
+    // If we have audio tracks, proceed regardless of stream.active status
+    if (workingTracks.length === 0) {
+      console.error('No working audio tracks found:', audioTracks.map(t => ({ id: t.id, state: t.readyState })));
       toast({
         title: "Error de micrófono",
-        description: "Pistas de audio no están activas",
+        description: "Las pistas de audio no están funcionando",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      console.log('Starting OpenAI Realtime connection with validated stream:', {
-        streamId: stream.id,
-        active: stream.active,
-        audioTracks: audioTracks.length,
-        liveTrack: liveTrack.id
-      });
+      console.log('Starting OpenAI Realtime connection with validated stream');
       
       realtimeChatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
       await realtimeChatRef.current.connect(stream);
