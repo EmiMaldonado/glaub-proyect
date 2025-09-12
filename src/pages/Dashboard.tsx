@@ -67,25 +67,23 @@ const Dashboard = () => {
       // Load all insights from all conversations
       const { data: insights } = await supabase
         .from('key_insights')
-        .select(`
-          *,
-          conversation:conversations!inner(
-            user_id,
-            created_at,
-            title
-          )
-        `)
-        .eq('conversation.user_id', user.id)
+        .select('*')
         .order('created_at', { ascending: false });
 
+      // Filter insights that belong to user's conversations
+      const userConversationIds = conversations?.map(c => c.id) || [];
+      const userInsights = insights?.filter(insight => 
+        userConversationIds.includes(insight.conversation_id)
+      ) || [];
+
       // Set all insights for comprehensive dashboard
-      if (insights) {
-        setAllInsights(insights);
+      if (userInsights && userInsights.length > 0) {
+        setAllInsights(userInsights);
         
         // Generate personalized summary based on all conversations
-        const allPersonalityData = insights.map(i => i.personality_notes).filter(Boolean);
-        const allInsightsData = insights.flatMap(i => i.insights || []);
-        const allNextSteps = insights.flatMap(i => i.next_steps || []);
+        const allPersonalityData = userInsights.map(i => i.personality_notes).filter(Boolean);
+        const allInsightsData = userInsights.flatMap(i => i.insights || []);
+        const allNextSteps = userInsights.flatMap(i => i.next_steps || []);
         
         // Calculate average OCEAN scores across all sessions
         if (allPersonalityData.length > 0) {
@@ -107,22 +105,25 @@ const Dashboard = () => {
       // Load last conversation for quick reference
       const { data: lastConv } = await supabase
         .from('conversations')
-        .select(`
-          *,
-          key_insights (
-            insights,
-            personality_notes,
-            next_steps
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (lastConv) {
-        setLastConversation(lastConv);
+        // Separately load insights for this conversation to avoid join issues
+        const { data: lastConvInsights } = await supabase
+          .from('key_insights')
+          .select('insights, personality_notes, next_steps')
+          .eq('conversation_id', lastConv.id)
+          .maybeSingle();
+        
+        setLastConversation({
+          ...lastConv,
+          key_insights: lastConvInsights
+        });
       }
 
       setStats({
@@ -134,6 +135,14 @@ const Dashboard = () => {
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      // Don't show error toast for auth issues to avoid spamming
+      if (error?.message && !error.message.includes('refresh_token')) {
+        toast({
+          title: "Error Loading Dashboard",
+          description: "Some data may not be available. Please try refreshing the page.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -267,10 +276,10 @@ const Dashboard = () => {
                   <span className="text-muted-foreground">Type:</span>
                   <p className="font-medium">Complete Conversation</p>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Insights:</span>
-                  <p className="font-medium">{lastConversation.key_insights?.insights?.length || 3} generated</p>
-                </div>
+                 <div>
+                   <span className="text-muted-foreground">Insights:</span>
+                   <p className="font-medium">{lastConversation.key_insights?.insights?.length || 0} generated</p>
+                 </div>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link to="/history">

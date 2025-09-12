@@ -98,6 +98,11 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const startRecording = useCallback(async () => {
     if (isProcessing) {
       console.log('🚫 Cannot start recording - already processing, isProcessing:', isProcessing);
+      toast({
+        title: "Still Processing",
+        description: "Please wait for the current message to finish processing",
+        variant: "default",
+      });
       return;
     }
 
