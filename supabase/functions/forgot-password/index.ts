@@ -35,14 +35,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Find user by email using direct database query
-    const { data: users, error: userError } = await supabase
-      .from('auth.users')
-      .select('id, email')
-      .eq('email', email)
-      .limit(1);
+    // Find user by email using Auth Admin API
+    const { data: user, error: userError } = await supabase.auth.admin.getUserByEmail(email);
 
-    if (userError || !users || users.length === 0) {
+    if (userError || !user) {
       // Don't reveal if user exists or not for security
       console.log(`Password reset requested for non-existent email: ${email}`);
       return new Response(
@@ -56,8 +52,6 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
-
-    const user = users[0];
 
     // Generate secure token
     const { data: tokenData, error: tokenError } = await supabase.rpc('generate_reset_token');
