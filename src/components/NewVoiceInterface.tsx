@@ -4,6 +4,7 @@ import { Mic, Square, Volume2, ArrowLeft, Check, Star, Loader2 } from 'lucide-re
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MicrophonePermission from '@/components/MicrophonePermission';
+import LeaveSessionModal from '@/components/LeaveSessionModal';
 
 interface VoiceInterfaceProps {
   onTranscriptionUpdate: (text: string, isUser: boolean) => void;
@@ -44,12 +45,23 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const [currentAIText, setCurrentAIText] = useState(currentAIResponse || '');
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [isProcessing, setIsProcessing] = useState(false); // Lock to prevent concurrent processing
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioPromiseRef = useRef<Promise<void> | null>(null);
 
-  // Initialize with AI's first message and update when currentAIResponse changes
+  // Handle back button with confirmation
+  const handleBackClick = () => {
+    setShowLeaveModal(true);
+  };
+
+  const handleConfirmLeave = () => {
+    cleanup();
+    setShowLeaveModal(false);
+    onBack();
+  };
   useEffect(() => {
     if (currentAIResponse) {
       setCurrentAIText(currentAIResponse);
@@ -287,6 +299,11 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   // Text-to-speech for AI responses - ensures only one audio plays at a time
   const playAIResponse = useCallback(async (text: string) => {
+    // Cancel any existing audio promise
+    if (audioPromiseRef.current) {
+      console.log('Cancelling previous audio playback');
+    }
+
     try {
       // Stop any currently playing audio first
       if (currentAudio) {
@@ -323,34 +340,65 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       const audio = new Audio(audioUrl);
       setCurrentAudio(audio);
       
-      audio.onended = () => {
-        setVoiceState('idle');
-        URL.revokeObjectURL(audioUrl);
-        setCurrentAudio(null);
-      };
+      // Create a promise to handle audio playback
+      const audioPromise = new Promise<void>((resolve, reject) => {
+        audio.onended = () => {
+          setVoiceState('idle');
+          URL.revokeObjectURL(audioUrl);
+          setCurrentAudio(null);
+          audioPromiseRef.current = null;
+          resolve();
+        };
 
-      audio.onerror = () => {
-        setVoiceState('idle');
-        URL.revokeObjectURL(audioUrl);
-        setCurrentAudio(null);
-        console.error('Error playing audio');
+        audio.onerror = () => {
+          setVoiceState('idle');
+          URL.revokeObjectURL(audioUrl);
+          setCurrentAudio(null);
+          audioPromiseRef.current = null;
+          console.error('Error playing audio');
+          reject(new Error('Audio playback failed'));
+        };
+
+        // Handle the common AbortError when audio is interrupted
+        audio.addEventListener('abort', () => {
+          console.log('Audio playback was aborted');
+          setVoiceState('idle');
+          URL.revokeObjectURL(audioUrl);
+          setCurrentAudio(null);
+          audioPromiseRef.current = null;
+          resolve(); // Don't treat abort as an error
+        });
+      });
+
+      audioPromiseRef.current = audioPromise;
+      
+      // Start playing - wrap in try-catch to handle play() promise rejection
+      try {
+        await audio.play();
+      } catch (playError) {
+        if (playError.name === 'AbortError') {
+          console.log('Audio play was aborted - this is normal');
+          return; // Don't throw error for abort
+        }
+        throw playError;
+      }
+      
+      // Wait for audio to finish or be aborted
+      await audioPromise;
+      
+    } catch (error) {
+      console.error('Error with text-to-speech:', error);
+      setVoiceState('idle');
+      audioPromiseRef.current = null;
+      
+      // Only show toast for actual errors, not aborts
+      if (error.name !== 'AbortError') {
         toast({
           title: "Audio Playback Issue",
           description: "Could not play AI response audio.",
           variant: "destructive",
         });
-      };
-
-      await audio.play();
-      
-    } catch (error) {
-      console.error('Error with text-to-speech:', error);
-      setVoiceState('idle');
-      toast({
-        title: "Audio Playback Issue",
-        description: "Could not play AI response audio.",
-        variant: "destructive",
-      });
+      }
     }
   }, [currentAudio]);
 
@@ -362,6 +410,8 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       setCurrentAudio(null);
       setVoiceState('idle');
     }
+    // Cancel any pending audio promise
+    audioPromiseRef.current = null;
   }, [currentAudio]);
 
   // Process audio when blob is ready
@@ -434,7 +484,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={onBack}>
+          <Button variant="ghost" size="sm" onClick={handleBackClick}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-lg font-medium text-[#24476e]">Voice Session</h1>
@@ -530,6 +580,13 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           </>
         )}
       </div>
+
+      {/* Leave Session Confirmation Modal */}
+      <LeaveSessionModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={handleConfirmLeave}
+      />
     </div>
   );
 };
