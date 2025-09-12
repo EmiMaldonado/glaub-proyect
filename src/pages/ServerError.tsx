@@ -15,9 +15,9 @@ const ServerError = () => {
           <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
             <ServerCrash className="h-8 w-8 text-destructive" />
           </div>
-          <CardTitle className="text-2xl">Error del Servidor</CardTitle>
+          <CardTitle className="text-2xl">Server Error</CardTitle>
           <CardDescription>
-            Estamos experimentando problemas técnicos. Nuestro equipo está trabajando para solucionarlo.
+            We are experiencing technical issues. Our team is working to resolve it.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -27,17 +27,17 @@ const ServerError = () => {
           <div className="flex flex-col gap-2">
             <Button onClick={handleRefresh} className="w-full">
               <RefreshCw className="mr-2 h-4 w-4" />
-              Intentar de Nuevo
+              Try Again
             </Button>
             <Button variant="outline" asChild className="w-full">
               <Link to="/">
                 <Home className="mr-2 h-4 w-4" />
-                Volver al Inicio
+                Back to Home
               </Link>
             </Button>
           </div>
           <div className="text-xs text-muted-foreground">
-            Si el problema persiste, contacta a soporte@glaub.com
+            If the problem persists, contact mariaemiliamaldonadopaez@gmail.com
           </div>
         </CardContent>
       </Card>
