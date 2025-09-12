@@ -35,20 +35,12 @@ const Navigation = () => {
                 <Button variant="ghost" asChild>
                   <Link to="/dashboard">Dashboard</Link>
                 </Button>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to="/conversation/chat">
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Chat
-                    </Link>
-                  </Button>
-                  <Button variant="default" size="sm" asChild>
-                    <Link to="/conversation/voice">
-                      <Mic className="h-4 w-4 mr-2" />
-                      Voice
-                    </Link>
-                  </Button>
-                </div>
+                <Button variant="default" size="sm" asChild>
+                  <Link to="/conversation/voice">
+                    <Mic className="h-4 w-4 mr-2" />
+                    Start Conversation
+                  </Link>
+                </Button>
                 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
