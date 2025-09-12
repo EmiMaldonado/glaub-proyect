@@ -37,16 +37,60 @@ class RealtimeChat {
       this.onConnectionChange('connecting');
       this.stream = stream;
 
+      // First test if the edge function is reachable with HTTP
+      await this.testEdgeFunctionHealth();
+      
       // Initialize WebSocket connection through Supabase edge function
-      const wsUrl = `wss://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`;
-      console.log('Connecting to WebSocket:', wsUrl);
+      await this.connectWebSocket();
+      
+    } catch (error) {
+      console.error('Error in connect method:', error);
+      this.onConnectionChange('error');
+    }
+  }
+
+  private async testEdgeFunctionHealth() {
+    try {
+      console.log('Testing edge function health...');
+      const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`, {
+        method: 'OPTIONS',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Edge function health check:', response.status);
+      if (!response.ok && response.status !== 200) {
+        throw new Error(`Edge function not ready. Status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Edge function health check failed:', error);
+      throw new Error('Edge function not available. Please wait a moment and try again.');
+    }
+  }
+
+  private async connectWebSocket(retryCount = 0) {
+    const maxRetries = 3;
+    const wsUrl = `wss://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`;
+    
+    console.log(`Attempting WebSocket connection (attempt ${retryCount + 1}/${maxRetries + 1}):`, wsUrl);
+
+    return new Promise<void>((resolve, reject) => {
       this.ws = new WebSocket(wsUrl);
+      
+      const connectionTimeout = setTimeout(() => {
+        console.error('WebSocket connection timeout');
+        this.ws?.close();
+        reject(new Error('Connection timeout'));
+      }, 10000); // 10 second timeout
 
       this.ws.onopen = () => {
+        clearTimeout(connectionTimeout);
         console.log('WebSocket connected to Supabase proxy');
         this.isConnected = true;
         this.onConnectionChange('connected');
         this.setupAudioProcessing();
+        resolve();
       };
 
       this.ws.onmessage = (event) => {
@@ -58,24 +102,33 @@ class RealtimeChat {
         }
       };
 
-      this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+      this.ws.onclose = (event) => {
+        clearTimeout(connectionTimeout);
+        console.log('WebSocket connection closed:', event.code, event.reason);
         this.isConnected = false;
         this.onConnectionChange('disconnected');
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket connection error:', error);
-        console.error('WebSocket URL:', wsUrl);
-        console.error('WebSocket readyState:', this.ws?.readyState);
-        this.onConnectionChange('error');
+        clearTimeout(connectionTimeout);
+        console.error('WebSocket connection error details:', {
+          error,
+          url: wsUrl,
+          readyState: this.ws?.readyState,
+          retryCount
+        });
+        
+        if (retryCount < maxRetries) {
+          console.log(`Retrying connection in ${(retryCount + 1) * 2} seconds...`);
+          setTimeout(() => {
+            this.connectWebSocket(retryCount + 1).then(resolve).catch(reject);
+          }, (retryCount + 1) * 2000);
+        } else {
+          this.onConnectionChange('error');
+          reject(new Error('WebSocket connection failed after multiple attempts'));
+        }
       };
-
-    } catch (error) {
-      console.error('Error connecting to OpenAI Realtime API:', error);
-      this.onConnectionChange('error');
-      throw error;
-    }
+    });
   }
 
 
@@ -403,23 +456,27 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
       case 'connecting':
         toast({
           title: "Connecting...",
-          description: "Establishing voice connection",
+          description: "Testing edge function and establishing voice connection",
         });
         break;
       case 'connected':
         toast({
           title: "✅ Connected",
-          description: "Voice connection established",
+          description: "Voice connection established successfully",
         });
         break;
       case 'error':
         setIsRecording(false);
         setIsAISpeaking(false);
         toast({
-          title: "Connection Error",
-          description: "Unable to establish voice connection",
+          title: "Connection Failed",
+          description: "The edge function may still be deploying. Wait 30 seconds and try again.",
           variant: "destructive",
         });
+        break;
+      case 'disconnected':
+        setIsRecording(false);
+        setIsAISpeaking(false);
         break;
     }
   }, []);
