@@ -22,9 +22,10 @@ interface TranscriptItem {
 class RealtimeChat {
   private ws: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
-  private mediaRecorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
   private isConnected = false;
+  private audioQueue: Uint8Array[] = [];
+  private isPlayingAudio = false;
 
   constructor(
     private onMessage: (message: any) => void,
@@ -36,15 +37,14 @@ class RealtimeChat {
       this.onConnectionChange('connecting');
       this.stream = stream;
 
-      // Initialize WebSocket connection to OpenAI
-      const wsUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01';
+      // Initialize WebSocket connection through Supabase edge function
+      const wsUrl = 'wss://bmrifufykczudfxomenr.functions.supabase.co/realtime-chat';
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected to Supabase proxy');
         this.isConnected = true;
         this.onConnectionChange('connected');
-        this.initializeSession();
         this.setupAudioProcessing();
       };
 
@@ -75,51 +75,28 @@ class RealtimeChat {
     }
   }
 
-  private initializeSession() {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-
-    // Configure session
-    const sessionConfig = {
-      type: 'session.update',
-      session: {
-        modalities: ['text', 'audio'],
-        instructions: 'You are a helpful AI assistant. Respond conversationally.',
-        voice: 'alloy',
-        input_audio_format: 'pcm16',
-        output_audio_format: 'pcm16',
-        input_audio_transcription: {
-          model: 'whisper-1'
-        },
-        turn_detection: {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 200
-        }
-      }
-    };
-
-    this.ws.send(JSON.stringify(sessionConfig));
-  }
 
   private async setupAudioProcessing() {
     if (!this.stream) return;
 
     try {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // Setup MediaRecorder for audio capture
-      this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus'
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: 24000
       });
-
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && this.isConnected) {
-          this.sendAudioData(event.data);
+      
+      // Create audio processing nodes
+      const source = this.audioContext.createMediaStreamSource(this.stream);
+      const processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+      
+      processor.onaudioprocess = (event) => {
+        if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+          const inputData = event.inputBuffer.getChannelData(0);
+          this.sendAudioData(new Float32Array(inputData));
         }
       };
-
-      this.mediaRecorder.start(100); // Send data every 100ms
+      
+      source.connect(processor);
+      processor.connect(this.audioContext.destination);
       
       this.onMessage({ type: 'session.created' });
     } catch (error) {
@@ -128,12 +105,27 @@ class RealtimeChat {
     }
   }
 
-  private async sendAudioData(audioBlob: Blob) {
+  private sendAudioData(audioData: Float32Array) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
     try {
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      // Convert Float32Array to base64 PCM16
+      const int16Array = new Int16Array(audioData.length);
+      for (let i = 0; i < audioData.length; i++) {
+        const s = Math.max(-1, Math.min(1, audioData[i]));
+        int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      
+      const uint8Array = new Uint8Array(int16Array.buffer);
+      let binary = '';
+      const chunkSize = 0x8000;
+      
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      
+      const base64Audio = btoa(binary);
       
       const message = {
         type: 'input_audio_buffer.append',
@@ -199,41 +191,105 @@ class RealtimeChat {
     }
   }
 
+
   private async playAudioDelta(base64Audio: string) {
     if (!this.audioContext) return;
 
     try {
-      const audioData = atob(base64Audio);
-      const audioBuffer = new ArrayBuffer(audioData.length);
-      const view = new Uint8Array(audioBuffer);
-      
-      for (let i = 0; i < audioData.length; i++) {
-        view[i] = audioData.charCodeAt(i);
+      const binaryString = atob(base64Audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
+      
+      this.audioQueue.push(bytes);
+      
+      if (!this.isPlayingAudio) {
+        this.playNextAudioChunk();
+      }
+    } catch (error) {
+      console.error('Error processing audio delta:', error);
+    }
+  }
 
-      const decodedBuffer = await this.audioContext.decodeAudioData(audioBuffer);
-      const source = this.audioContext.createBufferSource();
-      source.buffer = decodedBuffer;
-      source.connect(this.audioContext.destination);
+  private async playNextAudioChunk() {
+    if (this.audioQueue.length === 0) {
+      this.isPlayingAudio = false;
+      return;
+    }
+
+    this.isPlayingAudio = true;
+    const audioData = this.audioQueue.shift()!;
+
+    try {
+      // Convert PCM16 to WAV format for AudioContext
+      const wavData = this.createWavFromPCM(audioData);
+      const audioBuffer = await this.audioContext!.decodeAudioData(wavData.buffer);
+      
+      const source = this.audioContext!.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(this.audioContext!.destination);
+      
+      source.onended = () => this.playNextAudioChunk();
       source.start();
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('Error playing audio chunk:', error);
+      this.playNextAudioChunk(); // Continue with next chunk
     }
+  }
+
+  private createWavFromPCM(pcmData: Uint8Array): Uint8Array {
+    const sampleRate = 24000;
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const blockAlign = (numChannels * bitsPerSample) / 8;
+    const byteRate = sampleRate * blockAlign;
+    
+    // Create WAV header
+    const wavHeader = new ArrayBuffer(44);
+    const view = new DataView(wavHeader);
+    
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + pcmData.length, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(36, 'data');
+    view.setUint32(40, pcmData.length, true);
+
+    // Combine header and data
+    const wavArray = new Uint8Array(wavHeader.byteLength + pcmData.length);
+    wavArray.set(new Uint8Array(wavHeader), 0);
+    wavArray.set(pcmData, wavHeader.byteLength);
+    
+    return wavArray;
   }
 
   disconnect() {
     console.log('Disconnecting RealtimeChat...');
     
-    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-      this.mediaRecorder.stop();
+    // Clear audio queue
+    this.audioQueue = [];
+    this.isPlayingAudio = false;
+    
+    if (this.audioContext) {
+      this.audioContext.close();
     }
     
     if (this.ws) {
       this.ws.close();
-    }
-    
-    if (this.audioContext) {
-      this.audioContext.close();
     }
     
     this.isConnected = false;
