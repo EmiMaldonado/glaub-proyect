@@ -11,10 +11,10 @@ const Landing = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden" style={{
+      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden mx-6 my-6" style={{
         backgroundImage: `url('/lovable-uploads/25a658b9-53b0-4b57-92f8-a630720ba2aa.png')`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat'
       }}>
         <div className="absolute inset-0" style={{ backgroundColor: 'rgba(36, 71, 110, 0.05)' }}></div>
@@ -24,12 +24,12 @@ const Landing = () => {
               ⚠️ This is not a real company, this is Master's thesis project
             </Badge>
             
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight drop-shadow-lg">
               Build Stronger Teams,<br />
               One Conversation at a Time
             </h1>
             
-            <p className="text-lg md:text-xl text-white/90 max-w-2xl">
+            <p className="text-lg md:text-xl text-white/90 max-w-2xl drop-shadow-md">
               Get personalized insights to help every individual thrive. It's not about evaluating, it's about understanding.
             </p>
             
