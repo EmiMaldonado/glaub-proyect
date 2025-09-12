@@ -6,26 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  MessageCircle, 
-  TrendingUp, 
-  Users, 
-  Calendar,
-  Plus,
-  History,
-  Settings,
-  Target,
-  Lightbulb,
-  Share2,
-  UserCheck
-} from "lucide-react";
+import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
-
 const Dashboard = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [lastConversation, setLastConversation] = useState<any>(null);
   const [oceanProfile, setOceanProfile] = useState<any>(null);
   const [allInsights, setAllInsights] = useState<any[]>([]);
@@ -46,45 +35,41 @@ const Dashboard = () => {
     sharedInsights: 0,
     teamMembers: 0
   });
-
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
   }, [user]);
-
   const loadDashboardData = async () => {
     if (!user) return;
-
     try {
       // Load all conversations for comprehensive analysis
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const {
+        data: conversations
+      } = await supabase.from('conversations').select('*').eq('user_id', user.id).order('created_at', {
+        ascending: false
+      });
 
       // Load all insights from all conversations
-      const { data: insights } = await supabase
-        .from('key_insights')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const {
+        data: insights
+      } = await supabase.from('key_insights').select('*').order('created_at', {
+        ascending: false
+      });
 
       // Filter insights that belong to user's conversations
       const userConversationIds = conversations?.map(c => c.id) || [];
-      const userInsights = insights?.filter(insight => 
-        userConversationIds.includes(insight.conversation_id)
-      ) || [];
+      const userInsights = insights?.filter(insight => userConversationIds.includes(insight.conversation_id)) || [];
 
       // Set all insights for comprehensive dashboard
       if (userInsights && userInsights.length > 0) {
         setAllInsights(userInsights);
-        
+
         // Generate personalized summary based on all conversations
         const allPersonalityData = userInsights.map(i => i.personality_notes).filter(Boolean);
         const allInsightsData = userInsights.flatMap(i => i.insights || []);
         const allNextSteps = userInsights.flatMap(i => i.next_steps || []);
-        
+
         // Calculate average OCEAN scores across all sessions
         if (allPersonalityData.length > 0) {
           const avgOcean = {
@@ -97,42 +82,34 @@ const Dashboard = () => {
           };
           setOceanProfile(avgOcean);
         }
-        
+
         // Create personalized summary
         setPersonalizedSummary(`Based on your ${conversations?.length || 0} conversations, you've shown consistent growth in self-awareness and professional development. Your journey reflects ${allInsightsData.length} unique insights and ${allNextSteps.length} actionable recommendations.`);
       }
 
       // Load last conversation for quick reference
-      const { data: lastConv } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const {
+        data: lastConv
+      } = await supabase.from('conversations').select('*').eq('user_id', user.id).eq('status', 'completed').order('created_at', {
+        ascending: false
+      }).limit(1).maybeSingle();
       if (lastConv) {
         // Separately load insights for this conversation to avoid join issues
-        const { data: lastConvInsights } = await supabase
-          .from('key_insights')
-          .select('insights, personality_notes, next_steps')
-          .eq('conversation_id', lastConv.id)
-          .maybeSingle();
-        
+        const {
+          data: lastConvInsights
+        } = await supabase.from('key_insights').select('insights, personality_notes, next_steps').eq('conversation_id', lastConv.id).maybeSingle();
         setLastConversation({
           ...lastConv,
           key_insights: lastConvInsights
         });
       }
-
       setStats({
         totalConversations: conversations?.length || 0,
         completedConversations: conversations?.filter(c => c.status === 'completed').length || 0,
-        sharedInsights: 0, // TODO: implement sharing tracking
+        sharedInsights: 0,
+        // TODO: implement sharing tracking
         teamMembers: 0 // TODO: implement team member count
       });
-
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       // Don't show error toast for auth issues to avoid spamming
@@ -140,69 +117,63 @@ const Dashboard = () => {
         toast({
           title: "Error Loading Dashboard",
           description: "Some data may not be available. Please try refreshing the page.",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     }
   };
-
   const handleSharingToggle = (setting: string) => {
     setSharingSettings(prev => ({
       ...prev,
       [setting]: !prev[setting as keyof typeof prev]
     }));
   };
-
   const handleInviteManager = async () => {
     if (!managerEmail.trim()) {
       toast({
         title: "Email Required",
         description: "Please enter your manager's email address",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     if (!managerEmail.includes('@')) {
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setIsInvitingManager(true);
-
     try {
-      const { error } = await supabase.functions.invoke('invite-manager', {
-        body: { managerEmail: managerEmail.trim() },
+      const {
+        error
+      } = await supabase.functions.invoke('invite-manager', {
+        body: {
+          managerEmail: managerEmail.trim()
+        }
       });
-
       if (error) {
         throw error;
       }
-
       toast({
         title: "Invitation Sent!",
-        description: `Manager invitation has been sent to ${managerEmail}`,
+        description: `Manager invitation has been sent to ${managerEmail}`
       });
-
       setManagerEmail(''); // Clear the input
     } catch (error: any) {
       console.error('Error inviting manager:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to send manager invitation",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsInvitingManager(false);
     }
   };
-
-  return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+  return <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Welcome Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-foreground">
@@ -219,15 +190,8 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div className="space-y-3">
               <h2 className="text-2xl font-bold">New Conversation</h2>
-              <p className="text-primary-foreground/90">
-                Start a 10-15 minute session to discover new insights about your personality
-              </p>
-              <Button 
-                variant="secondary" 
-                size="lg" 
-                className="mt-4"
-                asChild
-              >
+              <p className="text-primary-foreground/90">Start a new 5 minutes session to discover new insights about your personality</p>
+              <Button variant="secondary" size="lg" className="mt-4" asChild>
                 <Link to="/conversation">
                   <Plus className="mr-2 h-5 w-5" />
                   Start Now
@@ -250,23 +214,16 @@ const Dashboard = () => {
               Your Last Meeting
             </CardTitle>
             <CardDescription>
-              {lastConversation ? 
-                `Completed on ${new Date(lastConversation.created_at).toLocaleDateString()}` :
-                'No conversation data available'
-              }
+              {lastConversation ? `Completed on ${new Date(lastConversation.created_at).toLocaleDateString()}` : 'No conversation data available'}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Switch 
-              checked={sharingSettings.insights}
-              onCheckedChange={() => handleSharingToggle('insights')}
-            />
+            <Switch checked={sharingSettings.insights} onCheckedChange={() => handleSharingToggle('insights')} />
             <span className="text-sm text-muted-foreground">Share with Manager</span>
           </div>
         </CardHeader>
         <CardContent>
-          {lastConversation ? (
-            <div className="space-y-3">
+          {lastConversation ? <div className="space-y-3">
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Duration:</span>
@@ -287,16 +244,13 @@ const Dashboard = () => {
                   View Complete History
                 </Link>
               </Button>
-            </div>
-          ) : (
-            <div className="text-center py-8">
+            </div> : <div className="text-center py-8">
               <History className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No conversation data available</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Complete your first conversation to see a summary here
               </p>
-            </div>
-          )}
+            </div>}
         </CardContent>
       </Card>
 
@@ -313,16 +267,12 @@ const Dashboard = () => {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Switch 
-              checked={sharingSettings.profile}
-              onCheckedChange={() => handleSharingToggle('profile')}
-            />
+            <Switch checked={sharingSettings.profile} onCheckedChange={() => handleSharingToggle('profile')} />
             <span className="text-sm text-muted-foreground">Share with Manager</span>
           </div>
         </CardHeader>
         <CardContent>
-          {oceanProfile ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {oceanProfile ? <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
                 <div className="text-xs text-muted-foreground">Openness</div>
@@ -343,16 +293,13 @@ const Dashboard = () => {
                 <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
                 <div className="text-xs text-muted-foreground">Stability</div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
+            </div> : <div className="text-center py-8">
               <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No personality data available</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Complete a conversation to generate your personalized OCEAN profile
               </p>
-            </div>
-          )}
+            </div>}
         </CardContent>
       </Card>
 
@@ -370,32 +317,23 @@ const Dashboard = () => {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Switch 
-                checked={sharingSettings.strengths}
-                onCheckedChange={() => handleSharingToggle('strengths')}
-              />
+              <Switch checked={sharingSettings.strengths} onCheckedChange={() => handleSharingToggle('strengths')} />
               <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
           <CardContent>
-            {allInsights.length > 0 ? (
-              <ul className="space-y-2">
-                {allInsights.flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => (
-                  <li key={index} className="flex items-start gap-2">
+            {allInsights.length > 0 ? <ul className="space-y-2">
+                {allInsights.flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => <li key={index} className="flex items-start gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-2 flex-shrink-0" />
                     <span className="text-sm">{insight}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-center py-6">
+                  </li>)}
+              </ul> : <div className="text-center py-6">
                 <Target className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-muted-foreground text-sm font-medium">No strengths data available</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Complete a conversation to identify your strengths
                 </p>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
 
@@ -411,32 +349,23 @@ const Dashboard = () => {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Switch 
-                checked={sharingSettings.opportunities}
-                onCheckedChange={() => handleSharingToggle('opportunities')}
-              />
+              <Switch checked={sharingSettings.opportunities} onCheckedChange={() => handleSharingToggle('opportunities')} />
               <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
           <CardContent>
-            {allInsights.length > 0 ? (
-              <ul className="space-y-2">
-                {allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5).map((step: string, index: number) => (
-                  <li key={index} className="flex items-start gap-2">
+            {allInsights.length > 0 ? <ul className="space-y-2">
+                {allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5).map((step: string, index: number) => <li key={index} className="flex items-start gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-2 flex-shrink-0" />
                     <span className="text-sm">{step}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-center py-6">
+                  </li>)}
+              </ul> : <div className="text-center py-6">
                 <Lightbulb className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-muted-foreground text-sm font-medium">No growth opportunities available</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Recommended steps will appear after your first conversation
                 </p>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
       </div>
@@ -455,10 +384,7 @@ const Dashboard = () => {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Switch 
-                checked={sharingSettings.manager}
-                onCheckedChange={() => handleSharingToggle('manager')}
-              />
+              <Switch checked={sharingSettings.manager} onCheckedChange={() => handleSharingToggle('manager')} />
               <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
@@ -469,22 +395,10 @@ const Dashboard = () => {
             
             <div className="space-y-2">
               <Label htmlFor="manager-email">Manager's Email</Label>
-              <Input
-                id="manager-email"
-                type="email"
-                placeholder="manager@company.com"
-                value={managerEmail}
-                onChange={(e) => setManagerEmail(e.target.value)}
-                disabled={isInvitingManager}
-              />
+              <Input id="manager-email" type="email" placeholder="manager@company.com" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} disabled={isInvitingManager} />
             </div>
             
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleInviteManager}
-              disabled={isInvitingManager || !managerEmail.trim()}
-            >
+            <Button variant="outline" size="sm" onClick={handleInviteManager} disabled={isInvitingManager || !managerEmail.trim()}>
               <Share2 className="mr-1 h-3 w-3" />
               {isInvitingManager ? "Sending..." : "Send Invitation"}
             </Button>
@@ -503,16 +417,12 @@ const Dashboard = () => {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Switch 
-                checked={sharingSettings.team}
-                onCheckedChange={() => handleSharingToggle('team')}
-              />
+              <Switch checked={sharingSettings.team} onCheckedChange={() => handleSharingToggle('team')} />
               <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {stats.teamMembers > 0 || stats.sharedInsights > 0 ? (
-              <div className="text-sm">
+            {stats.teamMembers > 0 || stats.sharedInsights > 0 ? <div className="text-sm">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-muted-foreground">Team members:</span>
                   <span className="font-medium">{stats.teamMembers}</span>
@@ -521,13 +431,10 @@ const Dashboard = () => {
                   <span className="text-muted-foreground">Shared insights:</span>
                   <span className="font-medium">{stats.sharedInsights}</span>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-4">
+              </div> : <div className="text-center py-4">
                 <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-muted-foreground text-sm">No team data available</p>
-              </div>
-            )}
+              </div>}
             <Button variant="outline" size="sm" disabled>
               <Users className="mr-1 h-3 w-3" />
               Manage Team
@@ -535,8 +442,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
