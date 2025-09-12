@@ -103,7 +103,7 @@ const ResetPassword = () => {
         <div className="flex items-center justify-center mb-8">
           <Link to="/" className="flex items-center space-x-2">
             <Brain className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">PersonaInsights</span>
+            <span className="text-xl font-bold text-foreground">Gläub</span>
           </Link>
         </div>
 

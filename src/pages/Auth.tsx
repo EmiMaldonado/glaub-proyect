@@ -183,7 +183,7 @@ const Auth = () => {
         <div className="flex items-center justify-center mb-8">
           <Link to="/" className="flex items-center space-x-2">
             <Brain className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">PersonaInsights</span>
+            <span className="text-xl font-bold text-foreground">Gläub</span>
           </Link>
         </div>
 
@@ -260,7 +260,7 @@ const Auth = () => {
                     </div>
                     <CardTitle>Join the Team</CardTitle>
                     <CardDescription>
-                      You've been invited to join a team on PersonaInsights. Create your account to get started.
+                      You've been invited to join a team on Gläub. Create your account to get started.
                     </CardDescription>
                   </>
                 ) : (
