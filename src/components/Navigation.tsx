@@ -25,7 +25,7 @@ const Navigation = () => {
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
-            <img src="/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" className="h-6 w-auto" />
+            <img src="/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" className="h-10 w-auto" />
           </Link>
           
           <div className="flex items-center space-x-4">
