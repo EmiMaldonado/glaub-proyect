@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import NewVoiceInterface from '@/components/NewVoiceInterface';
 import VoiceErrorBoundary from '@/components/VoiceErrorBoundary';
@@ -30,6 +31,7 @@ interface Conversation {
 const VoiceConversation: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { speak, isSpeaking: isTTSSpeaking } = useTextToSpeech();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -113,12 +115,55 @@ const VoiceConversation: React.FC = () => {
     }
   };
 
-  // Send AI first message with context
+  // Get AI first message with context and previous insights
   const sendAIFirstMessage = async (conversationId: string, userName: string) => {
     try {
+      // Get user's previous conversations for personalized greeting
+      const { data: previousConversations } = await supabase
+        .from('conversations')
+        .select('insights, ocean_signals, ended_at')
+        .eq('user_id', user?.id)
+        .eq('status', 'completed')
+        .order('ended_at', { ascending: false })
+        .limit(3);
+
+      let greeting = `Hello ${userName}! Welcome back to your therapy session.`;
+      
+      if (previousConversations && previousConversations.length > 0) {
+        const lastSession = previousConversations[0];
+        const lastSessionDate = new Date(lastSession.ended_at).toLocaleDateString();
+        
+        // Create specific questions based on previous insights
+        let specificQuestions = [];
+        
+        const insights = lastSession.insights as any;
+        const oceanSignals = lastSession.ocean_signals as any;
+        
+        if (insights?.themes?.includes('work')) {
+          specificQuestions.push("How have things been going with work since we last talked?");
+        }
+        if (insights?.themes?.includes('relationships')) {
+          specificQuestions.push("Have there been any developments in your relationships since our last session?");
+        }
+        if (insights?.emotional_tone === 'sad' || insights?.emotional_tone === 'anxious') {
+          specificQuestions.push("How have you been feeling emotionally since our last conversation?");
+        }
+        if (oceanSignals?.neuroticism_high) {
+          specificQuestions.push("Have you been able to practice any of the coping strategies we discussed?");
+        }
+        
+        if (specificQuestions.length > 0) {
+          greeting = `Hello ${userName}! Welcome back to your therapy session. I remember we talked on ${lastSessionDate}. ${specificQuestions[0]}`;
+        } else {
+          greeting = `Hello ${userName}! Welcome back to your therapy session. It's been since ${lastSessionDate} that we last talked. How have you been feeling since then?`;
+        }
+      } else {
+        greeting = `Hello ${userName}! Welcome to your first therapy session with me. I'm here to listen and support you. What brings you here today, and what would you like to explore in our conversation?`;
+      }
+
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: `Hello ${userName}! Welcome to your therapy session. To get started, tell me a bit about yourself - whatever feels comfortable to share.`,
+          message: greeting,
           conversationId: conversationId,
           userId: user?.id,
           isFirstMessage: true,
@@ -130,9 +175,11 @@ const VoiceConversation: React.FC = () => {
         throw new Error(response.error.message);
       }
 
-      // Set the AI's first message for display
+      // Set the AI's first message for display and speak it
       if (response.data?.message) {
         setCurrentAIResponse(response.data.message);
+        // Play the AI's first message as voice
+        speak(response.data.message);
       }
 
     } catch (error) {
@@ -181,9 +228,11 @@ const VoiceConversation: React.FC = () => {
         
         setSessionTranscripts(prev => [...prev, newMessage]);
 
-        // Update current AI response if it's from AI
+        // Update current AI response if it's from AI and speak it
         if (!isUser) {
           setCurrentAIResponse(text.trim());
+          // Play AI response as voice
+          speak(text.trim());
         }
       }
     } catch (error) {
@@ -267,9 +316,11 @@ const VoiceConversation: React.FC = () => {
             return exists ? prev : [...prev, newMessage];
           });
 
-          // Update current AI response if it's from AI
+          // Update current AI response if it's from AI and speak it
           if (newMessage.role === 'assistant') {
             setCurrentAIResponse(newMessage.content);
+            // Play AI response as voice
+            speak(newMessage.content);
           }
         }
       )
