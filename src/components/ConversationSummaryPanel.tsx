@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Brain, Heart, TrendingUp, Target, Send, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { Heart, TrendingUp, Target, Send, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 interface ConversationSummaryPanelProps {
   conversationSummary: string;
   conversationContext: any;
@@ -58,7 +58,7 @@ const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
   return <div className={`${isCompact ? 'w-60' : 'w-96'} bg-card/30 backdrop-blur-sm border-l border-border h-full`}>
       <div className={`${isCompact ? 'p-3' : 'p-4'} border-b`}>
         <div className="flex items-center gap-2">
-          <Brain className={`${isCompact ? 'h-4 w-4' : 'h-5 w-5'} text-primary`} />
+          <Heart className={`${isCompact ? 'h-4 w-4' : 'h-5 w-5'} text-primary`} />
           <h3 className={`${isCompact ? 'text-sm' : 'text-base'} font-semibold text-foreground`}>Resumen e Insights</h3>
         </div>
       </div>
@@ -120,7 +120,7 @@ const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
           {/* Key Insights */}
           {conversationContext?.keyInsights?.length > 0 && <Card className="p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Brain className="h-4 w-4 text-primary" />
+                <Heart className="h-4 w-4 text-primary" />
                 <h4 className="text-sm font-medium">Insights Principales</h4>
               </div>
               <div className="space-y-2">
@@ -135,7 +135,7 @@ const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
               {/* Insights Category */}
               {categorizedSummary.insights.length > 0 && <Card className="p-4 border-blue-200 bg-blue-50/30">
                   <div className="flex items-center gap-2 mb-3">
-                    <Brain className="h-4 w-4 text-blue-600" />
+                    <Heart className="h-4 w-4 text-blue-600" />
                     <h4 className="text-sm font-medium text-blue-800">Insights Terapéuticos</h4>
                   </div>
                   <div className="space-y-1">
@@ -219,7 +219,7 @@ const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
 
           {/* Empty State */}
           {!conversationSummary && !isSessionCompleted && <div className="text-center py-12 text-muted-foreground">
-              <Brain className="h-16 w-16 mx-auto mb-4 opacity-20" />
+              <Heart className="h-16 w-16 mx-auto mb-4 opacity-20" />
               <h4 className="text-lg font-medium mb-2">Sesión en Progreso</h4>
               <p className="text-sm max-w-sm mx-auto leading-relaxed">
                 Los insights y el resumen aparecerán aquí conforme avance tu conversación terapéutica.

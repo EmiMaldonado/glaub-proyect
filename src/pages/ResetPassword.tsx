@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Lock, CheckCircle, AlertCircle } from "lucide-react";
+import { Lock, CheckCircle, AlertCircle } from "lucide-react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "@/hooks/use-toast";
 
@@ -102,7 +102,6 @@ const ResetPassword = () => {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center mb-8">
           <Link to="/" className="flex items-center space-x-2">
-            <Brain className="h-8 w-8 text-primary" />
             <img src="/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" className="h-6 w-auto" />
           </Link>
         </div>

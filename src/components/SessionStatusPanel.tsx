@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Clock, Activity, Volume2, VolumeX, Settings, Heart, Brain, Mic, Keyboard, MessageSquare } from 'lucide-react';
+import { Clock, Activity, Volume2, VolumeX, Settings, Heart, Mic, Keyboard, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SessionStatusPanelProps {

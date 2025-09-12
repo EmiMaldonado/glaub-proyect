@@ -1,7 +1,7 @@
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Brain, Heart, Eye, Target } from 'lucide-react';
+import { TrendingUp, Heart, Eye, Target, User } from 'lucide-react';
 
 interface ProgressIndicatorProps {
   progress: {
@@ -40,7 +40,7 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ progress, stage, 
       key: 'selfAwareness', 
       label: 'Autoconocimiento', 
       value: progress.selfAwareness,
-      icon: Brain,
+      icon: User,
       description: 'Comprensión de pensamientos y emociones'
     },
     { 

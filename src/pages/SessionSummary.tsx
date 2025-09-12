@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Loader2, Brain, CheckCircle, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle, MessageCircle, Lightbulb } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -276,7 +276,7 @@ const SessionSummary = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Brain className="w-5 h-5 text-primary" />
+                  <Lightbulb className="w-5 h-5 text-primary" />
                   Key Insights
                 </CardTitle>
               </CardHeader>

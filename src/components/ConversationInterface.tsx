@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { Mic, MicOff, Square, Send, User, Brain, Keyboard, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Square, Send, User, Keyboard, Volume2 } from 'lucide-react';
 import VoiceInput from '@/components/VoiceInput';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -218,7 +218,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
                   {message.role === 'user' ? (
                     <User className="h-3 w-3 sm:h-4 sm:w-4" />
                   ) : (
-                    <Brain className={`h-3 w-3 sm:h-4 sm:w-4 ${isAISpeaking ? 'animate-pulse text-primary' : ''}`} />
+                    <User className={`h-3 w-3 sm:h-4 sm:w-4 ${isAISpeaking ? 'animate-pulse text-primary' : ''}`} />
                   )}
                 </div>
                 <Card className={`p-2 sm:p-3 ${
@@ -266,7 +266,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
           {isLoading && (
             <div className="flex gap-3 justify-start">
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-muted">
-                <Brain className="h-4 w-4 animate-pulse" />
+                <User className="h-4 w-4 animate-pulse" />
               </div>
               <Card className="p-3 bg-card">
                 <div className="flex items-center gap-2">

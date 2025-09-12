@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MessageCircle, Hash, Lightbulb, ClipboardList, Brain, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Hash, Lightbulb, ClipboardList, Check, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,7 +100,7 @@ const SessionRecap = () => {
     {
       id: 'ai-recommendations',
       title: 'AI Recommendations',
-      icon: Brain,
+      icon: Lightbulb,
       content: (
         <ul className="space-y-2 text-sm">
           <li className="flex items-start gap-2">

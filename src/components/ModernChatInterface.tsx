@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { Menu, Mic, MicOff, Send, PenTool, User, Brain, Paperclip, Square, Volume2, ArrowLeft } from 'lucide-react';
+import { Menu, Mic, MicOff, Send, PenTool, User, Paperclip, Square, Volume2, ArrowLeft } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import VoiceRecorder from '@/components/VoiceRecorder';
 interface Message {
@@ -147,7 +147,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
             <div className="text-center space-y-8 max-w-2xl">
               {/* Avatar */}
               <div className="w-24 h-24 mx-auto rounded-full bg-primary flex items-center justify-center shadow-elegant">
-                <Brain className="w-12 h-12 text-white" />
+                <User className="w-12 h-12 text-white" />
               </div>
               
               {/* Welcome Text */}
@@ -205,7 +205,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                 {messages.map(message => <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`flex items-start space-x-3 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${message.role === 'user' ? 'bg-blue-500' : 'bg-white border border-gray-200'}`}>
-                        {message.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Brain className={`w-4 h-4 ${isAISpeaking ? 'text-purple-500 animate-pulse' : 'text-gray-600'}`} />}
+                        {message.role === 'user' ? <User className="w-4 h-4 text-white" /> : <User className={`w-4 h-4 ${isAISpeaking ? 'text-purple-500 animate-pulse' : 'text-gray-600'}`} />}
                       </div>
                       <div className={`px-4 py-3 rounded-lg ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white border border-gray-200'}`}>
                         <p className="text-sm leading-relaxed">{message.content}</p>
@@ -220,7 +220,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                 {isLoading && <div className="flex justify-start">
                     <div className="flex items-start space-x-3">
                       <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center">
-                        <Brain className="w-4 h-4 text-gray-600 animate-pulse" />
+                        <User className="w-4 h-4 text-gray-600 animate-pulse" />
                       </div>
                       <div className="px-4 py-3 bg-white border border-gray-200 rounded-lg">
                         <div className="flex items-center space-x-2">

@@ -2,7 +2,7 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Home, ArrowLeft } from "lucide-react";
+import { Home, ArrowLeft, AlertTriangle } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
@@ -17,7 +17,7 @@ const NotFound = () => {
       <Card className="w-full max-w-md shadow-medium text-center">
         <CardHeader>
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <Brain className="h-8 w-8 text-primary" />
+            <AlertTriangle className="h-8 w-8 text-primary" />
           </div>
           <CardTitle className="text-4xl font-bold">404</CardTitle>
           <CardDescription className="text-lg">

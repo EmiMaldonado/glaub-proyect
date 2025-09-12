@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from 'recharts';
-import { Brain, Share2, Calendar, TrendingUp, Users, MessageSquare, Lightbulb, Target, Sparkles } from 'lucide-react';
+import { Share2, Calendar, TrendingUp, Users, MessageSquare, Lightbulb, Target, Sparkles, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import TeamManagement from '@/components/TeamManagement';
 
@@ -292,7 +292,7 @@ const Profile: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-md mx-auto text-center p-8">
-          <Brain className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h2 className="text-xl font-semibold mb-2">Sin datos de perfil</h2>
           <p className="text-muted-foreground mb-4">
             Completa tu primera sesión para generar tu perfil personalizado.
@@ -339,7 +339,7 @@ const Profile: React.FC = () => {
           <Card className="insight-glow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-primary" />
+                <Target className="h-5 w-5 text-primary" />
                 Tu Perfil OCEAN Interactivo
               </CardTitle>
               <CardDescription>

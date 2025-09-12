@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, FileText, Brain, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Loader2, FileText, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface TranscriptionProcessorProps {
@@ -220,7 +220,7 @@ const TranscriptionProcessor: React.FC<TranscriptionProcessorProps> = ({
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Brain className="w-6 h-6 text-primary" />
+              <Sparkles className="w-6 h-6 text-primary" />
               <h3 className="text-xl font-semibold">Conversation Insights</h3>
             </div>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
@@ -325,7 +325,7 @@ const TranscriptionProcessor: React.FC<TranscriptionProcessorProps> = ({
               onClick={() => processAudio()}
               className="hover:bg-primary/5 hover:border-primary/50"
             >
-              <Brain className="w-4 h-4 mr-2" />
+              <Sparkles className="w-4 h-4 mr-2" />
               Generate New Insights
             </Button>
           </div>

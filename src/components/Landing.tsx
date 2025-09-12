@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Users, Building, MessageCircle, Brain, Shield, ArrowRight } from "lucide-react";
+import { User, Users, Building, MessageCircle, Shield, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 const Landing = () => {
   return <div className="min-h-screen">

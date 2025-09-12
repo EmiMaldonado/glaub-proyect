@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mic, MicOff, Square, Play, Brain, AlertTriangle } from 'lucide-react';
+import { Mic, MicOff, Square, Play, AlertTriangle, User } from 'lucide-react';
 import VoiceInput from '@/components/VoiceInput';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -122,7 +122,7 @@ const VoiceRecordingInterface: React.FC<VoiceRecordingInterfaceProps> = ({
         <Card className="p-6 bg-primary/5 border-primary/20 max-w-2xl w-full">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-              <Brain className={`h-5 w-5 text-primary ${isAISpeaking ? 'animate-pulse' : ''}`} />
+              <User className={`h-5 w-5 text-primary ${isAISpeaking ? 'animate-pulse' : ''}`} />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">

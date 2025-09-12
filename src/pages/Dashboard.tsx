@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { 
   MessageCircle, 
-  Brain, 
   TrendingUp, 
   Users, 
   Calendar,
@@ -244,7 +243,7 @@ const Dashboard = () => {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-secondary" />
+              <Target className="h-5 w-5 text-secondary" />
               Your OCEAN Profile
             </CardTitle>
             <CardDescription>
@@ -285,7 +284,7 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="text-center py-8">
-              <Brain className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No personality data available</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Complete a conversation to generate your personalized OCEAN profile

@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Brain, Heart, Eye, TrendingUp, AlertCircle } from 'lucide-react';
+import { Heart, Eye, TrendingUp, AlertCircle } from 'lucide-react';
 
 interface TherapeuticInsightsProps {
   conversationContext: {
@@ -57,7 +57,7 @@ const TherapeuticInsights: React.FC<TherapeuticInsightsProps> = ({
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="text-center">
-          <Brain className="h-8 w-8 text-primary mx-auto mb-2" />
+          <Heart className="h-8 w-8 text-primary mx-auto mb-2" />
           <h3 className="text-lg font-semibold text-foreground">Análisis Terapéutico</h3>
           <p className="text-sm text-muted-foreground">Insights en Tiempo Real</p>
         </div>
@@ -159,7 +159,7 @@ const TherapeuticInsights: React.FC<TherapeuticInsightsProps> = ({
         {conversationContext.keyInsights.length > 0 && (
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Brain className="h-4 w-4 text-primary" />
+              <Heart className="h-4 w-4 text-primary" />
               <h4 className="text-sm font-medium">Insights Clave</h4>
             </div>
             <div className="space-y-2">
@@ -193,7 +193,7 @@ const TherapeuticInsights: React.FC<TherapeuticInsightsProps> = ({
         {oceanSignals && (
           <Card className="p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Brain className="h-4 w-4 text-primary" />
+              <Heart className="h-4 w-4 text-primary" />
               <h4 className="text-sm font-medium">Señales OCEAN</h4>
             </div>
             <div className="space-y-2">

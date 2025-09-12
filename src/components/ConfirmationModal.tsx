@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { Send, User, UserCheck, Brain, FileText, CheckCircle, Target } from 'lucide-react';
+import { Send, User, UserCheck, FileText, CheckCircle, Target } from 'lucide-react';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -39,7 +39,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       id: 'insights',
       label: 'Insights Terapéuticos',
       description: 'Descubrimientos y revelaciones de la sesión',
-      icon: Brain,
+      icon: User,
       count: categorizedSummary?.insights?.length || 0,
       color: 'text-blue-600 bg-blue-50 border-blue-200'
     },
