@@ -134,6 +134,34 @@ serve(async (req) => {
     metadata: {}
   };
 
+  let requestBody: any = {};
+  
+  try {
+    requestBody = await req.json();
+    console.log('📥 Request body received:', JSON.stringify(requestBody, null, 2));
+  } catch (error) {
+    console.error('❌ Failed to parse request body:', error);
+    return new Response(JSON.stringify({
+      error: 'Invalid request body',
+      debug: {
+        success: false,
+        error_category: 'request_parsing',
+        error_message: 'Failed to parse JSON request body',
+        error_type: error.constructor.name,
+        processing_time_ms: Date.now() - startTime,
+        steps_completed: [],
+        timing_breakdown: {},
+        metadata: {},
+        timestamp: new Date().toISOString(),
+        conversation_id: null,
+        user_id: null
+      }
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
     // Handle session analysis requests
     if (requestBody.analysis_type === 'session_summary') {

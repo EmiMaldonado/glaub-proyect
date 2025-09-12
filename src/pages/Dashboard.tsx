@@ -106,21 +106,21 @@ const Dashboard = () => {
       {/* Welcome Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-foreground">
-          ¡Hola, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! 👋
+          Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! 👋
         </h1>
         <p className="text-lg text-muted-foreground">
-          Tu espacio personal para el autoconocimiento y desarrollo profesional.
+          Your personal space for self-discovery and professional development.
         </p>
       </div>
 
-      {/* Section 1: Nueva Conversación - Prominent */}
+      {/* Section 1: New Conversation - Prominent */}
       <Card className="bg-gradient-primary text-primary-foreground shadow-elegant">
         <CardContent className="p-8">
           <div className="flex items-center justify-between">
             <div className="space-y-3">
-              <h2 className="text-2xl font-bold">Nueva Conversación</h2>
+              <h2 className="text-2xl font-bold">New Conversation</h2>
               <p className="text-primary-foreground/90">
-                Inicia una sesión de 10-15 minutos para descubrir nuevos insights sobre tu personalidad
+                Start a 10-15 minute session to discover new insights about your personality
               </p>
               <Button 
                 variant="secondary" 
@@ -130,7 +130,7 @@ const Dashboard = () => {
               >
                 <Link to="/conversation">
                   <Plus className="mr-2 h-5 w-5" />
-                  Comenzar Ahora
+                  Start Now
                 </Link>
               </Button>
             </div>
@@ -141,18 +141,18 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Section 2: Tu Última Reunión */}
+      {/* Section 2: Your Last Meeting */}
       <Card className="shadow-soft">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              Tu Última Reunión
+              Your Last Meeting
             </CardTitle>
             <CardDescription>
               {lastConversation ? 
-                `Completada el ${new Date(lastConversation.created_at).toLocaleDateString()}` :
-                'Aún no has completado ninguna conversación'
+                `Completed on ${new Date(lastConversation.created_at).toLocaleDateString()}` :
+                'No conversation data available'
               }
             </CardDescription>
           </div>
@@ -161,7 +161,7 @@ const Dashboard = () => {
               checked={sharingSettings.insights}
               onCheckedChange={() => handleSharingToggle('insights')}
             />
-            <span className="text-sm text-muted-foreground">Compartir con Manager</span>
+            <span className="text-sm text-muted-foreground">Share with Manager</span>
           </div>
         </CardHeader>
         <CardContent>
@@ -169,43 +169,47 @@ const Dashboard = () => {
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Duración:</span>
+                  <span className="text-muted-foreground">Duration:</span>
                   <p className="font-medium">{lastConversation.duration_minutes || 15} min</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Tipo:</span>
-                  <p className="font-medium">Conversación Completa</p>
+                  <span className="text-muted-foreground">Type:</span>
+                  <p className="font-medium">Complete Conversation</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Insights:</span>
-                  <p className="font-medium">{lastConversation.key_insights?.insights?.length || 3} generados</p>
+                  <p className="font-medium">{lastConversation.key_insights?.insights?.length || 3} generated</p>
                 </div>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link to="/history">
                   <History className="mr-1 h-3 w-3" />
-                  Ver Historial Completo
+                  View Complete History
                 </Link>
               </Button>
             </div>
           ) : (
-            <p className="text-muted-foreground">
-              Completa tu primera conversación para ver un resumen aquí
-            </p>
+            <div className="text-center py-8">
+              <History className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No conversation data available</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Complete your first conversation to see a summary here
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Section 3: Tu Perfil OCEAN */}
+      {/* Section 3: Your OCEAN Profile */}
       <Card className="shadow-soft">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Brain className="h-5 w-5 text-secondary" />
-              Tu Perfil OCEAN
+              Your OCEAN Profile
             </CardTitle>
             <CardDescription>
-              Dimensiones de personalidad basadas en tus conversaciones
+              Personality dimensions based on your conversations
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -213,7 +217,7 @@ const Dashboard = () => {
               checked={sharingSettings.profile}
               onCheckedChange={() => handleSharingToggle('profile')}
             />
-            <span className="text-sm text-muted-foreground">Compartir con Manager</span>
+            <span className="text-sm text-muted-foreground">Share with Manager</span>
           </div>
         </CardHeader>
         <CardContent>
@@ -221,44 +225,48 @@ const Dashboard = () => {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
-                <div className="text-xs text-muted-foreground">Apertura</div>
+                <div className="text-xs text-muted-foreground">Openness</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
-                <div className="text-xs text-muted-foreground">Responsabilidad</div>
+                <div className="text-xs text-muted-foreground">Conscientiousness</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
-                <div className="text-xs text-muted-foreground">Extraversión</div>
+                <div className="text-xs text-muted-foreground">Extraversion</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
-                <div className="text-xs text-muted-foreground">Amabilidad</div>
+                <div className="text-xs text-muted-foreground">Agreeableness</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
-                <div className="text-xs text-muted-foreground">Estabilidad</div>
+                <div className="text-xs text-muted-foreground">Stability</div>
               </div>
             </div>
           ) : (
-            <p className="text-muted-foreground">
-              Completa una conversación para generar tu perfil OCEAN personalizado
-            </p>
+            <div className="text-center py-8">
+              <Brain className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No personality data available</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Complete a conversation to generate your personalized OCEAN profile
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Section 4: Puntos Fuertes y Oportunidades */}
+      {/* Section 4: Strengths and Growth Opportunities */}
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5 text-green-600" />
-                Puntos Fuertes
+                Strengths
               </CardTitle>
               <CardDescription>
-                Tus principales fortalezas identificadas
+                Your main identified strengths
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -266,7 +274,7 @@ const Dashboard = () => {
                 checked={sharingSettings.strengths}
                 onCheckedChange={() => handleSharingToggle('strengths')}
               />
-              <span className="text-sm text-muted-foreground">Compartir</span>
+              <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
           <CardContent>
@@ -280,9 +288,13 @@ const Dashboard = () => {
                 ))}
               </ul>
             ) : (
-              <p className="text-muted-foreground text-sm">
-                Completa una conversación para identificar tus fortalezas
-              </p>
+              <div className="text-center py-6">
+                <Target className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm font-medium">No strengths data available</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Complete a conversation to identify your strengths
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -292,10 +304,10 @@ const Dashboard = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Lightbulb className="h-5 w-5 text-amber-600" />
-                Oportunidades de Crecimiento
+                Growth Opportunities
               </CardTitle>
               <CardDescription>
-                Áreas para tu desarrollo profesional
+                Areas for your professional development
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -303,7 +315,7 @@ const Dashboard = () => {
                 checked={sharingSettings.opportunities}
                 onCheckedChange={() => handleSharingToggle('opportunities')}
               />
-              <span className="text-sm text-muted-foreground">Compartir</span>
+              <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
           <CardContent>
@@ -317,25 +329,29 @@ const Dashboard = () => {
                 ))}
               </ul>
             ) : (
-              <p className="text-muted-foreground text-sm">
-                Los pasos recomendados aparecerán después de tu primera conversación
-              </p>
+              <div className="text-center py-6">
+                <Lightbulb className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm font-medium">No growth opportunities available</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recommended steps will appear after your first conversation
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Section 5: Trabajar con tu Manager y Construir tu Equipo */}
+      {/* Section 5: Work with your Manager and Build your Team */}
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-blue-600" />
-                Trabajar con tu Manager
+                Work with your Manager
               </CardTitle>
               <CardDescription>
-                Mejora la comunicación y colaboración
+                Improve communication and collaboration
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -343,16 +359,16 @@ const Dashboard = () => {
                 checked={sharingSettings.manager}
                 onCheckedChange={() => handleSharingToggle('manager')}
               />
-              <span className="text-sm text-muted-foreground">Compartir</span>
+              <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Comparte insights seleccionados con tu manager para mejorar la comunicación y el desarrollo profesional.
+              Share selected insights with your manager to improve communication and professional development.
             </p>
             <Button variant="outline" size="sm" disabled>
               <Share2 className="mr-1 h-3 w-3" />
-              Enviar Invitación
+              Send Invitation
             </Button>
           </CardContent>
         </Card>
@@ -362,10 +378,10 @@ const Dashboard = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-purple-600" />
-                Construir tu Equipo
+              Build your Team
               </CardTitle>
               <CardDescription>
-                Insights grupales y dinámicas de equipo
+                Group insights and team dynamics
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -373,23 +389,30 @@ const Dashboard = () => {
                 checked={sharingSettings.team}
                 onCheckedChange={() => handleSharingToggle('team')}
               />
-              <span className="text-sm text-muted-foreground">Compartir</span>
+              <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="text-sm">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-muted-foreground">Miembros del equipo:</span>
-                <span className="font-medium">{stats.teamMembers}</span>
+            {stats.teamMembers > 0 || stats.sharedInsights > 0 ? (
+              <div className="text-sm">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-muted-foreground">Team members:</span>
+                  <span className="font-medium">{stats.teamMembers}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Shared insights:</span>
+                  <span className="font-medium">{stats.sharedInsights}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Insights compartidos:</span>
-                <span className="font-medium">{stats.sharedInsights}</span>
+            ) : (
+              <div className="text-center py-4">
+                <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">No team data available</p>
               </div>
-            </div>
+            )}
             <Button variant="outline" size="sm" disabled>
               <Users className="mr-1 h-3 w-3" />
-              Gestionar Equipo
+              Manage Team
             </Button>
           </CardContent>
         </Card>
