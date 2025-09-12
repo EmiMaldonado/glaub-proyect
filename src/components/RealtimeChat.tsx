@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { toast } from '@/hooks/use-toast';
+import MicrophonePermission from '@/components/MicrophonePermission';
 
 interface RealtimeChatProps {
   onTranscriptionUpdate: (text: string, isUser: boolean) => void;
@@ -30,6 +31,8 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
   const [currentUserTranscript, setCurrentUserTranscript] = useState('');
   const [currentAITranscript, setCurrentAITranscript] = useState('');
+  const [microphoneGranted, setMicrophoneGranted] = useState(false);
+  const [microphoneStream, setMicrophoneStream] = useState<MediaStream | null>(null);
 
   const realtimeChatRef = useRef<RealtimeChat | null>(null);
   const userTranscriptRef = useRef('');
@@ -153,12 +156,43 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
     }
   }, []);
 
+  // Handle microphone permission granted
+  const handleMicrophoneGranted = useCallback((stream: MediaStream) => {
+    console.log('Microphone permission granted, starting voice connection...');
+    setMicrophoneStream(stream);
+    setMicrophoneGranted(true);
+    startConversation();
+  }, []);
+
+  // Handle microphone permission denied
+  const handleMicrophoneDenied = useCallback(() => {
+    console.log('Microphone permission denied');
+    setConnectionStatus('error');
+    toast({
+      title: "Micrófono requerido",
+      description: "Necesitas permitir acceso al micrófono para usar conversaciones de voz",
+      variant: "destructive",
+    });
+  }, []);
+
   const startConversation = async () => {
+    if (!microphoneStream) {
+      console.error('No microphone stream available');
+      toast({
+        title: "Error de micrófono",
+        description: "No se detectó stream de micrófono",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      console.log('Starting OpenAI Realtime connection with microphone stream...');
       realtimeChatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
-      await realtimeChatRef.current.connect();
+      await realtimeChatRef.current.connect(microphoneStream);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error starting conversation:', errorMessage);
       toast({
         title: "Error de conexión",
         description: errorMessage,
@@ -168,24 +202,41 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
   };
 
   const endConversation = () => {
+    console.log('Ending voice conversation...');
+    
     if (realtimeChatRef.current) {
       realtimeChatRef.current.disconnect();
       realtimeChatRef.current = null;
     }
+    
+    if (microphoneStream) {
+      microphoneStream.getTracks().forEach(track => {
+        track.stop();
+        console.log('Microphone track stopped');
+      });
+      setMicrophoneStream(null);
+    }
+    
     setTranscripts([]);
     setCurrentUserTranscript('');
     setCurrentAITranscript('');
+    setMicrophoneGranted(false);
     userTranscriptRef.current = '';
     aiTranscriptRef.current = '';
+    setConnectionStatus('idle');
   };
 
   useEffect(() => {
     return () => {
+      console.log('Cleaning up RealtimeChat component...');
       if (realtimeChatRef.current) {
         realtimeChatRef.current.disconnect();
       }
+      if (microphoneStream) {
+        microphoneStream.getTracks().forEach(track => track.stop());
+      }
     };
-  }, []);
+  }, [microphoneStream]);
 
   const getConnectionStatusColor = () => {
     switch (connectionStatus) {
@@ -210,70 +261,80 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
 
   return (
     <div className="flex flex-col items-center space-y-6">
-      {/* Connection Status */}
-      <div className={`flex items-center space-x-2 ${getConnectionStatusColor()}`}>
-        <div className="w-2 h-2 rounded-full bg-current animate-pulse"></div>
-        <span className="text-sm font-medium">{getConnectionStatusText()}</span>
-      </div>
+      {!microphoneGranted ? (
+        // Show microphone permission component
+        <MicrophonePermission
+          onPermissionGranted={handleMicrophoneGranted}
+          onPermissionDenied={handleMicrophoneDenied}
+        />
+      ) : (
+        <>
+          {/* Connection Status */}
+          <div className={`flex items-center space-x-2 ${getConnectionStatusColor()}`}>
+            <div className="w-2 h-2 rounded-full bg-current animate-pulse"></div>
+            <span className="text-sm font-medium">{getConnectionStatusText()}</span>
+          </div>
 
-      {/* Recording Button */}
-      <div className="relative">
-        {connectionStatus !== 'connected' ? (
-          <Button
-            onClick={startConversation}
-            disabled={connectionStatus === 'connecting' || connectionStatus === 'retrying'}
-            className="w-24 h-24 rounded-full bg-primary hover:bg-primary/90 text-white shadow-lg"
-          >
-            {(connectionStatus === 'connecting' || connectionStatus === 'retrying') ? (
-              <Loader2 className="w-8 h-8 animate-spin" />
-            ) : (
-              <Mic className="w-8 h-8" />
-            )}
-          </Button>
-        ) : (
+          {/* Recording Button */}
           <div className="relative">
-            <Button
-              onClick={endConversation}
-              className={`w-24 h-24 rounded-full shadow-lg transition-all ${
-                isRecording && !isAISpeaking
-                  ? 'bg-red-500 hover:bg-red-600 animate-pulse'
-                  : 'bg-gray-500 hover:bg-gray-600'
-              }`}
-            >
-              {isAISpeaking ? (
-                <Volume2 className="w-8 h-8 text-white animate-pulse" />
-              ) : isRecording ? (
-                <Mic className="w-8 h-8 text-white" />
-              ) : (
-                <MicOff className="w-8 h-8 text-white" />
-              )}
-            </Button>
+            {connectionStatus !== 'connected' ? (
+              <Button
+                onClick={startConversation}
+                disabled={connectionStatus === 'connecting' || connectionStatus === 'retrying'}
+                className="w-24 h-24 rounded-full bg-primary hover:bg-primary/90 text-white shadow-lg"
+              >
+                {(connectionStatus === 'connecting' || connectionStatus === 'retrying') ? (
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                ) : (
+                  <Mic className="w-8 h-8" />
+                )}
+              </Button>
+            ) : (
+              <div className="relative">
+                <Button
+                  onClick={endConversation}
+                  className={`w-24 h-24 rounded-full shadow-lg transition-all ${
+                    isRecording && !isAISpeaking
+                      ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                      : 'bg-gray-500 hover:bg-gray-600'
+                  }`}
+                >
+                  {isAISpeaking ? (
+                    <Volume2 className="w-8 h-8 text-white animate-pulse" />
+                  ) : isRecording ? (
+                    <Mic className="w-8 h-8 text-white" />
+                  ) : (
+                    <MicOff className="w-8 h-8 text-white" />
+                  )}
+                </Button>
 
-            {/* Waveform Animation */}
-            {isRecording && !isAISpeaking && (
-              <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-red-400 animate-ping"></div>
-            )}
+                {/* Waveform Animation */}
+                {isRecording && !isAISpeaking && (
+                  <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-red-400 animate-ping"></div>
+                )}
 
-            {/* AI Speaking Animation */}
-            {isAISpeaking && (
-              <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-blue-400 animate-pulse"></div>
+                {/* AI Speaking Animation */}
+                {isAISpeaking && (
+                  <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-blue-400 animate-pulse"></div>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Status Text */}
-      <div className="text-center">
-        {isAISpeaking ? (
-          <p className="text-blue-600 font-medium animate-pulse">IA hablando...</p>
-        ) : isRecording ? (
-          <p className="text-red-600 font-medium">Escuchando...</p>
-        ) : connectionStatus === 'connected' ? (
-          <p className="text-gray-600">Presiona para finalizar</p>
-        ) : (
-          <p className="text-gray-600">Presiona para comenzar conversación de voz</p>
-        )}
-      </div>
+          {/* Status Text */}
+          <div className="text-center">
+            {isAISpeaking ? (
+              <p className="text-blue-600 font-medium animate-pulse">IA hablando...</p>
+            ) : isRecording ? (
+              <p className="text-red-600 font-medium">Escuchando...</p>
+            ) : connectionStatus === 'connected' ? (
+              <p className="text-gray-600">Presiona para finalizar</p>
+            ) : (
+              <p className="text-gray-600">Presiona para comenzar conversación de voz</p>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Live Transcriptions */}
       {(currentUserTranscript || currentAITranscript) && (

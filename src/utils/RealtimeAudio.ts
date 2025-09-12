@@ -6,18 +6,25 @@ export class AudioRecorder {
 
   constructor(private onAudioData: (audioData: Float32Array) => void) {}
 
-  async start() {
+  async start(existingStream?: MediaStream) {
     try {
-      // Request microphone permission with proper error handling
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 24000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
+      // Use existing stream if provided, otherwise request new one
+      if (existingStream) {
+        console.log('Using existing microphone stream');
+        this.stream = existingStream;
+      } else {
+        console.log('Requesting new microphone stream...');
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: 24000,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        console.log('New microphone stream acquired');
+      }
       
       this.audioContext = new AudioContext({
         sampleRate: 24000,
@@ -230,7 +237,7 @@ export class RealtimeChat {
     }
   }
 
-  async connect() {
+  async connect(existingStream?: MediaStream) {
     if (this.isConnecting) return;
     
     this.isConnecting = true;
@@ -247,14 +254,21 @@ export class RealtimeChat {
       // Initialize audio context first
       this.audioContext = new AudioContext({ sampleRate: 24000 });
       
-      // Check microphone permissions
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (error) {
-        if (error.name === 'NotAllowedError') {
-          throw new Error('Microphone permission required for voice chat');
+      // Skip permission check if stream provided (already handled by MicrophonePermission component)
+      if (!existingStream) {
+        console.log('No existing stream provided, checking microphone permissions...');
+        try {
+          const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          testStream.getTracks().forEach(track => track.stop()); // Clean up test stream
+          console.log('Microphone permissions verified');
+        } catch (error) {
+          if (error.name === 'NotAllowedError') {
+            throw new Error('Microphone permission required for voice chat');
+          }
+          throw error;
         }
-        throw error;
+      } else {
+        console.log('Using provided microphone stream, skipping permission check');
       }
 
       // Set connection timeout
@@ -328,7 +342,7 @@ export class RealtimeChat {
         }
       });
 
-      await this.audioRecorder.start();
+      await this.audioRecorder.start(existingStream);
 
     } catch (error) {
       this.isConnecting = false;
