@@ -327,6 +327,8 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       onTranscriptionUpdate(aiResponse, false);
 
       // Step 3: Convert AI response to speech and play
+      // Ensure any previous audio is stopped before starting new one
+      stopAudio();
       await playAIResponse(aiResponse);
 
     } catch (error) {
@@ -357,10 +359,13 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
     }
 
     try {
-      // Stop any currently playing audio first
+      // Stop any currently playing audio first - comprehensive cleanup
       if (currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
+        currentAudio.onended = null;
+        currentAudio.onerror = null;
+        currentAudio.removeEventListener('abort', () => {});
         setCurrentAudio(null);
       }
 
@@ -635,7 +640,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
             </div>
 
             {/* Main Action Button */}
-            <div className="mt-8 flex justify-center">
+            <div className="mt-8 flex justify-center pb-10">
               <Button
                 size="sm"
                 className={`${buttonProps.color} rounded-full px-6 py-3 text-sm font-medium shadow-lg transition-all duration-200 transform hover:scale-105`}
