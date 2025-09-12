@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
 import ChatConversation from "./pages/ChatConversation";
 import VoiceConversation from "./pages/VoiceConversation";
+import VoiceAssistant from "./pages/VoiceAssistant";
 import Profile from "./pages/Profile";
 import SessionRecap from "./pages/SessionRecap";
 import SessionSummary from "./pages/SessionSummary";
@@ -58,6 +59,7 @@ const App = () => (
                     <Auth />
                   </AuthGuard>
                 } />
+                <Route path="/voice-assistant" element={<VoiceAssistant />} />
                 <Route path="/500" element={<ServerError />} />
 
                 {/* Protected routes */}
