@@ -174,8 +174,7 @@ class RealtimeChat {
       source.connect(processor);
       processor.connect(this.audioContext.destination);
       
-      // Send initial session configuration
-      this.sendSessionUpdate();
+      // Don't send session update here - wait for session.created event
       
     } catch (error) {
       console.error('Error setting up audio processing:', error);
@@ -252,6 +251,8 @@ class RealtimeChat {
       case 'session.created':
         console.log('✅ OpenAI session created');
         this.onMessage({ type: 'session.created' });
+        // Send session configuration AFTER session is created
+        this.sendSessionUpdate();
         break;
       case 'session.updated':
         console.log('✅ OpenAI session updated');
