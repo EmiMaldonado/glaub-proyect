@@ -47,6 +47,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [isProcessing, setIsProcessing] = useState(false); // Lock to prevent concurrent processing
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [lastRecordingTime, setLastRecordingTime] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -59,10 +60,37 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   };
 
   const handleConfirmLeave = () => {
-    cleanup();
+    cleanupRecording();
     setShowLeaveModal(false);
     onBack();
   };
+
+  // Comprehensive cleanup function that properly resets ALL states
+  const cleanupRecording = useCallback(() => {
+    console.log('🧹 Comprehensive cleanup started');
+    
+    // Stop media recorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('🛑 Stopping media recorder');
+      mediaRecorderRef.current.stop();
+    }
+    
+    // Stop stream tracks
+    if (streamRef.current) {
+      console.log('🔇 Stopping stream tracks');
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    // Reset all refs and state
+    mediaRecorderRef.current = null;
+    audioChunksRef.current = [];
+    setAudioBlob(null);
+    setIsProcessing(false);
+    setVoiceState('idle');
+    
+    console.log('🧹 Comprehensive cleanup completed');
+  }, []);
   useEffect(() => {
     if (currentAIResponse) {
       setCurrentAIText(currentAIResponse);
@@ -96,12 +124,23 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   // Start recording user's voice
   const startRecording = useCallback(async () => {
+    const now = Date.now();
+    
+    // Debounce to prevent rapid clicking
+    if (now - lastRecordingTime < 2000) {
+      console.log('🚫 Recording blocked - debounce active');
+      return;
+    }
+    
     console.log('🎯 Recording attempt - Current state:', {
       voiceState,
       isProcessing,
       microphoneGranted,
       hasActiveRecorder: !!mediaRecorderRef.current
     });
+
+    // Clean up any existing recording state first
+    cleanupRecording();
 
     if (isProcessing) {
       console.log('🚫 Cannot start recording - already processing');
@@ -118,6 +157,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       return;
     }
 
+    setLastRecordingTime(now);
     console.log('✅ Starting recording...');
 
     try {
@@ -167,6 +207,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
       mediaRecorder.onerror = (event) => {
         console.error('MediaRecorder error:', event);
+        cleanupRecording(); // Cleanup on error
         setVoiceState('error');
       };
 
@@ -180,6 +221,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
     } catch (error) {
       console.error('Error starting recording:', error);
+      cleanupRecording(); // Cleanup on error
       setVoiceState('error');
       toast({
         title: "Recording Error",
@@ -187,7 +229,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         variant: "destructive",
       });
     }
-  }, [voiceState, isProcessing, microphoneGranted]);
+  }, [voiceState, isProcessing, microphoneGranted, lastRecordingTime, cleanupRecording]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
@@ -248,7 +290,6 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           variant: "destructive",
         });
         setVoiceState('idle');
-        setIsProcessing(false); // Reset processing state
         return;
       }
 
@@ -297,56 +338,16 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         variant: "destructive",
       });
     } finally {
-      setIsProcessing(false); // Unlock processing
+      // Always reset processing state in the finally block
+      setIsProcessing(false);
       console.log('🔄 Audio processing completed, isProcessing set to false');
     }
   }, [conversationId, userId, onTranscriptionUpdate, isProcessing, currentAudio]);
 
-  // Cleanup function to stop all audio when leaving
-  const cleanup = useCallback(() => {
-    console.log('🧹 Cleanup called - Current state:', {
-      voiceState,
-      isProcessing,
-      hasRecorder: !!mediaRecorderRef.current,
-      hasAudio: !!currentAudio
-    });
-
-    // Only cleanup if we're not actively recording
-    if (voiceState === 'recording' && mediaRecorderRef.current?.state === 'recording') {
-      console.log('⚠️ Skipping cleanup - recording in progress');
-      return;
-    }
-    
-    // Stop any playing audio
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      setCurrentAudio(null);
-    }
-    
-    // Stop recording only if it's in a stoppable state
-    if (mediaRecorderRef.current && ['recording', 'paused'].includes(mediaRecorderRef.current.state)) {
-      mediaRecorderRef.current.stop();
-    }
-    
-    // Release microphone
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    
-    // Reset states only if not processing
-    if (!isProcessing) {
-      setVoiceState('idle');
-    }
-    
-    console.log('🧹 Cleanup completed');
-  }, [voiceState, currentAudio, isProcessing]);
-
   // Cleanup on unmount or when leaving
   useEffect(() => {
-    return cleanup;
-  }, [cleanup]);
+    return cleanupRecording;
+  }, [cleanupRecording]);
 
   // Text-to-speech for AI responses - ensures only one audio plays at a time
   const playAIResponse = useCallback(async (text: string) => {
