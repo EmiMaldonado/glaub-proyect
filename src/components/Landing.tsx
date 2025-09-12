@@ -194,7 +194,7 @@ const Landing = () => {
                 3
               </div>
               <h3 className="text-2xl font-semibold text-foreground">Share with Total Control</h3>
-              <p className="text-muted-foreground text-lg leading-relaxed">
+              <p className="text-muted-foreground text-base leading-relaxed">
                 You decide what to share and with whom. Granular privacy control 
                 and complete transparency about your data.
               </p>
