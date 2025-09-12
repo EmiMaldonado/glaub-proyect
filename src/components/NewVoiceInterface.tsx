@@ -229,7 +229,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
       console.log('🤖 AI Response:', aiResponse);
       
-      // Add AI message to display
+      // Add AI message to display and replace the current displayed text
       const aiMessage = {
         id: `ai-${Date.now()}`,
         role: 'assistant' as const,
@@ -237,6 +237,8 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         timestamp: new Date()
       };
       setMessages(prev => [...prev, aiMessage]);
+      
+      // Replace the current AI text display with new response
       setCurrentAIText(aiResponse);
       onTranscriptionUpdate(aiResponse, false);
 
@@ -254,9 +256,16 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
     }
   }, [conversationId, userId, onTranscriptionUpdate]);
 
-  // Play AI response using text-to-speech
+  // Text-to-speech for AI responses - ensures only one audio plays at a time
   const playAIResponse = useCallback(async (text: string) => {
     try {
+      // Stop any currently playing audio first
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        setCurrentAudio(null);
+      }
+
       setVoiceState('ai_speaking');
       
       // Call text-to-speech edge function
@@ -296,6 +305,11 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         URL.revokeObjectURL(audioUrl);
         setCurrentAudio(null);
         console.error('Error playing audio');
+        toast({
+          title: "Audio Playback Issue",
+          description: "Could not play AI response audio.",
+          variant: "destructive",
+        });
       };
 
       await audio.play();
@@ -309,7 +323,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         variant: "destructive",
       });
     }
-  }, []);
+  }, [currentAudio]);
 
   // Stop current audio playback
   const stopAudio = useCallback(() => {
