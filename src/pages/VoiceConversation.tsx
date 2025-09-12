@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
-import LoadingSpinner from '@/components/LoadingSpinner';
 import NewVoiceInterface from '@/components/NewVoiceInterface';
 import VoiceErrorBoundary from '@/components/VoiceErrorBoundary';
 import { useConversationTimer } from '@/hooks/useConversationTimer';
@@ -334,7 +333,6 @@ const VoiceConversation: React.FC = () => {
           <div className="animate-pulse">
             <div className="w-16 h-16 bg-[#6889b4] rounded-full mx-auto mb-4 animate-bounce"></div>
           </div>
-          <LoadingSpinner />
           <div className="space-y-2">
             <p className="text-gray-600 font-medium">Starting new voice session...</p>
             <p className="text-sm text-gray-500">Setting up AI assistant and preparing conversation</p>
