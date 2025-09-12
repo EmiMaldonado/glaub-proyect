@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import VoiceInterface from '@/components/VoiceInterface';
+import NewVoiceInterface from '@/components/NewVoiceInterface';
 import VoiceErrorBoundary from '@/components/VoiceErrorBoundary';
 import { useConversationTimer } from '@/hooks/useConversationTimer';
 
@@ -149,7 +149,7 @@ const VoiceConversation: React.FC = () => {
     }
   };
 
-  // Handle transcription updates from VoiceInterface
+  // Handle transcription updates from NewVoiceInterface
   const handleTranscriptionUpdate = async (text: string, isUser: boolean) => {
     if (!conversation || !text.trim()) return;
 
@@ -291,9 +291,8 @@ const VoiceConversation: React.FC = () => {
 
   return (
     <VoiceErrorBoundary onRetry={createNewConversation}>
-      <VoiceInterface
+      <NewVoiceInterface
         onTranscriptionUpdate={handleTranscriptionUpdate}
-        onSpeakingChange={handleSpeakingChange}
         conversationId={conversation?.id}
         userId={user?.id}
         onEndSession={handleEndSession}

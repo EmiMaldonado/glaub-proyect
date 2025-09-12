@@ -4,8 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { useTextToSpeech } from '@/hooks/useTextToSpeech';
-import ModernChatInterface from '@/components/ModernChatInterface';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -37,7 +35,6 @@ const ChatConversation: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { speak, stop, isSpeaking } = useTextToSpeech();
 
   // Reset all state for new conversation
   const resetConversationState = () => {
@@ -125,7 +122,6 @@ const ChatConversation: React.FC = () => {
     if (!messageText.trim() || !conversation || isLoading) return;
 
     setIsLoading(true);
-    stop(); // Stop any current TTS
 
     try {
       const response = await supabase.functions.invoke('ai-chat', {
@@ -140,16 +136,11 @@ const ChatConversation: React.FC = () => {
         throw new Error(response.error.message);
       }
 
-      toast({
-        title: "✅ Mensaje enviado",
-        description: "El mensaje ha sido procesado correctamente",
-      });
-
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
         title: "Error",
-        description: "No se pudo enviar el mensaje",
+        description: "Could not send message",
         variant: "destructive",
       });
     } finally {
@@ -180,11 +171,6 @@ const ChatConversation: React.FC = () => {
         (payload) => {
           const newMessage = payload.new as Message;
           setMessages(prev => [...prev, newMessage]);
-          
-          // Auto-speak AI responses
-          if (newMessage.role === 'assistant' && newMessage.content) {
-            speak(newMessage.content);
-          }
         }
       )
       .subscribe();
@@ -192,7 +178,7 @@ const ChatConversation: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversation, speak]);
+  }, [conversation]);
 
   // Scroll to bottom when messages update
   useEffect(() => {

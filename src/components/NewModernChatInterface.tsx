@@ -4,7 +4,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Mic, MessageSquare, FileDown } from 'lucide-react';
 import VoiceRecorder from './VoiceRecorder';
-import RealtimeChat from './RealtimeChat';
 import ConversationModeSelector from './ConversationModeSelector';
 
 interface ModernChatInterfaceProps {
@@ -86,19 +85,8 @@ const NewModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
 
       {/* Messages Area or Realtime Chat */}
       {inputMode === 'realtime' ? (
-        <div className="flex-1">
-          <RealtimeChat 
-            onTranscriptionUpdate={(text: string, isUser: boolean) => {
-              const newMessage = {
-                id: Date.now().toString(),
-                role: isUser ? 'user' : 'assistant',
-                content: text,
-                created_at: new Date().toISOString()
-              };
-              setRealtimeMessages(prev => [...prev, newMessage]);
-            }}
-            onSpeakingChange={setIsAISpeaking}
-          />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">Realtime mode not available in chat interface</p>
         </div>
       ) : (
         <>
