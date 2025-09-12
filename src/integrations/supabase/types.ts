@@ -215,6 +215,33 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          is_used: boolean
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_used?: boolean
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_used?: boolean
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -315,6 +342,10 @@ export type Database = {
       clear_conversation_messages: {
         Args: { conversation_uuid: string }
         Returns: undefined
+      }
+      generate_reset_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       is_invitation_manager: {
         Args: { invitation_manager_id: string }
