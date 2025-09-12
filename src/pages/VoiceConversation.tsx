@@ -120,7 +120,7 @@ const VoiceConversation: React.FC = () => {
       
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: `Start a new voice therapy session with ${userName}. Greet them warmly and professionally, ask how they're feeling today and what they'd like to explore in this session. Keep a conversational tone appropriate for voice communication.`,
+          message: `Hello ${userName}! Welcome to your therapy session. To get started, tell me a bit about yourself - whatever feels comfortable to share.`,
           conversationId: conversationId,
           userId: user?.id,
           isFirstMessage: true,

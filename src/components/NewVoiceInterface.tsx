@@ -507,7 +507,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
               {/* AI Response Display */}
               {currentAIText && (
                 <div className="max-w-md text-center">
-                  <p className="text-gray-600 leading-relaxed bg-white p-4 rounded-lg shadow-sm border">
+                  <p className="text-sm text-gray-600 leading-relaxed bg-white p-4 rounded-lg shadow-sm border">
                     {currentAIText}
                   </p>
                 </div>
