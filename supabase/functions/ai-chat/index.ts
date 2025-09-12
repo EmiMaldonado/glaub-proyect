@@ -366,9 +366,10 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
         'Content-Type': 'application/json',
       },
         body: JSON.stringify({
-          model: 'gpt-5-mini-2025-08-07', // Faster model for better response times
+          model: 'gpt-4o-mini', // Reliable model that was working
           messages: chatMessages,
-          max_completion_tokens: 150, // Shorter for voice responses
+          max_tokens: 150, // Use max_tokens for legacy models
+          temperature: 0.7,
         }),
     });
 
