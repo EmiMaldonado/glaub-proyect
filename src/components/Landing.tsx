@@ -171,7 +171,7 @@ const Landing = () => {
               <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-white" style={{ backgroundColor: '#A5C7B9' }}>
                 1
               </div>
-              <h3 className="text-2xl font-semibold text-foreground">Natural Conversation</h3>
+              <h3 className="text-2xl font-semibold text-foreground">Natural<br />Conversation</h3>
               <p className="text-muted-foreground text-base leading-relaxed">
                 10-15 minute empathetic chat with our AI. No intimidating questions, 
                 just a fluid and natural conversation.
