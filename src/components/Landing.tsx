@@ -193,7 +193,7 @@ const Landing = () => {
               <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-white" style={{ backgroundColor: '#A5C7B9' }}>
                 3
               </div>
-              <h3 className="text-2xl font-semibold text-foreground">Share with Total Control</h3>
+              <h3 className="text-2xl font-semibold text-foreground">Share with<br />Total Control</h3>
               <p className="text-muted-foreground text-base leading-relaxed">
                 You decide what to share and with whom. Granular privacy control 
                 and complete transparency about your data.
