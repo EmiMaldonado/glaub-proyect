@@ -26,7 +26,7 @@ const Navigation = () => {
         <nav className="flex items-center justify-between">
           <Link to="/" className="flex items-center space-x-2">
             <Brain className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">Gläub</span>
+            <span className="text-xl font-bold text-foreground">PersonaInsights</span>
           </Link>
           
           <div className="flex items-center space-x-4">
@@ -45,7 +45,7 @@ const Navigation = () => {
                   <Button variant="default" size="sm" asChild>
                     <Link to="/conversation/voice">
                       <Mic className="h-4 w-4 mr-2" />
-                      Voz
+                      Voice
                     </Link>
                   </Button>
                 </div>
@@ -64,7 +64,7 @@ const Navigation = () => {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <div className="flex items-center justify-start gap-2 p-2">
                       <div className="flex flex-col space-y-1 leading-none">
-                        <p className="font-medium">{user.user_metadata?.full_name || 'Usuario'}</p>
+                        <p className="font-medium">{user.user_metadata?.full_name || 'User'}</p>
                         <p className="w-[200px] truncate text-sm text-muted-foreground">
                           {user.email}
                         </p>
@@ -74,13 +74,13 @@ const Navigation = () => {
                     <DropdownMenuItem asChild>
                       <Link to="/profile" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
-                        Perfil
+                        Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to="/settings" className="cursor-pointer">
                         <Settings className="mr-2 h-4 w-4" />
-                        Configuración
+                        Settings
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -94,10 +94,10 @@ const Navigation = () => {
             ) : (
               <>
                 <Button variant="ghost" asChild>
-                  <Link to="/auth">Iniciar Sesión</Link>
+                  <Link to="/auth">Sign In</Link>
                 </Button>
                 <Button variant="hero" asChild>
-                  <Link to="/auth?mode=signup">Comenzar Gratis</Link>
+                  <Link to="/auth?mode=signup">Start Free</Link>
                 </Button>
               </>
             )}

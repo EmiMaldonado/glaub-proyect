@@ -170,7 +170,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       console.error('Error starting recording:', error);
       toast({
         title: "Error",
-        description: "No se pudo iniciar la grabación",
+        description: "Could not start recording",
         variant: "destructive",
       });
     }

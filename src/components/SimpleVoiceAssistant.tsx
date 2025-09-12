@@ -145,9 +145,9 @@ const SimpleVoiceAssistant: React.FC = () => {
       const chatResponse = await supabase.functions.invoke('ai-chat', {
         body: {
           message: transcribedText,
-          conversationId: 'voice-assistant',
-          userId: 'voice-user',
-          isFirstMessage: false,
+          conversationId: null,
+          userId: null,
+          isFirstMessage: true,
           modalityType: 'voice',
           systemPrompt: 'You are a helpful, friendly, and concise assistant. Answer the user\'s question clearly and directly. Keep responses conversational and under 200 words.'
         }

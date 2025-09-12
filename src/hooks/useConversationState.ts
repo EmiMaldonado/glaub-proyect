@@ -101,7 +101,7 @@ export const useConversationState = () => {
       console.error('Error creating conversation:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear la nueva conversación",
+        description: "Could not create new conversation",
         variant: "destructive",
       });
       throw error;
@@ -123,15 +123,15 @@ export const useConversationState = () => {
         .eq('id', conversationId);
 
       toast({
-        title: "✅ Sesión completada",
-        description: "La conversación ha sido guardada",
+        title: "✅ Session completed",
+        description: "Conversation saved",
       });
 
     } catch (error) {
       console.error('Error ending conversation:', error);
       toast({
         title: "Error",
-        description: "No se pudo finalizar la sesión",
+        description: "Could not finalize session",
         variant: "destructive",
       });
       throw error;
@@ -166,8 +166,8 @@ export const useConversationState = () => {
 
       if (!options.isFirstMessage) {
         toast({
-          title: "✅ Mensaje enviado",
-          description: "El mensaje ha sido procesado correctamente",
+          title: "✅ Message sent",
+          description: "The message has been processed successfully",
         });
       }
 
@@ -177,7 +177,7 @@ export const useConversationState = () => {
       console.error('Error sending message:', error);
       toast({
         title: "Error",
-        description: "No se pudo enviar el mensaje",
+        description: "Could not send message",
         variant: "destructive",
       });
       throw error;

@@ -84,8 +84,8 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
   const sendInvitation = async () => {
     if (!email) {
       toast({
-        title: "Email requerido",
-        description: "Por favor ingresa un email válido",
+                  title: "Email required",
+                  description: "Please enter a valid email",
         variant: "destructive",
       });
       return;
@@ -145,7 +145,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="team-email">Email del miembro del equipo</Label>
+            <Label htmlFor="team-email">Team member email</Label>
             <div className="flex gap-2">
               <Input
                 id="team-email"
@@ -225,7 +225,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="invite-email">Email del nuevo miembro</Label>
+              <Label htmlFor="invite-email">New member email</Label>
               <div className="flex gap-2">
                 <Input
                   id="invite-email"

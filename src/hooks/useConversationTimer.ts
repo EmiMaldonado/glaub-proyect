@@ -44,7 +44,7 @@ export const useConversationTimer = ({
             onTimeUp?.();
             toast({
               title: "⏰ Tiempo agotado",
-              description: "La sesión de conversación ha terminado",
+              description: "The conversation session has ended",
               variant: "destructive",
             });
             return prev;

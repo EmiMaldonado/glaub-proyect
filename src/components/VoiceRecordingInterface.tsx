@@ -41,8 +41,8 @@ const VoiceRecordingInterface: React.FC<VoiceRecordingInterfaceProps> = ({
         size: 'lg' as const,
         className: 'h-32 w-32 rounded-full text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300',
         icon: <Mic className="h-12 w-12" />,
-        text: 'Iniciar Sesión',
-        description: 'Presiona para comenzar tu sesión de terapia'
+        text: 'Start Session',
+        description: 'Press to start your therapy session'
       };
     }
     
@@ -156,7 +156,7 @@ const VoiceRecordingInterface: React.FC<VoiceRecordingInterfaceProps> = ({
             className="h-12 px-6 gap-2"
           >
             <Square className="h-4 w-4" />
-            Terminar Sesión
+            End Session
           </Button>
         </div>
       )}
@@ -167,7 +167,7 @@ const VoiceRecordingInterface: React.FC<VoiceRecordingInterfaceProps> = ({
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
             <p className="text-sm text-yellow-800">
-              La sesión terminará pronto. Prepárate para el cierre.
+              The session will end soon. Prepare for closure.
             </p>
           </div>
         </Card>

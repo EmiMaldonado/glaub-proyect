@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import SessionRecap from "./pages/SessionRecap";
 import SessionSummary from "./pages/SessionSummary";
 import ConversationSelector from "./pages/ConversationSelector";
+import ResetPassword from "./pages/ResetPassword";
 import OnboardingFlow from "@/components/OnboardingFlow";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
                     <Auth />
                   </AuthGuard>
                 } />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/voice-assistant" element={<VoiceAssistant />} />
                 <Route path="/500" element={<ServerError />} />
 

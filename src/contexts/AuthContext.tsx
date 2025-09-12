@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else {
         toast({
-          title: "¡Bienvenido!",
+          title: "Welcome!",
           description: "You have successfully logged in",
         });
       }
@@ -97,24 +97,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         toast({
-          title: "Error de registro",
+          title: "Registration error",
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "¡Registro exitoso!",
-          description: "Por favor verifica tu email para completar el registro",
+          title: "Registration successful!",
+          description: "Please verify your email to complete registration",
         });
       }
       
       return { error };
     } catch (error) {
-      toast({
-        title: "Error inesperado",
-        description: "Ha ocurrido un error inesperado",
-        variant: "destructive",
-      });
+        toast({
+          title: "Unexpected error", 
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
       return { error };
     }
   };
@@ -151,18 +151,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else {
         toast({
-          title: "Email enviado",
-          description: "Revisa tu email para restablecer tu contraseña",
+          title: "Email sent",
+          description: "Check your email to reset your password",
         });
       }
       
       return { error };
     } catch (error) {
-      toast({
-        title: "Error inesperado",
-        description: "Ha ocurrido un error inesperado",
-        variant: "destructive",
-      });
+        toast({
+          title: "Unexpected error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
       return { error };
     }
   };

@@ -183,22 +183,22 @@ const Auth = () => {
         <div className="flex items-center justify-center mb-8">
           <Link to="/" className="flex items-center space-x-2">
             <Brain className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">Gläub</span>
+            <span className="text-xl font-bold text-foreground">PersonaInsights</span>
           </Link>
         </div>
 
         <Card className="shadow-medium">
           <Tabs defaultValue={mode} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Iniciar Sesión</TabsTrigger>
-              <TabsTrigger value="signup">Registrarse</TabsTrigger>
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
             
             <TabsContent value="signin">
               <CardHeader className="text-center">
-                <CardTitle>Bienvenido de vuelta</CardTitle>
+                <CardTitle>Welcome back</CardTitle>
                 <CardDescription>
-                  Inicia sesión para continuar con tus conversaciones
+                  Sign in to continue with your conversations
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -213,14 +213,14 @@ const Auth = () => {
                         type="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        placeholder="tu@email.com"
+                        placeholder="your@email.com"
                         className="pl-10"
                         required
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Contraseña</Label>
+                    <Label htmlFor="signin-password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -237,7 +237,7 @@ const Auth = () => {
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
-                    Iniciar Sesión
+                    Sign In
                   </Button>
                   <Button
                     type="button"
@@ -245,7 +245,7 @@ const Auth = () => {
                     className="w-full text-sm"
                     onClick={() => setShowResetPassword(true)}
                   >
-                    ¿Olvidaste tu contraseña?
+                    Forgot your password?
                   </Button>
                 </form>
               </CardContent>
@@ -258,16 +258,16 @@ const Auth = () => {
                     <div className="mx-auto w-12 h-12 bg-therapeutic-primary/10 rounded-full flex items-center justify-center mb-4">
                       <Users className="h-6 w-6 text-therapeutic-primary" />
                     </div>
-                    <CardTitle>Únete al Equipo</CardTitle>
+                    <CardTitle>Join the Team</CardTitle>
                     <CardDescription>
-                      Has sido invitado a unirte a un equipo en EmpathAI. Crea tu cuenta para comenzar.
+                      You've been invited to join a team on PersonaInsights. Create your account to get started.
                     </CardDescription>
                   </>
                 ) : (
                   <>
-                    <CardTitle>Crea tu cuenta</CardTitle>
+                    <CardTitle>Create your account</CardTitle>
                     <CardDescription>
-                      Únete y comienza a descubrir tu personalidad
+                      Join and start discovering your personality
                     </CardDescription>
                   </>
                 )}
@@ -275,7 +275,7 @@ const Auth = () => {
               <CardContent>
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nombre completo</Label>
+                    <Label htmlFor="signup-name">Full name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -284,7 +284,7 @@ const Auth = () => {
                         type="text"
                         value={formData.fullName}
                         onChange={handleInputChange}
-                        placeholder="Tu nombre completo"
+                        placeholder="Your full name"
                         className="pl-10"
                         required
                       />
@@ -300,7 +300,7 @@ const Auth = () => {
                         type="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        placeholder="tu@email.com"
+                        placeholder="your@email.com"
                         className="pl-10"
                         disabled={!!invitationEmail}
                         required
@@ -308,7 +308,7 @@ const Auth = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Contraseña</Label>
+                    <Label htmlFor="signup-password">Password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -325,7 +325,7 @@ const Auth = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirmar contraseña</Label>
+                    <Label htmlFor="confirm-password">Confirm password</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -340,7 +340,7 @@ const Auth = () => {
                       />
                     </div>
                     {formData.password !== formData.confirmPassword && formData.confirmPassword && (
-                      <p className="text-sm text-destructive">Las contraseñas no coinciden</p>
+                      <p className="text-sm text-destructive">Passwords don't match</p>
                     )}
                   </div>
                   <Button 
@@ -349,7 +349,7 @@ const Auth = () => {
                     disabled={isLoading || formData.password !== formData.confirmPassword}
                   >
                     {isLoading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
-                    Crear Cuenta
+                    Create Account
                   </Button>
                 </form>
               </CardContent>
