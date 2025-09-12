@@ -11,23 +11,29 @@ const Landing = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center bg-gradient-to-br from-primary to-primary-600">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-primary-600/90"></div>
-        <div className="relative container mx-auto px-4 py-16 text-center text-white">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <Badge className="bg-warning text-warning-foreground px-4 py-2 text-sm font-medium rounded-full">
+      <section className="relative min-h-screen flex items-center" style={{
+        backgroundImage: `url('/lovable-uploads/25a658b9-53b0-4b57-92f8-a630720ba2aa.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}>
+        <div className="absolute inset-0 bg-black/50"></div>
+        <div className="relative w-full h-full flex items-center justify-end pr-[5%] py-[5%]">
+          <div className="w-full max-w-2xl text-right text-white space-y-8">
+            <Badge className="bg-warning/50 text-warning-foreground px-3 py-1 text-xs font-medium rounded-full backdrop-blur-sm">
               ⚠️ This is not a real company, this is Master's thesis project
             </Badge>
             
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-              Build Stronger Teams, One Conversation at a Time
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
+              Build Stronger Teams,<br />
+              One Conversation at a Time
             </h1>
             
-            <p className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-white/90 max-w-2xl">
               Get personalized insights to help every individual thrive. It's not about evaluating, it's about understanding.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-end">
               <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary-700 text-lg px-8" asChild>
                 <Link to="/auth?mode=signup">
                   Start conversation →
