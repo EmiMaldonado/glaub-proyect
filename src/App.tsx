@@ -15,7 +15,7 @@ import ServerError from "./pages/ServerError";
 import ChatConversation from "./pages/ChatConversation";
 import VoiceConversation from "./pages/VoiceConversation";
 import VoiceAssistant from "./pages/VoiceAssistant";
-import Profile from "./pages/Profile";
+
 import SessionRecap from "./pages/SessionRecap";
 import SessionSummary from "./pages/SessionSummary";
 import ConversationSelector from "./pages/ConversationSelector";
@@ -101,12 +101,6 @@ const App = () => (
                   </AuthGuard>
                 } />
                 <Route path="/onboarding" element={<OnboardingRoute />} />
-                <Route path="/profile" element={
-                  <AuthGuard>
-                    <Navigation />
-                    <Profile />
-                  </AuthGuard>
-                } />
                 <Route path="/session-recap" element={
                   <AuthGuard>
                     <SessionRecap />

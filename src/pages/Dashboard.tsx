@@ -272,26 +272,33 @@ const Dashboard = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {oceanProfile ? <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
-                <div className="text-xs text-muted-foreground">Openness</div>
+          {oceanProfile ? <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Openness</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Conscientiousness</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Extraversion</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Agreeableness</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
+                  <div className="text-xs text-muted-foreground">Stability</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
-                <div className="text-xs text-muted-foreground">Conscientiousness</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
-                <div className="text-xs text-muted-foreground">Extraversion</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
-                <div className="text-xs text-muted-foreground">Agreeableness</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
-                <div className="text-xs text-muted-foreground">Stability</div>
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-sm text-foreground/80 leading-relaxed">
+                  Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your energy from social interactions, and agreeableness shows your cooperative and trusting tendencies. Finally, emotional stability (inverse of neuroticism) represents your resilience under stress. These dimensions work together to create your distinctive professional and personal approach to challenges and relationships.
+                </p>
               </div>
             </div> : <div className="text-center py-8">
               <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
