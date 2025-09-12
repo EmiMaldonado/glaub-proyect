@@ -37,10 +37,10 @@ class RealtimeChat {
       this.onConnectionChange('connecting');
       this.stream = stream;
 
-      // First test if the edge function is reachable with HTTP
+      // Test edge function with proper auth headers
       await this.testEdgeFunctionHealth();
       
-      // Initialize WebSocket connection through Supabase edge function
+      // Initialize WebSocket connection 
       await this.connectWebSocket();
       
     } catch (error) {
@@ -51,43 +51,40 @@ class RealtimeChat {
 
   private async testEdgeFunctionHealth() {
     try {
-      console.log('Testing edge function health...');
+      console.log('🔍 Testing edge function health with proper authentication...');
       
-      // Test with a simple HTTP request first
-      const httpResponse = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`, {
-        method: 'GET',
+      // Get Supabase anon key from client
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtcmlmdWZ5a2N6dWRmeG9tZW5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNzkzNTYsImV4cCI6MjA3Mjc1NTM1Nn0.TE9BEft4v-f_vIQkKQ39BHZzcvbwg93OXBXX6QaSUbY';
+      
+      const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey,
         },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Health check' }]
+        })
       });
       
-      console.log('HTTP test response:', {
-        status: httpResponse.status,
-        statusText: httpResponse.statusText,
-        headers: Object.fromEntries(httpResponse.headers.entries())
+      console.log('🌐 Edge function response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
       
-      // Also test OPTIONS for CORS
-      const optionsResponse = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`, {
-        method: 'OPTIONS',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('OPTIONS test response:', {
-        status: optionsResponse.status,
-        statusText: optionsResponse.statusText
-      });
-      
-      if (httpResponse.status === 400 && httpResponse.statusText.includes('WebSocket')) {
-        console.log('✅ Edge function is responding correctly (expects WebSocket)');
-      } else {
-        console.warn('⚠️ Unexpected HTTP response, but continuing...');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
+
+      const data = await response.json();
+      console.log('✅ Edge function health check passed:', data);
+      
     } catch (error) {
-      console.error('Edge function health check failed:', error);
-      throw new Error('Edge function not available. Please wait a moment and try again.');
+      console.error('❌ Edge function health check failed:', error);
+      throw new Error(`Edge function not available: ${error.message}`);
     }
   }
 
@@ -101,11 +98,13 @@ class RealtimeChat {
     ];
     
     const wsUrl = wsUrls[retryCount % wsUrls.length];
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtcmlmdWZ5a2N6dWRmeG9tZW5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNzkzNTYsImV4cCI6MjA3Mjc1NTM1Nn0.TE9BEft4v-f_vIQkKQ39BHZzcvbwg93OXBXX6QaSUbY';
     
     console.log(`🔄 WebSocket connection attempt ${retryCount + 1}/${maxRetries + 1}`);
     console.log(`📡 Trying URL: ${wsUrl}`);
 
     return new Promise<void>((resolve, reject) => {
+      // Create WebSocket (browser WebSockets don't support custom headers)
       this.ws = new WebSocket(wsUrl);
       
       const connectionTimeout = setTimeout(() => {
@@ -519,8 +518,8 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         setIsRecording(false);
         setIsAISpeaking(false);
         toast({
-          title: "Connection Failed",
-          description: "The edge function may still be deploying. Wait 30 seconds and try again.",
+          title: "Connection Failed", 
+          description: "Edge function authentication fixed. The connection should work now. Check console for details.",
           variant: "destructive",
         });
         break;

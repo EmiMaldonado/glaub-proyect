@@ -2,24 +2,114 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400',
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  const { headers } = req;
-  const upgradeHeader = headers.get("upgrade") || "";
-
-  if (upgradeHeader.toLowerCase() !== "websocket") {
-    return new Response("Expected WebSocket connection", { 
-      status: 400,
+    return new Response('ok', { 
+      status: 200,
       headers: corsHeaders 
     });
   }
 
+  // Check for WebSocket upgrade
+  const { headers } = req;
+  const upgradeHeader = headers.get("upgrade") || "";
+
+  // If not a WebSocket request, handle as HTTP API test
+  if (upgradeHeader.toLowerCase() !== "websocket") {
+    try {
+      console.log('HTTP request received, handling as health check...');
+      
+      // Simple health check for HTTP requests
+      if (req.method === 'GET') {
+        return new Response(JSON.stringify({
+          success: true,
+          message: "Edge function is running. Use WebSocket for voice connection.",
+          timestamp: new Date().toISOString()
+        }), {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      // Handle POST requests for testing
+      if (req.method === 'POST') {
+        const { messages = [] } = await req.json();
+        
+        // Test OpenAI connection
+        const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+        if (!openAIApiKey) {
+          throw new Error('OpenAI API key not configured');
+        }
+
+        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: messages.length > 0 ? messages : [
+              { role: 'user', content: 'Health check - respond with OK' }
+            ],
+            max_tokens: 10,
+          }),
+        });
+
+        if (!openaiResponse.ok) {
+          throw new Error(`OpenAI API error: ${openaiResponse.status}`);
+        }
+
+        const data = await openaiResponse.json();
+        
+        return new Response(JSON.stringify({
+          success: true,
+          message: "OpenAI connection successful",
+          data: data
+        }), {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+
+    } catch (error) {
+      console.error('HTTP request error:', error);
+      
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Internal server error',
+        message: error.message 
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+  }
+
+  // WebSocket handling starts here
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiApiKey) {
     return new Response(JSON.stringify({ error: "Server configuration error" }), { 
@@ -28,6 +118,7 @@ serve(async (req) => {
     });
   }
 
+  console.log('WebSocket upgrade request received');
   const { socket, response } = Deno.upgradeWebSocket(req);
   
   let openAISocket: WebSocket | null = null;
