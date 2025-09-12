@@ -37,7 +37,6 @@ const Navigation = () => {
                 </Button>
                 <Button variant="default" size="sm" asChild>
                   <Link to="/conversation/voice">
-                    <Mic className="h-4 w-4 mr-2" />
                     Start Conversation
                   </Link>
                 </Button>
