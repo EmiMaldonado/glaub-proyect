@@ -55,129 +55,45 @@ const SessionSummary = () => {
     try {
       setIsProcessing(true);
       setProgress(10);
-      setCurrentStep('Retrieving conversation messages...');
-
-      // Get conversation messages
-      const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (messagesError) throw messagesError;
+      setCurrentStep('Retrieving conversation data...');
 
       setProgress(30);
-      setCurrentStep('Processing with AI...');
+      setCurrentStep('Analyzing conversation with AI...');
 
-      // Send to AI for analysis
-      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('ai-chat', {
+      // Send conversation for comprehensive analysis using dedicated function
+      const { data: analysisResponse, error: analysisError } = await supabase.functions.invoke('session-analysis', {
         body: {
-          message: "Generate comprehensive insights from this therapeutic conversation. Analyze the user's personality traits using OCEAN model, extract key insights, and provide actionable next steps.",
           conversationId,
-          userId: user?.id,
-          messages: messages || [],
-          analysis_type: 'session_summary'
+          userId: user?.id
         }
       });
 
-      if (aiError) throw aiError;
-
-      setProgress(70);
-      setCurrentStep('Saving insights to your profile...');
-
-      // Parse AI response for insights
-      let insightData: InsightData;
-      
-      try {
-        // Try to parse structured response from AI
-        const aiResponseData = aiResponse.data;
-        if (aiResponseData && aiResponseData.message) {
-          // Parse JSON from AI response if it's structured
-          const aiMessage = aiResponseData.message;
-          
-          // Try to extract JSON from the response
-          const jsonMatch = aiMessage.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsedData = JSON.parse(jsonMatch[0]);
-            insightData = {
-              key_insights: parsedData.key_insights || [],
-              personality_notes: parsedData.personality_notes || {
-                openness: 50,
-                conscientiousness: 50,
-                extraversion: 50,
-                agreeableness: 50,
-                neuroticism: 50,
-                summary: "Analysis based on conversation content."
-              },
-              next_steps: parsedData.next_steps || []
-            };
-          } else {
-            // If no JSON found, extract insights from natural language
-            const lines = aiMessage.split('\n').filter(line => line.trim());
-            insightData = {
-              key_insights: lines.filter(line => line.includes('insight') || line.includes('key') || line.includes('important')).slice(0, 3),
-              personality_notes: {
-                openness: 50,
-                conscientiousness: 50,
-                extraversion: 50,
-                agreeableness: 50,
-                neuroticism: 50,
-                summary: "Analysis based on conversation patterns and responses."
-              },
-              next_steps: lines.filter(line => line.includes('recommend') || line.includes('suggest') || line.includes('next')).slice(0, 3)
-            };
-          }
-        } else {
-          throw new Error('No valid AI response received');
-        }
-      } catch (parseError) {
-        console.error('Error parsing AI response:', parseError);
-        // Fallback to basic analysis
-        insightData = {
-          key_insights: [
-            "Engaged actively in the conversation",
-            "Showed willingness to explore topics",
-            "Demonstrated communication skills"
-          ],
-          personality_notes: {
-            openness: 50,
-            conscientiousness: 50,
-            extraversion: 50,
-            agreeableness: 50,
-            neuroticism: 50,
-            summary: "Basic analysis based on conversation participation."
-          },
-          next_steps: [
-            "Continue with regular self-reflection",
-            "Practice mindfulness techniques",
-            "Schedule follow-up conversations"
-          ]
-        };
+      if (analysisError) {
+        console.error('Session analysis error:', analysisError);
+        throw new Error(`Analysis failed: ${analysisError.message}`);
       }
 
-      // Save insights to database
-      const { error: insertError } = await supabase
-        .from('key_insights')
-        .upsert({
-          conversation_id: conversationId,
-          insights: insightData.key_insights,
-          personality_notes: insightData.personality_notes,
-          next_steps: insightData.next_steps
-        });
+      if (!analysisResponse?.success) {
+        throw new Error(analysisResponse?.error || 'Analysis failed');
+      }
 
-      if (insertError) throw insertError;
+      setProgress(80);
+      setCurrentStep('Processing results...');
 
-      // Update conversation with summary
-      const { error: updateError } = await supabase
-        .from('conversations')
-        .update({
-          status: 'completed',
-          ended_at: new Date().toISOString(),
-          insights: insightData.personality_notes
-        })
-        .eq('id', conversationId);
-
-      if (updateError) throw updateError;
+      // Extract insights from analysis response
+      const analysis = analysisResponse.analysis;
+      const insightData: InsightData = {
+        key_insights: analysis.key_insights || [],
+        personality_notes: analysis.ocean_profile || {
+          openness: 50,
+          conscientiousness: 50,
+          extraversion: 50,
+          agreeableness: 50,
+          neuroticism: 50,
+          summary: "Analysis completed based on conversation data."
+        },
+        next_steps: analysis.personalized_recommendations || []
+      };
 
       setProgress(100);
       setCurrentStep('Analysis complete!');

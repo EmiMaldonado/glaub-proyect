@@ -20,3 +20,6 @@ verify_jwt = false
 
 [edge_functions.complete-invitation]
 verify_jwt = true
+
+[edge_functions.session-analysis]
+verify_jwt = true
