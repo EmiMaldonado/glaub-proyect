@@ -32,7 +32,7 @@ const Landing = () => {
               One Conversation at a Time
             </h1>
             
-            <p className="text-lg md:text-xl text-white/90 max-w-2xl drop-shadow-md">
+            <p className="text-sm md:text-base text-white/90 max-w-2xl drop-shadow-md">
               Get personalized insights to help every individual thrive. It's not about evaluating, it's about understanding.
             </p>
             
