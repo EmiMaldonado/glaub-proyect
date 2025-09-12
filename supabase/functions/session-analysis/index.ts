@@ -123,7 +123,6 @@ Make recommendations specific to the topics they discussed and their apparent pe
           }
         ],
         max_completion_tokens: 2000,
-        temperature: 0.3,
       }),
     });
 
