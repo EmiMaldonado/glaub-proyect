@@ -44,6 +44,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const [currentAIText, setCurrentAIText] = useState(currentAIResponse || '');
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [messages, setMessages] = useState<Array<{id: string, role: 'user' | 'assistant', content: string, timestamp: Date}>>([]);
+  const [isProcessing, setIsProcessing] = useState(false); // Lock to prevent concurrent processing
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -85,6 +86,11 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   // Start recording user's voice
   const startRecording = useCallback(async () => {
+    if (isProcessing) {
+      console.log('🚫 Cannot start recording - already processing');
+      return;
+    }
+
     try {
       setVoiceState('recording');
       audioChunksRef.current = [];
@@ -114,16 +120,17 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
-        setAudioBlob(audioBlob);
+        if (!isProcessing) { // Only process if not already processing
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
+          setAudioBlob(audioBlob);
+          setVoiceState('processing');
+        }
         
         // Immediately release microphone
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
         }
-        
-        setVoiceState('processing');
       };
 
       mediaRecorder.start();
@@ -142,7 +149,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         variant: "destructive",
       });
     }
-  }, []);
+  }, [isProcessing]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
@@ -158,10 +165,21 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   // Process audio through speech-to-text and get AI response
   const processAudio = useCallback(async (audioBlob: Blob) => {
-    if (!conversationId) return;
+    if (!conversationId || isProcessing) {
+      console.log('🚫 Skipping audio processing - already in progress or no conversation ID');
+      return;
+    }
 
     try {
+      setIsProcessing(true); // Lock processing
       console.log('🔊 Processing audio blob:', audioBlob.size, 'bytes');
+      
+      // Stop any currently playing audio first
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        setCurrentAudio(null);
+      }
       
       // Step 1: Convert audio to base64 and send to speech-to-text
       const base64Audio = await new Promise<string>((resolve) => {
@@ -253,8 +271,10 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         description: "Could not process your message. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsProcessing(false); // Unlock processing
     }
-  }, [conversationId, userId, onTranscriptionUpdate]);
+  }, [conversationId, userId, onTranscriptionUpdate, isProcessing, currentAudio]);
 
   // Text-to-speech for AI responses - ensures only one audio plays at a time
   const playAIResponse = useCallback(async (text: string) => {
@@ -337,10 +357,14 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   // Process audio when blob is ready
   useEffect(() => {
-    if (audioBlob && voiceState === 'processing') {
-      processAudio(audioBlob);
+    if (audioBlob && voiceState === 'processing' && !isProcessing) {
+      const processAudioAsync = async () => {
+        await processAudio(audioBlob);
+        setAudioBlob(null); // Clear the blob after processing
+      };
+      processAudioAsync();
     }
-  }, [audioBlob, voiceState, processAudio]);
+  }, [audioBlob, voiceState, processAudio, isProcessing]);
 
   const getStatusText = () => {
     switch (voiceState) {
