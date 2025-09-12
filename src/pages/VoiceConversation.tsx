@@ -352,9 +352,9 @@ const VoiceConversation: React.FC = () => {
         userId={user?.id}
         onEndSession={handleEndSession}
         onBack={handleBack}
-        progressPercentage={progressPercentage}
-        formattedTime={formattedTime}
-        formattedTimeRemaining={formattedTimeRemaining}
+        progressPercentage={isTimerActive ? progressPercentage : 0}
+        formattedTime={isTimerActive ? formattedTime : "00:00"}
+        formattedTimeRemaining={isTimerActive ? formattedTimeRemaining : "05:00"}
         currentAIResponse={currentAIResponse}
       />
     </VoiceErrorBoundary>
