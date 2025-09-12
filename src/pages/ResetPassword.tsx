@@ -19,19 +19,27 @@ const ResetPassword = () => {
   
   const accessToken = searchParams.get("access_token");
   const refreshToken = searchParams.get("refresh_token");
+  const type = searchParams.get("type");
 
   useEffect(() => {
-    // If we have tokens in the URL, set the session
-    if (accessToken && refreshToken) {
+    // Handle both old and new token formats
+    if (accessToken && type === "recovery") {
+      // New format: just access_token with type=recovery
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || "", // refresh_token might be null in new format
+      });
+    } else if (accessToken && refreshToken) {
+      // Old format: both tokens present
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       });
     }
-  }, [accessToken, refreshToken]);
+  }, [accessToken, refreshToken, type]);
 
-  // If no tokens, redirect to auth page
-  if (!accessToken || !refreshToken) {
+  // If no access token, redirect to auth page
+  if (!accessToken) {
     return <Navigate to="/auth" replace />;
   }
 
