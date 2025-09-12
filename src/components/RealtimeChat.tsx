@@ -52,16 +52,38 @@ class RealtimeChat {
   private async testEdgeFunctionHealth() {
     try {
       console.log('Testing edge function health...');
-      const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`, {
+      
+      // Test with a simple HTTP request first
+      const httpResponse = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('HTTP test response:', {
+        status: httpResponse.status,
+        statusText: httpResponse.statusText,
+        headers: Object.fromEntries(httpResponse.headers.entries())
+      });
+      
+      // Also test OPTIONS for CORS
+      const optionsResponse = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`, {
         method: 'OPTIONS',
         headers: {
           'Content-Type': 'application/json',
         },
       });
       
-      console.log('Edge function health check:', response.status);
-      if (!response.ok && response.status !== 200) {
-        throw new Error(`Edge function not ready. Status: ${response.status}`);
+      console.log('OPTIONS test response:', {
+        status: optionsResponse.status,
+        statusText: optionsResponse.statusText
+      });
+      
+      if (httpResponse.status === 400 && httpResponse.statusText.includes('WebSocket')) {
+        console.log('✅ Edge function is responding correctly (expects WebSocket)');
+      } else {
+        console.warn('⚠️ Unexpected HTTP response, but continuing...');
       }
     } catch (error) {
       console.error('Edge function health check failed:', error);
@@ -71,22 +93,31 @@ class RealtimeChat {
 
   private async connectWebSocket(retryCount = 0) {
     const maxRetries = 3;
-    const wsUrl = `wss://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`;
     
-    console.log(`Attempting WebSocket connection (attempt ${retryCount + 1}/${maxRetries + 1}):`, wsUrl);
+    // Try both URL formats to see which one works
+    const wsUrls = [
+      `wss://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`,
+      `wss://bmrifufykczudfxomenr.functions.supabase.co/realtime-chat`
+    ];
+    
+    const wsUrl = wsUrls[retryCount % wsUrls.length];
+    
+    console.log(`🔄 WebSocket connection attempt ${retryCount + 1}/${maxRetries + 1}`);
+    console.log(`📡 Trying URL: ${wsUrl}`);
 
     return new Promise<void>((resolve, reject) => {
       this.ws = new WebSocket(wsUrl);
       
       const connectionTimeout = setTimeout(() => {
-        console.error('WebSocket connection timeout');
+        console.error('❌ WebSocket connection timeout after 10 seconds');
         this.ws?.close();
         reject(new Error('Connection timeout'));
-      }, 10000); // 10 second timeout
+      }, 10000);
 
       this.ws.onopen = () => {
         clearTimeout(connectionTimeout);
-        console.log('WebSocket connected to Supabase proxy');
+        console.log('✅ WebSocket connected successfully!');
+        console.log('🔗 Connected to:', wsUrl);
         this.isConnected = true;
         this.onConnectionChange('connected');
         this.setupAudioProcessing();
@@ -95,40 +126,59 @@ class RealtimeChat {
 
       this.ws.onmessage = (event) => {
         try {
+          console.log('📨 Received WebSocket message:', event.data);
           const message = JSON.parse(event.data);
           this.handleMessage(message);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('❌ Error parsing WebSocket message:', error);
         }
       };
 
       this.ws.onclose = (event) => {
         clearTimeout(connectionTimeout);
-        console.log('WebSocket connection closed:', event.code, event.reason);
+        console.log('🔌 WebSocket connection closed:', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
         this.isConnected = false;
         this.onConnectionChange('disconnected');
       };
 
       this.ws.onerror = (error) => {
         clearTimeout(connectionTimeout);
-        console.error('WebSocket connection error details:', {
+        console.error('❌ WebSocket error:', {
           error,
           url: wsUrl,
           readyState: this.ws?.readyState,
+          readyStateText: this.getReadyStateText(),
           retryCount
         });
         
         if (retryCount < maxRetries) {
-          console.log(`Retrying connection in ${(retryCount + 1) * 2} seconds...`);
+          const delay = (retryCount + 1) * 2000;
+          console.log(`🔄 Retrying in ${delay/1000} seconds with ${retryCount < wsUrls.length - 1 ? 'alternative URL' : 'same URL'}...`);
           setTimeout(() => {
             this.connectWebSocket(retryCount + 1).then(resolve).catch(reject);
-          }, (retryCount + 1) * 2000);
+          }, delay);
         } else {
+          console.error('❌ All WebSocket connection attempts failed');
           this.onConnectionChange('error');
-          reject(new Error('WebSocket connection failed after multiple attempts'));
+          reject(new Error('WebSocket connection failed after multiple attempts with different URLs'));
         }
       };
     });
+  }
+
+  private getReadyStateText(): string {
+    if (!this.ws) return 'NO_WEBSOCKET';
+    switch (this.ws.readyState) {
+      case WebSocket.CONNECTING: return 'CONNECTING';
+      case WebSocket.OPEN: return 'OPEN';
+      case WebSocket.CLOSING: return 'CLOSING';
+      case WebSocket.CLOSED: return 'CLOSED';
+      default: return 'UNKNOWN';
+    }
   }
 
 
