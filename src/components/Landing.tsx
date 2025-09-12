@@ -198,7 +198,7 @@ const Landing = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center space-y-4">
             <div className="flex items-center space-x-3">
-              <img src="/logo-dark.svg" alt="Gläub" className="h-8 w-auto" onError={e => {
+              <img src="/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" className="h-8 w-auto" onError={e => {
               (e.currentTarget as HTMLElement).style.display = 'none';
               (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block';
             }} />
