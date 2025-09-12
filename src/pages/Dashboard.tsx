@@ -272,28 +272,28 @@ const Dashboard = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {oceanProfile ? <ul className="space-y-2 text-sm">
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                <span>Openness: {oceanProfile.openness || 0}%</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                <span>Conscientiousness: {oceanProfile.conscientiousness || 0}%</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                <span>Extraversion: {oceanProfile.extraversion || 0}%</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                <span>Agreeableness: {oceanProfile.agreeableness || 0}%</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                <span>Stability: {100 - (oceanProfile.neuroticism || 0)}%</span>
-              </li>
-            </ul> : <div className="text-center py-8">
+          {oceanProfile ? <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
+                <div className="text-xs text-muted-foreground">Openness</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
+                <div className="text-xs text-muted-foreground">Conscientiousness</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
+                <div className="text-xs text-muted-foreground">Extraversion</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
+                <div className="text-xs text-muted-foreground">Agreeableness</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
+                <div className="text-xs text-muted-foreground">Stability</div>
+              </div>
+            </div> : <div className="text-center py-8">
               <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No personality data available</p>
               <p className="text-sm text-muted-foreground mt-1">
