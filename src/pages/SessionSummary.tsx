@@ -74,6 +74,7 @@ const SessionSummary = () => {
         body: {
           message: "Generate comprehensive insights from this therapeutic conversation. Analyze the user's personality traits using OCEAN model, extract key insights, and provide actionable next steps.",
           conversationId,
+          userId: user?.id,
           messages: messages || [],
           analysis_type: 'session_summary'
         }

@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import RealtimeChatInterface from '@/components/RealtimeChat';
+import VoiceErrorBoundary from '@/components/VoiceErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useConversationTimer } from '@/hooks/useConversationTimer';
@@ -376,12 +377,14 @@ const VoiceConversation: React.FC = () => {
 
             {/* Realtime Voice Interface */}
             <div className="border-t bg-background p-6">
-              <RealtimeChatInterface
-                onTranscriptionUpdate={handleTranscriptionUpdate}
-                onSpeakingChange={handleSpeakingChange}
-                conversationId={conversation?.id}
-                userId={user?.id}
-              />
+              <VoiceErrorBoundary onRetry={handleNewConversation}>
+                <RealtimeChatInterface
+                  onTranscriptionUpdate={handleTranscriptionUpdate}
+                  onSpeakingChange={handleSpeakingChange}
+                  conversationId={conversation?.id}
+                  userId={user?.id}
+                />
+              </VoiceErrorBoundary>
             </div>
           </div>
         </div>

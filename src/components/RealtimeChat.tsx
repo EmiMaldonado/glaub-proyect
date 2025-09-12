@@ -24,7 +24,7 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
   conversationId,
   userId
 }) => {
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'error' | 'retrying' | 'disconnected'>('idle');
   const [isRecording, setIsRecording] = useState(false);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
@@ -36,11 +36,9 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
   const aiTranscriptRef = useRef('');
 
   const handleMessage = useCallback((message: any) => {
-    console.log('[RealtimeChat] Message received:', message.type);
 
     switch (message.type) {
       case 'session.created':
-        console.log('[RealtimeChat] Session created');
         setIsRecording(true);
         toast({
           title: "🎙️ Conversación iniciada",
@@ -49,13 +47,11 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         break;
 
       case 'input_audio_buffer.speech_started':
-        console.log('[RealtimeChat] User started speaking');
         setCurrentUserTranscript('');
         userTranscriptRef.current = '';
         break;
 
       case 'input_audio_buffer.speech_stopped':
-        console.log('[RealtimeChat] User stopped speaking');
         if (userTranscriptRef.current.trim()) {
           const transcript: TranscriptItem = {
             id: Date.now().toString(),
@@ -107,25 +103,19 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         break;
 
       case 'response.audio_transcript.done':
-        console.log('[RealtimeChat] AI transcript completed:', aiTranscriptRef.current);
         break;
 
       case 'error':
-        console.error('[RealtimeChat] Error:', message.error);
         toast({
-          title: "Error",
-          description: message.error || "Error en la conexión",
+          title: "Error de conexión",
+          description: message.error || "Error en la conexión de voz",
           variant: "destructive",
         });
         break;
-
-      default:
-        console.log('[RealtimeChat] Unhandled message type:', message.type);
     }
   }, [onTranscriptionUpdate, onSpeakingChange]);
 
-  const handleConnectionChange = useCallback((status: 'connecting' | 'connected' | 'disconnected' | 'error') => {
-    console.log('[RealtimeChat] Connection status changed:', status);
+  const handleConnectionChange = useCallback((status: 'idle' | 'connecting' | 'connected' | 'error' | 'retrying' | 'disconnected') => {
     setConnectionStatus(status);
 
     switch (status) {
@@ -139,6 +129,12 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         toast({
           title: "✅ Conectado",
           description: "Conexión de voz establecida",
+        });
+        break;
+      case 'retrying':
+        toast({
+          title: "Reintentando...",
+          description: "Reconectando conexión de voz",
         });
         break;
       case 'error':
@@ -162,10 +158,10 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
       realtimeChatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
       await realtimeChatRef.current.connect();
     } catch (error) {
-      console.error('[RealtimeChat] Failed to start conversation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
-        title: "Error",
-        description: "No se pudo iniciar la conversación de voz",
+        title: "Error de conexión",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -195,6 +191,7 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
     switch (connectionStatus) {
       case 'connected': return 'text-green-500';
       case 'connecting': return 'text-yellow-500';
+      case 'retrying': return 'text-orange-500';
       case 'error': return 'text-red-500';
       default: return 'text-gray-500';
     }
@@ -204,7 +201,9 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
     switch (connectionStatus) {
       case 'connected': return 'Conectado';
       case 'connecting': return 'Conectando...';
+      case 'retrying': return 'Reintentando...';
       case 'error': return 'Error de conexión';
+      case 'idle': return 'Listo para conectar';
       default: return 'Desconectado';
     }
   };
@@ -222,10 +221,10 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         {connectionStatus !== 'connected' ? (
           <Button
             onClick={startConversation}
-            disabled={connectionStatus === 'connecting'}
+            disabled={connectionStatus === 'connecting' || connectionStatus === 'retrying'}
             className="w-24 h-24 rounded-full bg-primary hover:bg-primary/90 text-white shadow-lg"
           >
-            {connectionStatus === 'connecting' ? (
+            {(connectionStatus === 'connecting' || connectionStatus === 'retrying') ? (
               <Loader2 className="w-8 h-8 animate-spin" />
             ) : (
               <Mic className="w-8 h-8" />

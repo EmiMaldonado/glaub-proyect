@@ -8,8 +8,7 @@ export class AudioRecorder {
 
   async start() {
     try {
-      console.log('[AudioRecorder] Starting recording...');
-      
+      // Request microphone permission with proper error handling
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 24000,
@@ -35,16 +34,17 @@ export class AudioRecorder {
       this.source.connect(this.processor);
       this.processor.connect(this.audioContext.destination);
       
-      console.log('[AudioRecorder] Recording started successfully');
     } catch (error) {
-      console.error('[AudioRecorder] Error accessing microphone:', error);
-      throw error;
+      if (error.name === 'NotAllowedError') {
+        throw new Error('Microphone access denied. Please allow microphone permissions.');
+      } else if (error.name === 'NotFoundError') {
+        throw new Error('No microphone found. Please connect a microphone.');
+      }
+      throw new Error(`Microphone error: ${error.message}`);
     }
   }
 
-  stop() {
-    console.log('[AudioRecorder] Stopping recording...');
-    
+  stop() {    
     if (this.source) {
       this.source.disconnect();
       this.source = null;
@@ -61,8 +61,6 @@ export class AudioRecorder {
       this.audioContext.close();
       this.audioContext = null;
     }
-    
-    console.log('[AudioRecorder] Recording stopped');
   }
 }
 
@@ -170,7 +168,6 @@ class AudioQueue {
       source.onended = () => this.playNext();
       source.start(0);
     } catch (error) {
-      console.error('[AudioQueue] Error playing audio:', error);
       this.playNext(); // Continue with next segment even if current fails
     }
   }
@@ -196,41 +193,92 @@ export const clearAudioQueue = () => {
   }
 };
 
+export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error' | 'retrying' | 'disconnected';
+
 export class RealtimeChat {
   private ws: WebSocket | null = null;
   private audioRecorder: AudioRecorder | null = null;
   private audioContext: AudioContext | null = null;
   private onMessage: (message: any) => void;
-  private onConnectionChange: (status: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
+  private onConnectionChange: (status: ConnectionStatus) => void;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectTimeout: number | null = null;
+  private connectionTimeout: number | null = null;
+  private isConnecting = false;
 
   constructor(
     onMessage: (message: any) => void,
-    onConnectionChange: (status: 'connecting' | 'connected' | 'disconnected' | 'error') => void
+    onConnectionChange: (status: ConnectionStatus) => void
   ) {
     this.onMessage = onMessage;
     this.onConnectionChange = onConnectionChange;
   }
 
+  private getBackoffDelay(): number {
+    return Math.min(1000 * Math.pow(2, this.reconnectAttempts), 8000);
+  }
+
+  private clearTimeouts() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+  }
+
   async connect() {
+    if (this.isConnecting) return;
+    
+    this.isConnecting = true;
+    this.clearTimeouts();
+    
     try {
-      console.log('[RealtimeChat] Connecting to realtime chat...');
       this.onConnectionChange('connecting');
 
-      // Initialize audio context
+      // Check browser compatibility
+      if (!window.WebSocket) {
+        throw new Error('WebSocket not supported by browser');
+      }
+
+      // Initialize audio context first
       this.audioContext = new AudioContext({ sampleRate: 24000 });
+      
+      // Check microphone permissions
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (error) {
+        if (error.name === 'NotAllowedError') {
+          throw new Error('Microphone permission required for voice chat');
+        }
+        throw error;
+      }
+
+      // Set connection timeout
+      this.connectionTimeout = setTimeout(() => {
+        if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+          this.ws.close();
+          this.handleConnectionError(new Error('Connection timeout'));
+        }
+      }, 30000) as any;
 
       // Connect to WebSocket
-      this.ws = new WebSocket('wss://bmrifufykczudfxomenr.functions.supabase.co/realtime-chat');
+      const wsUrl = `wss://bmrifufykczudfxomenr.functions.supabase.co/realtime-chat`;
+      this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('[RealtimeChat] WebSocket connected');
+        this.clearTimeouts();
+        this.isConnecting = false;
+        this.reconnectAttempts = 0;
         this.onConnectionChange('connected');
       };
 
       this.ws.onmessage = async (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('[RealtimeChat] Received message:', data.type);
 
           if (data.type === 'response.audio.delta' && data.delta) {
             // Play audio data
@@ -246,21 +294,30 @@ export class RealtimeChat {
 
           this.onMessage(data);
         } catch (error) {
-          console.error('[RealtimeChat] Error processing message:', error);
+          // Silently handle message parsing errors
         }
       };
 
-      this.ws.onerror = (error) => {
-        console.error('[RealtimeChat] WebSocket error:', error);
-        this.onConnectionChange('error');
+      this.ws.onerror = () => {
+        this.handleConnectionError(new Error('WebSocket connection failed'));
       };
 
       this.ws.onclose = () => {
-        console.log('[RealtimeChat] WebSocket closed');
-        this.onConnectionChange('disconnected');
+        this.isConnecting = false;
+        this.clearTimeouts();
+        
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.scheduleReconnect();
+        } else {
+          this.onConnectionChange('error');
+          this.onMessage({
+            type: 'error',
+            error: 'Unable to establish voice connection after multiple attempts'
+          });
+        }
       };
 
-      // Start audio recording
+      // Start audio recording after WebSocket is established
       this.audioRecorder = new AudioRecorder((audioData) => {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           const encoded = encodeAudioForAPI(audioData);
@@ -274,15 +331,39 @@ export class RealtimeChat {
       await this.audioRecorder.start();
 
     } catch (error) {
-      console.error('[RealtimeChat] Connection error:', error);
-      this.onConnectionChange('error');
-      throw error;
+      this.isConnecting = false;
+      this.handleConnectionError(error as Error);
     }
+  }
+
+  private handleConnectionError(error: Error) {
+    this.clearTimeouts();
+    this.isConnecting = false;
+    
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.scheduleReconnect();
+    } else {
+      this.onConnectionChange('error');
+      this.onMessage({
+        type: 'error',
+        error: error.message || 'Connection failed'
+      });
+    }
+  }
+
+  private scheduleReconnect() {
+    this.onConnectionChange('retrying');
+    this.reconnectAttempts++;
+    
+    const delay = this.getBackoffDelay();
+    this.reconnectTimeout = setTimeout(() => {
+      this.connect();
+    }, delay) as any;
   }
 
   sendMessage(text: string) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket not connected');
+      throw new Error('Voice connection not ready');
     }
 
     const event = {
@@ -304,7 +385,8 @@ export class RealtimeChat {
   }
 
   disconnect() {
-    console.log('[RealtimeChat] Disconnecting...');
+    this.clearTimeouts();
+    this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
     
     if (this.audioRecorder) {
       this.audioRecorder.stop();

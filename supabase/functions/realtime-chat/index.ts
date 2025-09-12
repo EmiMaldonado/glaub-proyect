@@ -14,37 +14,49 @@ serve(async (req) => {
   const upgradeHeader = headers.get("upgrade") || "";
 
   if (upgradeHeader.toLowerCase() !== "websocket") {
-    return new Response("Expected WebSocket connection", { status: 400 });
+    return new Response("Expected WebSocket connection", { 
+      status: 400,
+      headers: corsHeaders 
+    });
   }
-
-  console.log("[REALTIME-CHAT] WebSocket upgrade request received");
 
   const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openaiApiKey) {
-    console.error("[REALTIME-CHAT] OPENAI_API_KEY not found");
-    return new Response("Server configuration error", { status: 500 });
+    return new Response(JSON.stringify({ error: "Server configuration error" }), { 
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
   const { socket, response } = Deno.upgradeWebSocket(req);
   
-  // Connect to OpenAI Realtime API
-  const openAISocket = new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17", {
-    headers: {
-      "Authorization": `Bearer ${openaiApiKey}`,
-      "OpenAI-Beta": "realtime=v1"
+  let openAISocket: WebSocket | null = null;
+  let isConnecting = false;
+  
+  const connectToOpenAI = async () => {
+    if (isConnecting || (openAISocket && openAISocket.readyState === WebSocket.OPEN)) {
+      return;
     }
-  });
-
-  // Handle OpenAI connection
-  openAISocket.onopen = () => {
-    console.log("[REALTIME-CHAT] Connected to OpenAI Realtime API");
     
-    // Send session configuration after connection
-    const sessionUpdate = {
-      type: "session.update",
-      session: {
-        modalities: ["text", "audio"],
-        instructions: `Eres un asistente terapéutico profesional en español. Tu rol es:
+    isConnecting = true;
+    
+    try {
+      openAISocket = new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17", {
+        headers: {
+          "Authorization": `Bearer ${openaiApiKey}`,
+          "OpenAI-Beta": "realtime=v1"
+        }
+      });
+
+      openAISocket.onopen = () => {
+        isConnecting = false;
+        
+        // Send session configuration after connection
+        const sessionUpdate = {
+          type: "session.update",
+          session: {
+            modalities: ["text", "audio"],
+            instructions: `Eres un asistente terapéutico profesional en español. Tu rol es:
 
 1. PERSONALIDAD TERAPÉUTICA:
 - Mantén un tono cálido, empático y profesional
@@ -71,85 +83,119 @@ serve(async (req) => {
 - Respeta la autonomía del usuario
 
 Responde siempre en español con un tono profesional pero cercano.`,
-        voice: "alloy",
-        input_audio_format: "pcm16",
-        output_audio_format: "pcm16",
-        input_audio_transcription: {
-          model: "whisper-1"
-        },
-        turn_detection: {
-          type: "server_vad",
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 1000
-        },
-        temperature: 0.8,
-        max_response_output_tokens: "inf"
-      }
-    };
+            voice: "alloy",
+            input_audio_format: "pcm16",
+            output_audio_format: "pcm16",
+            input_audio_transcription: {
+              model: "whisper-1"
+            },
+            turn_detection: {
+              type: "server_vad",
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 1000
+            },
+            temperature: 0.8,
+            max_response_output_tokens: "inf"
+          }
+        };
 
-    openAISocket.send(JSON.stringify(sessionUpdate));
-    console.log("[REALTIME-CHAT] Session configuration sent");
+        if (openAISocket && openAISocket.readyState === WebSocket.OPEN) {
+          openAISocket.send(JSON.stringify(sessionUpdate));
+        }
+        
+        // Setup message forwarding
+        setupOpenAIForwarding();
+        
+        // Notify client of successful connection
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: "session.created",
+            session_id: crypto.randomUUID()
+          }));
+        }
+      };
+
+      openAISocket.onerror = () => {
+        isConnecting = false;
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: "error",
+            error: "Connection failed - retrying..."
+          }));
+        }
+        
+        // Retry connection after 2 seconds
+        setTimeout(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            connectToOpenAI();
+          }
+        }, 2000);
+      };
+
+      openAISocket.onclose = () => {
+        isConnecting = false;
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        }
+      };
+
+    } catch (error) {
+      isConnecting = false;
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: "error",
+          error: "Failed to establish connection"
+        }));
+      }
+    }
   };
 
-  // Forward messages from client to OpenAI
+  const setupOpenAIForwarding = () => {
+    if (openAISocket) {
+      openAISocket.onmessage = (event) => {
+        try {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(event.data);
+          }
+        } catch (error) {
+          // Silently handle forwarding errors
+        }
+      };
+    }
+  };
+
+  // Initialize client handlers
+  socket.onopen = () => {
+    connectToOpenAI();
+  };
+
   socket.onmessage = (event) => {
     try {
-      const message = JSON.parse(event.data);
-      console.log("[REALTIME-CHAT] Client -> OpenAI:", message.type);
-      
-      if (openAISocket.readyState === WebSocket.OPEN) {
+      if (openAISocket && openAISocket.readyState === WebSocket.OPEN) {
         openAISocket.send(event.data);
-      } else {
-        console.error("[REALTIME-CHAT] OpenAI socket not ready, state:", openAISocket.readyState);
+      } else if (!isConnecting) {
+        // Try to reconnect if not already connecting
+        connectToOpenAI();
       }
     } catch (error) {
-      console.error("[REALTIME-CHAT] Error forwarding client message:", error);
-    }
-  };
-
-  // Forward messages from OpenAI to client
-  openAISocket.onmessage = (event) => {
-    try {
-      const message = JSON.parse(event.data);
-      console.log("[REALTIME-CHAT] OpenAI -> Client:", message.type);
-      
       if (socket.readyState === WebSocket.OPEN) {
-        socket.send(event.data);
-      } else {
-        console.error("[REALTIME-CHAT] Client socket not ready, state:", socket.readyState);
+        socket.send(JSON.stringify({
+          type: "error",
+          error: "Message processing failed"
+        }));
       }
-    } catch (error) {
-      console.error("[REALTIME-CHAT] Error forwarding OpenAI message:", error);
     }
   };
 
-  // Handle errors
-  openAISocket.onerror = (error) => {
-    console.error("[REALTIME-CHAT] OpenAI WebSocket error:", error);
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({
-        type: "error",
-        error: "OpenAI connection error"
-      }));
+  socket.onerror = () => {
+    if (openAISocket && openAISocket.readyState === WebSocket.OPEN) {
+      openAISocket.close();
     }
   };
 
-  socket.onerror = (error) => {
-    console.error("[REALTIME-CHAT] Client WebSocket error:", error);
-  };
-
-  // Handle closures
-  openAISocket.onclose = (event) => {
-    console.log("[REALTIME-CHAT] OpenAI WebSocket closed:", event.code, event.reason);
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.close();
-    }
-  };
-
-  socket.onclose = (event) => {
-    console.log("[REALTIME-CHAT] Client WebSocket closed:", event.code, event.reason);
-    if (openAISocket.readyState === WebSocket.OPEN) {
+  socket.onclose = () => {
+    if (openAISocket && openAISocket.readyState === WebSocket.OPEN) {
       openAISocket.close();
     }
   };

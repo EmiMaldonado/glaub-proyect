@@ -138,15 +138,17 @@ serve(async (req) => {
     const requestBody = await req.json();
     const { message, conversationId, userId } = requestBody;
 
-    // 1. Detailed logging at the beginning
-    console.log('🚀 AI Chat function called with:', {
-      conversationId,
-      userId,
-      messageLength: message?.length || 0,
-      messagePreview: message?.substring(0, 100) + (message?.length > 100 ? '...' : ''),
-      timestamp: new Date().toISOString(),
-      requestSize: JSON.stringify(requestBody).length
-    });
+    // Validate required fields
+    if (!message || !conversationId) {
+      const missingFields = [];
+      if (!message) missingFields.push('message');
+      if (!conversationId) missingFields.push('conversationId');
+      
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    }
+
+    // Use provided userId or 'system' for insights generation
+    const effectiveUserId = userId || 'system';
 
     debugInfo.processing_steps.push('Request parsed successfully');
     debugInfo.metadata = {
@@ -156,17 +158,6 @@ serve(async (req) => {
       request_size_bytes: JSON.stringify(requestBody).length
     };
 
-    if (!message || !conversationId || !userId) {
-      const missingFields = [];
-      if (!message) missingFields.push('message');
-      if (!conversationId) missingFields.push('conversationId');
-      if (!userId) missingFields.push('userId');
-      
-      console.error('❌ Missing required fields:', missingFields);
-      debugInfo.processing_steps.push(`Missing required fields: ${missingFields.join(', ')}`);
-      
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-    }
 
     // Get conversation history
     debugInfo.processing_steps.push('Fetching conversation history');
@@ -189,12 +180,6 @@ serve(async (req) => {
       debugInfo.processing_steps.push(`Database error: ${messagesError.message}`);
       throw new Error(`Failed to fetch conversation history: ${messagesError.message}`);
     }
-
-    console.log('📚 Conversation history retrieved:', {
-      messageCount: messages?.length || 0,
-      conversationId,
-      fetchTimeMs: debugInfo.timing.history_fetch_ms
-    });
 
     debugInfo.processing_steps.push(`Retrieved ${messages?.length || 0} historical messages`);
 
@@ -229,12 +214,6 @@ serve(async (req) => {
       throw new Error(`Failed to save user message: ${saveUserError.message}`);
     }
 
-    console.log('💾 User message saved successfully:', {
-      conversationId,
-      messageLength: message.length,
-      saveTimeMs: debugInfo.timing.user_message_save_ms
-    });
-
     debugInfo.processing_steps.push('User message saved successfully');
 
     // Prepare messages for OpenAI
@@ -243,16 +222,6 @@ serve(async (req) => {
       ...messages.map(m => ({ role: m.role, content: m.content })),
       { role: 'user', content: message }
     ];
-
-    // 2. Log before calling OpenAI with message count
-    console.log('🤖 Calling OpenAI with messages:', {
-      totalMessages: chatMessages.length,
-      systemPromptLength: SYSTEM_PROMPT.length,
-      historyMessages: messages?.length || 0,
-      currentMessage: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
-      model: 'gpt-4.1-2025-04-14',
-      timestamp: new Date().toISOString()
-    });
 
     debugInfo.processing_steps.push(`Prepared ${chatMessages.length} messages for OpenAI`);
     debugInfo.metadata.openai_messages_count = chatMessages.length;
@@ -293,17 +262,6 @@ serve(async (req) => {
     const assistantMessage = data.choices[0].message.content;
     const tokensUsed = data.usage?.total_tokens || 0;
 
-    // 3. Log after OpenAI response with status
-    console.log('✅ OpenAI response received:', {
-      status: response.status,
-      tokensUsed,
-      messageLength: assistantMessage.length,
-      responseTimeMs: debugInfo.timing.openai_call_ms,
-      conversationId,
-      model: data.model,
-      finishReason: data.choices[0].finish_reason
-    });
-
     debugInfo.processing_steps.push('OpenAI response received successfully');
     debugInfo.metadata.tokens_used = tokensUsed;
     debugInfo.metadata.assistant_message_length = assistantMessage.length;
@@ -314,15 +272,6 @@ serve(async (req) => {
     const insightsStartTime = Date.now();
     const insights = analyzeMessageForInsights(message, assistantMessage);
     debugInfo.timing.insights_analysis_ms = Date.now() - insightsStartTime;
-
-    // 4. Log before saving to DB with conversation ID
-    console.log('💾 Saving to database:', {
-      conversationId,
-      assistantMessageLength: assistantMessage.length,
-      tokensUsed,
-      insightsGenerated: Object.keys(insights).length,
-      timestamp: new Date().toISOString()
-    });
 
     debugInfo.processing_steps.push('Starting database save operations');
 
@@ -358,11 +307,6 @@ serve(async (req) => {
       throw new Error(`Failed to save assistant message: ${saveAssistantError.message}`);
     }
 
-    console.log('✅ Assistant message saved successfully:', {
-      conversationId,
-      saveTimeMs: debugInfo.timing.assistant_message_save_ms
-    });
-
     debugInfo.processing_steps.push('Assistant message saved successfully');
 
     // Update conversation with latest insights
@@ -387,10 +331,6 @@ serve(async (req) => {
       debugInfo.processing_steps.push(`Conversation update warning: ${updateConversationError.message}`);
       // Don't throw error for conversation update failure
     } else {
-      console.log('✅ Conversation updated successfully:', {
-        conversationId,
-        updateTimeMs: debugInfo.timing.conversation_update_ms
-      });
       debugInfo.processing_steps.push('Conversation updated successfully');
     }
 
@@ -398,12 +338,6 @@ serve(async (req) => {
     debugInfo.timing.total_processing_ms = Date.now() - startTime;
     debugInfo.processing_steps.push('Processing completed successfully');
 
-    console.log('🎉 AI Chat function completed successfully:', {
-      conversationId,
-      totalTimeMs: debugInfo.timing.total_processing_ms,
-      tokensUsed,
-      stepsCompleted: debugInfo.processing_steps.length
-    });
 
     // 6. Return debugging information in response
     return new Response(JSON.stringify({ 
