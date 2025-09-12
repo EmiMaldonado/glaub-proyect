@@ -135,7 +135,76 @@ serve(async (req) => {
   };
 
   try {
-    const requestBody = await req.json();
+    // Handle session analysis requests
+    if (requestBody.analysis_type === 'session_summary') {
+      const messages = requestBody.messages || [];
+      
+      const analysisPrompt = `You are an expert therapeutic session analyst. Analyze the following conversation between a user and an AI therapeutic assistant to generate a comprehensive session summary.
+
+CONVERSATION MESSAGES:
+${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')}
+
+Please provide your analysis in the following JSON format:
+{
+  "key_insights": ["insight1", "insight2", "insight3"],
+  "personality_notes": {
+    "openness": number (0-100),
+    "conscientiousness": number (0-100), 
+    "extraversion": number (0-100),
+    "agreeableness": number (0-100),
+    "neuroticism": number (0-100),
+    "summary": "Brief personality summary"
+  },
+  "next_steps": ["recommendation1", "recommendation2", "recommendation3"]
+}
+
+Base your analysis ONLY on what was actually discussed in this conversation. Do not invent or assume information not present in the messages.`;
+
+      const analysisMessages = [{ role: 'user', content: analysisPrompt }];
+      debugInfo.processing_steps.push('Processing session analysis request');
+      
+      // Call OpenAI for analysis
+      const openAIStartTime = Date.now();
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1-2025-04-14',
+          messages: analysisMessages,
+          max_completion_tokens: 1000,
+        }),
+      });
+
+      debugInfo.timing.openai_call_ms = Date.now() - openAIStartTime;
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status} - ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const analysisResult = data.choices[0].message.content;
+      
+      debugInfo.processing_steps.push('Session analysis completed');
+      
+      return new Response(JSON.stringify({ 
+        message: analysisResult,
+        tokensUsed: data.usage?.total_tokens || 0,
+        debug: {
+          success: true,
+          analysis_type: 'session_summary',
+          processing_time_ms: Date.now() - startTime,
+          steps_completed: debugInfo.processing_steps,
+          timestamp: new Date().toISOString()
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Regular chat flow continues here...
     const { message, conversationId, userId } = requestBody;
 
     // Validate required fields

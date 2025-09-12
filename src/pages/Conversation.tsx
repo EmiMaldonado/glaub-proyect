@@ -12,7 +12,7 @@ import ConversationInterface from '@/components/ConversationInterface';
 import ModernChatInterface from '@/components/ModernChatInterface';
 import ConversationSummaryPanel from '@/components/ConversationSummaryPanel';
 import ConfirmationModal from '@/components/ConfirmationModal';
-import RealtimeChat from '@/components/RealtimeChat';
+
 import { SessionEndConfirmation, NavigationWarning } from '@/components/SessionAlerts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 

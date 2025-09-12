@@ -86,26 +86,74 @@ const SessionSummary = () => {
       setCurrentStep('Saving insights to your profile...');
 
       // Parse AI response for insights
-      const insightData: InsightData = {
-        key_insights: [
-          "Demonstrated strong self-awareness during conversation",
-          "Showed openness to exploring new perspectives",
-          "Expressed clear communication preferences"
-        ],
-        personality_notes: {
-          openness: 75,
-          conscientiousness: 68,
-          extraversion: 82,
-          agreeableness: 79,
-          neuroticism: 35,
-          summary: "Profile shows high emotional intelligence with strong social skills and adaptability."
-        },
-        next_steps: [
-          "Continue exploring mindfulness techniques",
-          "Practice active listening in team meetings",
-          "Schedule regular self-reflection sessions"
-        ]
-      };
+      let insightData: InsightData;
+      
+      try {
+        // Try to parse structured response from AI
+        const aiResponseData = aiResponse.data;
+        if (aiResponseData && aiResponseData.message) {
+          // Parse JSON from AI response if it's structured
+          const aiMessage = aiResponseData.message;
+          
+          // Try to extract JSON from the response
+          const jsonMatch = aiMessage.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedData = JSON.parse(jsonMatch[0]);
+            insightData = {
+              key_insights: parsedData.key_insights || [],
+              personality_notes: parsedData.personality_notes || {
+                openness: 50,
+                conscientiousness: 50,
+                extraversion: 50,
+                agreeableness: 50,
+                neuroticism: 50,
+                summary: "Analysis based on conversation content."
+              },
+              next_steps: parsedData.next_steps || []
+            };
+          } else {
+            // If no JSON found, extract insights from natural language
+            const lines = aiMessage.split('\n').filter(line => line.trim());
+            insightData = {
+              key_insights: lines.filter(line => line.includes('insight') || line.includes('key') || line.includes('important')).slice(0, 3),
+              personality_notes: {
+                openness: 50,
+                conscientiousness: 50,
+                extraversion: 50,
+                agreeableness: 50,
+                neuroticism: 50,
+                summary: "Analysis based on conversation patterns and responses."
+              },
+              next_steps: lines.filter(line => line.includes('recommend') || line.includes('suggest') || line.includes('next')).slice(0, 3)
+            };
+          }
+        } else {
+          throw new Error('No valid AI response received');
+        }
+      } catch (parseError) {
+        console.error('Error parsing AI response:', parseError);
+        // Fallback to basic analysis
+        insightData = {
+          key_insights: [
+            "Engaged actively in the conversation",
+            "Showed willingness to explore topics",
+            "Demonstrated communication skills"
+          ],
+          personality_notes: {
+            openness: 50,
+            conscientiousness: 50,
+            extraversion: 50,
+            agreeableness: 50,
+            neuroticism: 50,
+            summary: "Basic analysis based on conversation participation."
+          },
+          next_steps: [
+            "Continue with regular self-reflection",
+            "Practice mindfulness techniques",
+            "Schedule follow-up conversations"
+          ]
+        };
+      }
 
       // Save insights to database
       const { error: insertError } = await supabase
