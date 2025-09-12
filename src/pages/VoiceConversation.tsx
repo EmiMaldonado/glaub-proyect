@@ -153,6 +153,12 @@ const VoiceConversation: React.FC = () => {
   const handleTranscriptionUpdate = async (text: string, isUser: boolean) => {
     if (!conversation || !text.trim()) return;
 
+    // Start timer when user first speaks (sends their first message)
+    if (isUser && !isTimerActive) {
+      startTimer();
+      console.log('🕒 Timer started on first user message');
+    }
+
     try {
       // Save transcription as message to database
       const { error } = await supabase
@@ -189,12 +195,9 @@ const VoiceConversation: React.FC = () => {
     }
   };
 
-  // Handle speaking state changes
+  // Handle speaking state changes (keeping for potential future use)
   const handleSpeakingChange = (speaking: boolean) => {
     setIsSpeaking(speaking);
-    if (speaking && !isTimerActive) {
-      startTimer();
-    }
   };
 
   // Handle end session
