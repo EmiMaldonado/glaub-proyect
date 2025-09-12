@@ -97,9 +97,11 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   // Start recording user's voice
   const startRecording = useCallback(async () => {
     if (isProcessing) {
-      console.log('🚫 Cannot start recording - already processing');
+      console.log('🚫 Cannot start recording - already processing, isProcessing:', isProcessing);
       return;
     }
+
+    console.log('✅ Starting recording, isProcessing:', isProcessing);
 
     try {
       setVoiceState('recording');
@@ -182,6 +184,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
     try {
       setIsProcessing(true); // Lock processing
+      console.log('🔄 Starting audio processing, isProcessing set to true');
       console.log('🔊 Processing audio blob:', audioBlob.size, 'bytes');
       
       // Stop any currently playing audio first
@@ -219,6 +222,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           variant: "destructive",
         });
         setVoiceState('idle');
+        setIsProcessing(false); // Reset processing state
         return;
       }
 
@@ -268,6 +272,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       });
     } finally {
       setIsProcessing(false); // Unlock processing
+      console.log('🔄 Audio processing completed, isProcessing set to false');
     }
   }, [conversationId, userId, onTranscriptionUpdate, isProcessing, currentAudio]);
 
@@ -292,6 +297,8 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
     }
     
     setVoiceState('idle');
+    setIsProcessing(false); // Reset processing state
+    console.log('🧹 Cleanup completed, all states reset');
   }, [currentAudio, voiceState]);
 
   // Cleanup on unmount or when leaving
