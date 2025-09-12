@@ -38,7 +38,8 @@ class RealtimeChat {
       this.stream = stream;
 
       // Initialize WebSocket connection through Supabase edge function
-      const wsUrl = 'wss://bmrifufykczudfxomenr.functions.supabase.co/realtime-chat';
+      const wsUrl = `wss://bmrifufykczudfxomenr.supabase.co/functions/v1/realtime-chat`;
+      console.log('Connecting to WebSocket:', wsUrl);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
@@ -64,7 +65,9 @@ class RealtimeChat {
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('WebSocket connection error:', error);
+        console.error('WebSocket URL:', wsUrl);
+        console.error('WebSocket readyState:', this.ws?.readyState);
         this.onConnectionChange('error');
       };
 
