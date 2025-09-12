@@ -516,10 +516,10 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
             </div>
 
             {/* Main Action Button */}
-            <div className="mt-8">
+            <div className="mt-8 flex justify-center">
               <Button
-                size="lg"
-                className={`${buttonProps.color} rounded-full px-8 py-6 text-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-105`}
+                size="sm"
+                className={`${buttonProps.color} rounded-full px-6 py-3 text-sm font-medium shadow-lg transition-all duration-200 transform hover:scale-105`}
                 onClick={buttonProps.onClick}
                 disabled={buttonProps.disabled}
               >
