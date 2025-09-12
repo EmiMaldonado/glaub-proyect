@@ -172,7 +172,7 @@ const Landing = () => {
                 1
               </div>
               <h3 className="text-2xl font-semibold text-foreground">Natural Conversation</h3>
-              <p className="text-muted-foreground text-lg leading-relaxed">
+              <p className="text-muted-foreground text-base leading-relaxed">
                 10-15 minute empathetic chat with our AI. No intimidating questions, 
                 just a fluid and natural conversation.
               </p>
