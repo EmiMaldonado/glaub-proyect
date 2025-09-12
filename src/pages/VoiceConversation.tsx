@@ -115,7 +115,7 @@ const VoiceConversation: React.FC = () => {
     }
   };
 
-  // Get AI first message with context and previous insights
+  // Send AI first message with context and previous insights
   const sendAIFirstMessage = async (conversationId: string, userName: string) => {
     try {
       // Get user's previous conversations for personalized greeting
@@ -228,11 +228,9 @@ const VoiceConversation: React.FC = () => {
         
         setSessionTranscripts(prev => [...prev, newMessage]);
 
-        // Update current AI response if it's from AI and speak it
+        // Update current AI response if it's from AI - don't speak here to avoid duplication
         if (!isUser) {
           setCurrentAIResponse(text.trim());
-          // Play AI response as voice
-          speak(text.trim());
         }
       }
     } catch (error) {
@@ -316,11 +314,9 @@ const VoiceConversation: React.FC = () => {
             return exists ? prev : [...prev, newMessage];
           });
 
-          // Update current AI response if it's from AI and speak it
+          // Update current AI response if it's from AI - don't speak here to avoid duplication
           if (newMessage.role === 'assistant') {
             setCurrentAIResponse(newMessage.content);
-            // Play AI response as voice
-            speak(newMessage.content);
           }
         }
       )
