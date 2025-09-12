@@ -48,6 +48,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const [isProcessing, setIsProcessing] = useState(false); // Lock to prevent concurrent processing
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [lastRecordingTime, setLastRecordingTime] = useState(0);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false); // Prevent duplicate TTS calls
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -94,8 +95,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   useEffect(() => {
     if (currentAIResponse) {
       setCurrentAIText(currentAIResponse);
-      // Auto-play AI's first message when it arrives
-      playAIResponse(currentAIResponse);
+      // Note: Audio playback is handled in processAudio, not here to avoid duplicates
     }
   }, [currentAIResponse]);
 
@@ -353,6 +353,15 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   // Text-to-speech for AI responses - ensures only one audio plays at a time
   const playAIResponse = useCallback(async (text: string) => {
+    // Prevent duplicate TTS calls
+    if (isPlayingAudio) {
+      console.log('🚫 TTS already playing, skipping duplicate call');
+      return;
+    }
+
+    console.log('🎵 Starting TTS playback for:', text.substring(0, 50) + '...');
+    setIsPlayingAudio(true);
+
     // Cancel any existing audio promise
     if (audioPromiseRef.current) {
       console.log('Cancelling previous audio playback');
@@ -401,14 +410,17 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       const audioPromise = new Promise<void>((resolve, reject) => {
         audio.onended = () => {
           setVoiceState('idle');
+          setIsPlayingAudio(false);
           URL.revokeObjectURL(audioUrl);
           setCurrentAudio(null);
           audioPromiseRef.current = null;
+          console.log('🎵 TTS playback completed');
           resolve();
         };
 
         audio.onerror = () => {
           setVoiceState('idle');
+          setIsPlayingAudio(false);
           URL.revokeObjectURL(audioUrl);
           setCurrentAudio(null);
           audioPromiseRef.current = null;
@@ -420,6 +432,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         audio.addEventListener('abort', () => {
           console.log('Audio playback was aborted');
           setVoiceState('idle');
+          setIsPlayingAudio(false);
           URL.revokeObjectURL(audioUrl);
           setCurrentAudio(null);
           audioPromiseRef.current = null;
@@ -446,6 +459,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
     } catch (error) {
       console.error('Error with text-to-speech:', error);
       setVoiceState('idle');
+      setIsPlayingAudio(false);
       audioPromiseRef.current = null;
       
       // Only show toast for actual errors, not aborts
@@ -457,7 +471,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         });
       }
     }
-  }, [currentAudio]);
+  }, [currentAudio, isPlayingAudio]);
 
   // Stop current audio playback
   const stopAudio = useCallback(() => {
@@ -467,8 +481,10 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       setCurrentAudio(null);
       setVoiceState('idle');
     }
-    // Cancel any pending audio promise
+    // Cancel any pending audio promise and reset playing state
     audioPromiseRef.current = null;
+    setIsPlayingAudio(false);
+    console.log('🛑 Audio manually stopped');
   }, [currentAudio]);
 
   // Process audio when blob is ready
