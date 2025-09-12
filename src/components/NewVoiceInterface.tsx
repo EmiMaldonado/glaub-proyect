@@ -43,7 +43,6 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [currentAIText, setCurrentAIText] = useState(currentAIResponse || '');
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
-  const [messages, setMessages] = useState<Array<{id: string, role: 'user' | 'assistant', content: string, timestamp: Date}>>([]);
   const [isProcessing, setIsProcessing] = useState(false); // Lock to prevent concurrent processing
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -54,10 +53,8 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   useEffect(() => {
     if (currentAIResponse) {
       setCurrentAIText(currentAIResponse);
-      // Auto-play AI's first message only if no messages exist yet
-      if (!messages.length) {
-        playAIResponse(currentAIResponse);
-      }
+      // Auto-play AI's first message when it arrives
+      playAIResponse(currentAIResponse);
     }
   }, [currentAIResponse]);
 
@@ -214,14 +211,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
       console.log('📝 Transcribed text:', transcribedText);
       
-      // Add user message to display
-      const userMessage = {
-        id: `user-${Date.now()}`,
-        role: 'user' as const,
-        content: transcribedText.trim(),
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, userMessage]);
+      // Update transcription
       onTranscriptionUpdate(transcribedText.trim(), true);
 
       // Step 2: Send transcribed text to AI for response
@@ -247,15 +237,6 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
       console.log('🤖 AI Response:', aiResponse);
       
-      // Add AI message to display and replace the current displayed text
-      const aiMessage = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant' as const,
-        content: aiResponse,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiMessage]);
-      
       // Replace the current AI text display with new response
       setCurrentAIText(aiResponse);
       onTranscriptionUpdate(aiResponse, false);
@@ -275,6 +256,34 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       setIsProcessing(false); // Unlock processing
     }
   }, [conversationId, userId, onTranscriptionUpdate, isProcessing, currentAudio]);
+
+  // Cleanup function to stop all audio when leaving
+  const cleanup = useCallback(() => {
+    // Stop any playing audio
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      setCurrentAudio(null);
+    }
+    
+    // Stop any recording
+    if (mediaRecorderRef.current && voiceState === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    
+    // Release microphone
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    setVoiceState('idle');
+  }, [currentAudio, voiceState]);
+
+  // Cleanup on unmount or when leaving
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
 
   // Text-to-speech for AI responses - ensures only one audio plays at a time
   const playAIResponse = useCallback(async (text: string) => {
@@ -498,54 +507,26 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
               {/* AI Response Display */}
               {currentAIText && (
                 <div className="max-w-md text-center">
-                  <div className="bg-white rounded-lg p-4 shadow-sm border">
-                    <p className="text-[#24476e] leading-relaxed">
-                      {currentAIText}
-                    </p>
-                  </div>
+                  <p className="text-gray-600 leading-relaxed bg-white p-4 rounded-lg shadow-sm border">
+                    {currentAIText}
+                  </p>
                 </div>
               )}
 
-              {/* Main Action Button */}
-              <Button
-                onClick={buttonProps.onClick}
-                disabled={buttonProps.disabled}
-                size="lg"
-                className={`w-20 h-20 rounded-full shadow-lg border-2 transition-all ${buttonProps.color}`}
-              >
-                {buttonProps.icon}
-              </Button>
-
-              <p className="text-sm text-gray-600 text-center max-w-sm">
-                {voiceState === 'ai_speaking' ? "AI is speaking... Press to stop" : 
-                 voiceState === 'recording' ? "Recording your voice... Press 'Stop Recording' when done" :
-                 voiceState === 'processing' ? "Processing your message..." :
-                 "Press the microphone to record your message"}
-              </p>
             </div>
 
-            {/* Conversation History */}
-            {messages.length > 0 && (
-              <div className="border-t border-gray-200 bg-white p-4">
-                <div className="max-w-2xl mx-auto">
-                  <h3 className="text-sm font-medium text-[#24476e] mb-3">Recent Messages</h3>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {messages.slice(-3).map((message) => (
-                      <div
-                        key={message.id}
-                        className={`p-2 rounded-lg text-sm ${
-                          message.role === 'user' 
-                            ? 'bg-[#6889b4] text-white ml-8' 
-                            : 'bg-gray-100 text-[#24476e] mr-8'
-                        }`}
-                      >
-                        {message.content}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Main Action Button */}
+            <div className="mt-8">
+              <Button
+                size="lg"
+                className={`${buttonProps.color} rounded-full px-8 py-6 text-lg font-medium shadow-lg transition-all duration-200 transform hover:scale-105`}
+                onClick={buttonProps.onClick}
+                disabled={buttonProps.disabled}
+              >
+                {buttonProps.icon}
+                <span className="ml-2">{buttonProps.label}</span>
+              </Button>
+            </div>
           </>
         )}
       </div>

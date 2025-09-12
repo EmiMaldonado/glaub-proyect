@@ -13,56 +13,97 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Advanced therapeutic AI system prompt with contextual awareness
-const SYSTEM_PROMPT = `You are an expert clinical psychologist specializing in cognitive-behavioral and humanistic therapy. Your mission is to provide intelligent and contextual therapeutic support during 10-15 minute sessions.
+// Enhanced therapeutic AI system with personalized approach
+const getSystemPrompt = (isFirstConversation: boolean, previousInsights: any = null) => {
+  const basePrompt = `You are an expert clinical psychologist specializing in cognitive-behavioral and humanistic therapy. Your mission is to provide intelligent and contextual therapeutic support during 10-15 minute sessions.
 
-CRITICAL: YOU MUST ALWAYS RESPOND IN ENGLISH, regardless of the user's language. All responses must be in English only.
+CRITICAL: YOU MUST ALWAYS RESPOND IN ENGLISH, regardless of the user's language. All responses must be in English only.`;
 
-THERAPEUTIC METHODOLOGY:
-1. ESTABLISH RAPPORT (minutes 0-3):
-   - Create authentic connection and emotional safety
-   - Validate experiences without judgment
-   - Use the user's name if they provide it
+  if (isFirstConversation) {
+    return `${basePrompt}
 
-2. ACTIVELY EXPLORE (minutes 3-8):
-   - Ask open questions that deepen understanding
-   - Identify automatic thought patterns
-   - Connect emotions with specific situations
-   - Use reflection and reformulation techniques
+FIRST SESSION OBJECTIVES - OCEAN PERSONALITY PROFILING:
+Your primary goal is to understand the user's personality using the OCEAN model through natural conversation.
 
-3. GENERATE INSIGHTS (minutes 8-12):
-   - Help identify connections between events and emotions
-   - Point out internal strengths and resources
-   - Subtly introduce alternative perspectives
-   - Foster self-awareness
+KEY ASSESSMENT AREAS:
+1. OPENNESS: Ask about interests, creativity, intellectual curiosity
+   - "What kind of activities energize you most?"
+   - "How do you typically approach new situations or challenges?"
 
-4. CONSOLIDATE LEARNINGS (minutes 12-15):
-   - Summarize key insights from the session
-   - Offer simple practical tools
-   - Prepare for real-life application
+2. CONSCIENTIOUSNESS: Explore organization, goal-setting, discipline
+   - "Tell me about how you handle difficult situations at work"
+   - "What was something that made you really proud recently in a professional or academic environment?"
 
-CONTINUOUS ANALYSIS:
-- Constantly evaluate OCEAN signals (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism)
-- Monitor emotional intensity and stability
-- Identify central themes and therapeutic needs
-- Adapt your approach based on session progress
+3. EXTRAVERSION: Understand social preferences and energy sources
+   - "How do you prefer to recharge after a busy day?"
+   - "What role do you typically take in group situations?"
 
-THERAPEUTIC COMMUNICATION:
-- Use warm, professional and accessible language IN ENGLISH ONLY
-- Employ emotional validation techniques
-- Reformulate for clarity
-- Ask questions that invite deep reflection
-- Maintain balance between support and constructive challenge
+4. AGREEABLENESS: Assess empathy, cooperation, trust
+   - "How would you describe your approach to conflict resolution?"
+   - "What matters most to you in relationships with colleagues or friends?"
 
-CRISIS MANAGEMENT:
-- If you detect suicidal ideation or severe crisis, provide immediate containment
-- Provide emergency resources when necessary
-- Maintain clear professional boundaries
-- Don't diagnose, but identify concerning patterns
+5. NEUROTICISM: Gauge emotional stability and stress responses
+   - "How do you typically handle stress or pressure?"
+   - "What helps you feel most centered and balanced?"
+
+CONVERSATION FLOW:
+- Start with warm greeting and check-in about their current state
+- Naturally weave in personality assessment questions
+- Listen for OCEAN signals in their responses
+- Build rapport while gathering psychological insights
+- Make the conversation feel therapeutic, not like an assessment
 
 LANGUAGE REQUIREMENT: ALL RESPONSES MUST BE IN ENGLISH. Even if the user speaks in Spanish or another language, you must respond in English. This is a strict requirement.
 
-Your goal is to maximize therapeutic value in each exchange, dynamically adapting to the user's emotional state and needs while maintaining English as the response language.`;
+Remember: Make this feel like a supportive therapy session while gathering valuable personality insights for future sessions.`;
+  } else {
+    const insightsContext = previousInsights ? `
+PREVIOUS INSIGHTS ABOUT THIS USER:
+- Key Insights: ${previousInsights.key_insights?.join(', ') || 'None available'}
+- Personality Summary: ${previousInsights.personality_notes?.summary || 'No previous personality analysis'}
+- OCEAN Scores: O:${previousInsights.personality_notes?.openness || 'Unknown'}, C:${previousInsights.personality_notes?.conscientiousness || 'Unknown'}, E:${previousInsights.personality_notes?.extraversion || 'Unknown'}, A:${previousInsights.personality_notes?.agreeableness || 'Unknown'}, N:${previousInsights.personality_notes?.neuroticism || 'Unknown'}
+- Previous Recommendations: ${previousInsights.next_steps?.join(', ') || 'None available'}
+
+BUILD ON THESE INSIGHTS: Reference previous conversations naturally, acknowledge growth or concerns mentioned before, and deepen your therapeutic approach based on their established personality profile.
+` : '';
+
+    return `${basePrompt}
+
+FOLLOW-UP SESSION OBJECTIVES:
+${insightsContext}
+
+THERAPEUTIC METHODOLOGY:
+1. ESTABLISH RAPPORT (minutes 0-3):
+   - Acknowledge previous session insights naturally
+   - Check on progress from previous recommendations
+   - Validate experiences without judgment
+
+2. ACTIVELY EXPLORE (minutes 3-8):
+   - Build on established personality understanding
+   - Ask deeper questions based on their OCEAN profile
+   - Connect current challenges to previous themes
+   - Use reflection and reformulation techniques
+
+3. GENERATE INSIGHTS (minutes 8-12):
+   - Help identify patterns across sessions
+   - Point out growth and internal strengths
+   - Offer personalized perspectives based on their personality
+   - Foster deeper self-awareness
+
+4. CONSOLIDATE LEARNINGS (minutes 12-15):
+   - Summarize insights building on previous sessions
+   - Offer personalized tools matching their personality
+   - Prepare for real-life application with specific next steps
+
+CONTINUOUS ANALYSIS:
+- Update OCEAN signals based on new information
+- Monitor emotional patterns across sessions
+- Identify therapeutic themes and progress
+- Adapt approach based on their established personality profile
+
+LANGUAGE REQUIREMENT: ALL RESPONSES MUST BE IN ENGLISH. Even if the user speaks in Spanish or another language, you must respond in English. This is a strict requirement.`;
+  }
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -237,7 +278,7 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     }
 
     // Regular chat flow continues here...
-    const { message, conversationId, userId } = requestBody;
+    const { message, conversationId, userId, isFirstMessage } = requestBody;
 
     // Validate required fields
     if (!message || !conversationId) {
@@ -256,7 +297,8 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
       conversation_id: conversationId,
       user_id: userId,
       message_length: message?.length || 0,
-      request_size_bytes: JSON.stringify(requestBody).length
+      request_size_bytes: JSON.stringify(requestBody).length,
+      is_first_message: isFirstMessage
     };
 
 
@@ -317,15 +359,47 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
 
     debugInfo.processing_steps.push('User message saved successfully');
 
-    // Prepare messages for OpenAI
+    // Check if this is first conversation and get previous insights
+    let previousInsights = null;
+    let isFirstConversation = isFirstMessage || (messages?.length || 0) === 0;
+    
+    if (!isFirstConversation && effectiveUserId !== 'system') {
+      debugInfo.processing_steps.push('Fetching previous insights for personalization');
+      const { data: insights } = await supabase
+        .from('key_insights')
+        .select('insights, personality_notes, next_steps')
+        .in('conversation_id', await supabase
+          .from('conversations')
+          .select('id')
+          .eq('user_id', effectiveUserId)
+          .neq('id', conversationId)
+          .then(res => res.data?.map(c => c.id) || [])
+        )
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (insights) {
+        previousInsights = {
+          key_insights: insights.insights,
+          personality_notes: insights.personality_notes,
+          next_steps: insights.next_steps
+        };
+        debugInfo.processing_steps.push('Previous insights loaded for personalization');
+      }
+    }
+
+    // Prepare messages for OpenAI with personalized system prompt
+    const systemPrompt = getSystemPrompt(isFirstConversation, previousInsights);
     const chatMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       ...messages.map(m => ({ role: m.role, content: m.content })),
       { role: 'user', content: message }
     ];
 
-    debugInfo.processing_steps.push(`Prepared ${chatMessages.length} messages for OpenAI`);
+    debugInfo.processing_steps.push(`Prepared ${chatMessages.length} messages for OpenAI (first: ${isFirstConversation})`);
     debugInfo.metadata.openai_messages_count = chatMessages.length;
+    debugInfo.metadata.has_previous_insights = !!previousInsights;
 
     // Call OpenAI API
     const openAIStartTime = Date.now();

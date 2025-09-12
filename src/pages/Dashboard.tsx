@@ -26,6 +26,8 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [lastConversation, setLastConversation] = useState<any>(null);
   const [oceanProfile, setOceanProfile] = useState<any>(null);
+  const [allInsights, setAllInsights] = useState<any[]>([]);
+  const [personalizedSummary, setPersonalizedSummary] = useState<string>('');
   const [sharingSettings, setSharingSettings] = useState({
     profile: false,
     insights: false,
@@ -51,14 +53,54 @@ const Dashboard = () => {
     if (!user) return;
 
     try {
-      // Load conversations count
+      // Load all conversations for comprehensive analysis
       const { data: conversations } = await supabase
         .from('conversations')
-        .select('id, status, insights, created_at')
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      // Load last conversation with insights
+      // Load all insights from all conversations
+      const { data: insights } = await supabase
+        .from('key_insights')
+        .select(`
+          *,
+          conversation:conversations!inner(
+            user_id,
+            created_at,
+            title
+          )
+        `)
+        .eq('conversation.user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      // Set all insights for comprehensive dashboard
+      if (insights) {
+        setAllInsights(insights);
+        
+        // Generate personalized summary based on all conversations
+        const allPersonalityData = insights.map(i => i.personality_notes).filter(Boolean);
+        const allInsightsData = insights.flatMap(i => i.insights || []);
+        const allNextSteps = insights.flatMap(i => i.next_steps || []);
+        
+        // Calculate average OCEAN scores across all sessions
+        if (allPersonalityData.length > 0) {
+          const avgOcean = {
+            openness: Math.round(allPersonalityData.reduce((sum, p: any) => sum + (p?.openness || 0), 0) / allPersonalityData.length),
+            conscientiousness: Math.round(allPersonalityData.reduce((sum, p: any) => sum + (p?.conscientiousness || 0), 0) / allPersonalityData.length),
+            extraversion: Math.round(allPersonalityData.reduce((sum, p: any) => sum + (p?.extraversion || 0), 0) / allPersonalityData.length),
+            agreeableness: Math.round(allPersonalityData.reduce((sum, p: any) => sum + (p?.agreeableness || 0), 0) / allPersonalityData.length),
+            neuroticism: Math.round(allPersonalityData.reduce((sum, p: any) => sum + (p?.neuroticism || 0), 0) / allPersonalityData.length),
+            summary: `Based on ${allPersonalityData.length} therapeutic conversations, showing consistent patterns across sessions.`
+          };
+          setOceanProfile(avgOcean);
+        }
+        
+        // Create personalized summary
+        setPersonalizedSummary(`Based on your ${conversations?.length || 0} conversations, you've shown consistent growth in self-awareness and professional development. Your journey reflects ${allInsightsData.length} unique insights and ${allNextSteps.length} actionable recommendations.`);
+      }
+
+      // Load last conversation for quick reference
       const { data: lastConv } = await supabase
         .from('conversations')
         .select(`
@@ -77,9 +119,6 @@ const Dashboard = () => {
 
       if (lastConv) {
         setLastConversation(lastConv);
-        if (lastConv.insights) {
-          setOceanProfile(lastConv.insights);
-        }
       }
 
       setStats({
@@ -109,7 +148,7 @@ const Dashboard = () => {
           Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! 👋
         </h1>
         <p className="text-lg text-muted-foreground">
-          Your personal space for self-discovery and professional development.
+          {personalizedSummary || "Your personal space for self-discovery and professional development."}
         </p>
       </div>
 
@@ -278,9 +317,9 @@ const Dashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {lastConversation?.key_insights?.insights ? (
+            {allInsights.length > 0 ? (
               <ul className="space-y-2">
-                {lastConversation.key_insights.insights.slice(0, 3).map((insight: string, index: number) => (
+                {allInsights.flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => (
                   <li key={index} className="flex items-start gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-2 flex-shrink-0" />
                     <span className="text-sm">{insight}</span>
@@ -319,9 +358,9 @@ const Dashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {lastConversation?.key_insights?.next_steps ? (
+            {allInsights.length > 0 ? (
               <ul className="space-y-2">
-                {lastConversation.key_insights.next_steps.slice(0, 3).map((step: string, index: number) => (
+                {allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5).map((step: string, index: number) => (
                   <li key={index} className="flex items-start gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-2 flex-shrink-0" />
                     <span className="text-sm">{step}</span>

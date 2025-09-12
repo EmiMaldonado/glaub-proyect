@@ -204,12 +204,15 @@ const VoiceConversation: React.FC = () => {
     try {
       pauseTimer();
       
+      // Calculate actual duration based on timer
+      const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
+      
       await supabase
         .from('conversations')
         .update({ 
           status: 'completed',
           ended_at: new Date().toISOString(),
-          duration_minutes: Math.floor(progressPercentage / 100 * 15)
+          duration_minutes: actualDuration
         })
         .eq('id', conversation.id);
 

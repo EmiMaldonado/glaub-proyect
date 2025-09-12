@@ -281,14 +281,16 @@ const SessionSummary = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <div className="space-y-3">
                   {insights?.key_insights?.map((insight, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                      <span className="text-sm">{insight}</span>
-                    </li>
+                    <div key={index} className="p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
+                        <p className="text-sm leading-relaxed">{insight}</p>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </CardContent>
             </Card>
 
@@ -344,17 +346,19 @@ const SessionSummary = () => {
             {/* Next Steps */}
             <Card>
               <CardHeader>
-                <CardTitle>Recommended Next Steps</CardTitle>
+                <CardTitle>Personalized Recommendations</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <div className="space-y-3">
                   {insights?.next_steps?.map((step, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-2 flex-shrink-0" />
-                      <span className="text-sm">{step}</span>
-                    </li>
+                    <div key={index} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 rounded-full bg-green-600 mt-2 flex-shrink-0" />
+                        <p className="text-sm leading-relaxed text-green-800">{step}</p>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </CardContent>
             </Card>
 
