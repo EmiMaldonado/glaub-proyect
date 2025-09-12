@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
-import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { toast } from '@/hooks/use-toast';
-import MicrophonePermission from '@/components/MicrophonePermission';
 
 interface RealtimeChatProps {
   onTranscriptionUpdate: (text: string, isUser: boolean) => void;
@@ -19,6 +17,306 @@ interface TranscriptItem {
   timestamp: Date;
 }
 
+// OpenAI Realtime API WebSocket Client
+class RealtimeChat {
+  private ws: WebSocket | null = null;
+  private audioContext: AudioContext | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
+  private stream: MediaStream | null = null;
+  private isConnected = false;
+
+  constructor(
+    private onMessage: (message: any) => void,
+    private onConnectionChange: (status: string) => void
+  ) {}
+
+  async connect(stream: MediaStream) {
+    try {
+      this.onConnectionChange('connecting');
+      this.stream = stream;
+
+      // Initialize WebSocket connection to OpenAI
+      const wsUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01';
+      this.ws = new WebSocket(wsUrl, [], {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+          'OpenAI-Beta': 'realtime=v1'
+        }
+      });
+
+      this.ws.onopen = () => {
+        console.log('WebSocket connected');
+        this.isConnected = true;
+        this.onConnectionChange('connected');
+        this.initializeSession();
+        this.setupAudioProcessing();
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          this.handleMessage(message);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      this.ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        this.isConnected = false;
+        this.onConnectionChange('disconnected');
+      };
+
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        this.onConnectionChange('error');
+      };
+
+    } catch (error) {
+      console.error('Error connecting to OpenAI Realtime API:', error);
+      this.onConnectionChange('error');
+      throw error;
+    }
+  }
+
+  private initializeSession() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+    // Configure session
+    const sessionConfig = {
+      type: 'session.update',
+      session: {
+        modalities: ['text', 'audio'],
+        instructions: 'You are a helpful AI assistant. Respond conversationally.',
+        voice: 'alloy',
+        input_audio_format: 'pcm16',
+        output_audio_format: 'pcm16',
+        input_audio_transcription: {
+          model: 'whisper-1'
+        },
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 200
+        }
+      }
+    };
+
+    this.ws.send(JSON.stringify(sessionConfig));
+  }
+
+  private async setupAudioProcessing() {
+    if (!this.stream) return;
+
+    try {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Setup MediaRecorder for audio capture
+      this.mediaRecorder = new MediaRecorder(this.stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0 && this.isConnected) {
+          this.sendAudioData(event.data);
+        }
+      };
+
+      this.mediaRecorder.start(100); // Send data every 100ms
+      
+      this.onMessage({ type: 'session.created' });
+    } catch (error) {
+      console.error('Error setting up audio processing:', error);
+      this.onConnectionChange('error');
+    }
+  }
+
+  private async sendAudioData(audioBlob: Blob) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+    try {
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      
+      const message = {
+        type: 'input_audio_buffer.append',
+        audio: base64Audio
+      };
+
+      this.ws.send(JSON.stringify(message));
+    } catch (error) {
+      console.error('Error sending audio data:', error);
+    }
+  }
+
+  private handleMessage(message: any) {
+    console.log('Received message:', message.type);
+    
+    switch (message.type) {
+      case 'session.created':
+      case 'session.updated':
+        console.log('Session initialized');
+        break;
+        
+      case 'input_audio_buffer.speech_started':
+        this.onMessage({ type: 'input_audio_buffer.speech_started' });
+        break;
+        
+      case 'input_audio_buffer.speech_stopped':
+        this.onMessage({ type: 'input_audio_buffer.speech_stopped' });
+        break;
+        
+      case 'conversation.item.input_audio_transcription.completed':
+        this.onMessage({
+          type: 'conversation.item.input_audio_transcription.completed',
+          transcript: message.transcript
+        });
+        break;
+        
+      case 'response.audio.delta':
+        this.onMessage({ type: 'response.audio.delta' });
+        if (message.delta) {
+          this.playAudioDelta(message.delta);
+        }
+        break;
+        
+      case 'response.audio.done':
+        this.onMessage({ type: 'response.audio.done' });
+        break;
+        
+      case 'response.audio_transcript.delta':
+        this.onMessage({
+          type: 'response.audio_transcript.delta',
+          delta: message.delta
+        });
+        break;
+        
+      case 'response.audio_transcript.done':
+        this.onMessage({ type: 'response.audio_transcript.done' });
+        break;
+        
+      case 'error':
+        console.error('OpenAI API error:', message);
+        this.onMessage({ type: 'error', error: message.error?.message || 'Unknown error' });
+        break;
+    }
+  }
+
+  private async playAudioDelta(base64Audio: string) {
+    if (!this.audioContext) return;
+
+    try {
+      const audioData = atob(base64Audio);
+      const audioBuffer = new ArrayBuffer(audioData.length);
+      const view = new Uint8Array(audioBuffer);
+      
+      for (let i = 0; i < audioData.length; i++) {
+        view[i] = audioData.charCodeAt(i);
+      }
+
+      const decodedBuffer = await this.audioContext.decodeAudioData(audioBuffer);
+      const source = this.audioContext.createBufferSource();
+      source.buffer = decodedBuffer;
+      source.connect(this.audioContext.destination);
+      source.start();
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  }
+
+  disconnect() {
+    console.log('Disconnecting RealtimeChat...');
+    
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.stop();
+    }
+    
+    if (this.ws) {
+      this.ws.close();
+    }
+    
+    if (this.audioContext) {
+      this.audioContext.close();
+    }
+    
+    this.isConnected = false;
+  }
+}
+
+// Microphone Permission Component
+const MicrophonePermission: React.FC<{
+  onPermissionGranted: (stream: MediaStream) => void;
+  onPermissionDenied: () => void;
+}> = ({ onPermissionGranted, onPermissionDenied }) => {
+  const [isRequesting, setIsRequesting] = useState(false);
+
+  const requestPermission = async () => {
+    setIsRequesting(true);
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      });
+      
+      console.log('Microphone permission granted:', {
+        streamId: stream.id,
+        active: stream.active,
+        audioTracks: stream.getAudioTracks().length
+      });
+      
+      onPermissionGranted(stream);
+    } catch (error) {
+      console.error('Microphone permission denied:', error);
+      onPermissionDenied();
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
+  useEffect(() => {
+    // Auto-request permission when component mounts
+    requestPermission();
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center space-y-4">
+      <div className="text-center">
+        <Mic className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Microphone Access Required
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Please allow microphone access to start voice conversation
+        </p>
+      </div>
+      
+      <Button 
+        onClick={requestPermission}
+        disabled={isRequesting}
+        className="flex items-center space-x-2"
+      >
+        {isRequesting ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Requesting Permission...</span>
+          </>
+        ) : (
+          <>
+            <Mic className="w-4 h-4" />
+            <span>Allow Microphone</span>
+          </>
+        )}
+      </Button>
+    </div>
+  );
+};
+
+// Main Component
 const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
   onTranscriptionUpdate,
   onSpeakingChange,
@@ -39,13 +337,12 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
   const aiTranscriptRef = useRef('');
 
   const handleMessage = useCallback((message: any) => {
-
     switch (message.type) {
       case 'session.created':
         setIsRecording(true);
         toast({
-          title: "🎙️ Conversación iniciada",
-          description: "Puedes comenzar a hablar ahora",
+          title: "🎙️ Conversation Started",
+          description: "You can start speaking now",
         });
         break;
 
@@ -105,13 +402,10 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         }
         break;
 
-      case 'response.audio_transcript.done':
-        break;
-
       case 'error':
         toast({
-          title: "Error de conexión",
-          description: message.error || "Error en la conexión de voz",
+          title: "Connection Error",
+          description: message.error || "Voice connection error",
           variant: "destructive",
         });
         break;
@@ -124,158 +418,63 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
     switch (status) {
       case 'connecting':
         toast({
-          title: "Conectando...",
-          description: "Estableciendo conexión de voz",
+          title: "Connecting...",
+          description: "Establishing voice connection",
         });
         break;
       case 'connected':
         toast({
-          title: "✅ Conectado",
-          description: "Conexión de voz establecida",
-        });
-        break;
-      case 'retrying':
-        toast({
-          title: "Reintentando...",
-          description: "Reconectando conexión de voz",
+          title: "✅ Connected",
+          description: "Voice connection established",
         });
         break;
       case 'error':
         setIsRecording(false);
         setIsAISpeaking(false);
         toast({
-          title: "Error de conexión",
-          description: "No se pudo establecer la conexión de voz",
+          title: "Connection Error",
+          description: "Unable to establish voice connection",
           variant: "destructive",
         });
-        break;
-      case 'disconnected':
-        setIsRecording(false);
-        setIsAISpeaking(false);
         break;
     }
   }, []);
 
-  // Handle microphone permission granted
-  const handleMicrophoneGranted = useCallback((stream: MediaStream) => {
-    console.log('Microphone permission granted, starting voice connection...', {
-      streamActive: stream.active,
-      audioTracks: stream.getAudioTracks().length,
-      streamId: stream.id
-    });
+  const handleMicrophoneGranted = useCallback(async (stream: MediaStream) => {
+    console.log('Microphone permission granted, starting voice connection...');
     setMicrophoneStream(stream);
     setMicrophoneGranted(true);
-    // Pass stream directly to avoid React state race condition
-    startConversationWithStream(stream);
-  }, []);
+    
+    try {
+      realtimeChatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
+      await realtimeChatRef.current.connect(stream);
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      toast({
+        title: "Connection Error",
+        description: "Failed to start voice conversation",
+        variant: "destructive",
+      });
+    }
+  }, [handleMessage, handleConnectionChange]);
 
-  // Handle microphone permission denied
   const handleMicrophoneDenied = useCallback(() => {
-    console.log('Microphone permission denied');
     setConnectionStatus('error');
     toast({
-      title: "Micrófono requerido",
-      description: "Necesitas permitir acceso al micrófono para usar conversaciones de voz",
+      title: "Microphone Required",
+      description: "Please allow microphone access to use voice conversations",
       variant: "destructive",
     });
   }, []);
 
-  // Start conversation with specific stream (avoids race condition)
-  const startConversationWithStream = async (stream: MediaStream) => {
-    if (!stream) {
-      console.error('No stream provided');
-      toast({
-        title: "Error de micrófono",
-        description: "No se proporcionó stream de micrófono",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate audio tracks exist
-    const audioTracks = stream.getAudioTracks();
-    if (audioTracks.length === 0) {
-      console.error('No audio tracks found in stream:', {
-        streamId: stream.id,
-        active: stream.active,
-        audioTracks: audioTracks.length
-      });
-      toast({
-        title: "Error de micrófono",
-        description: "No se encontraron pistas de audio",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if at least one audio track is working (don't rely on stream.active)
-    const workingTracks = audioTracks.filter(track => 
-      track.readyState === 'live' || track.readyState === 'ended'
-    );
-    
-    console.log('Stream validation passed:', {
-      streamId: stream.id,
-      streamActive: stream.active,
-      totalTracks: audioTracks.length,
-      workingTracks: workingTracks.length,
-      trackStates: audioTracks.map(t => ({ id: t.id, state: t.readyState, enabled: t.enabled }))
-    });
-
-    // If we have audio tracks, proceed regardless of stream.active status
-    if (workingTracks.length === 0) {
-      console.error('No working audio tracks found:', audioTracks.map(t => ({ id: t.id, state: t.readyState })));
-      toast({
-        title: "Error de micrófono",
-        description: "Las pistas de audio no están funcionando",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      console.log('Starting OpenAI Realtime connection with validated stream');
-      
-      realtimeChatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
-      await realtimeChatRef.current.connect(stream);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error starting conversation:', errorMessage);
-      toast({
-        title: "Error de conexión",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Fallback method using stored stream (for manual start button)
-  const startConversation = async () => {
-    if (!microphoneStream) {
-      console.error('No stored microphone stream available');
-      toast({
-        title: "Error de micrófono",
-        description: "No hay stream de micrófono disponible",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    await startConversationWithStream(microphoneStream);
-  };
-
   const endConversation = () => {
-    console.log('Ending voice conversation...');
-    
     if (realtimeChatRef.current) {
       realtimeChatRef.current.disconnect();
       realtimeChatRef.current = null;
     }
     
     if (microphoneStream) {
-      microphoneStream.getTracks().forEach(track => {
-        track.stop();
-        console.log('Microphone track stopped');
-      });
+      microphoneStream.getTracks().forEach(track => track.stop());
       setMicrophoneStream(null);
     }
     
@@ -290,7 +489,6 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
 
   useEffect(() => {
     return () => {
-      console.log('Cleaning up RealtimeChat component...');
       if (realtimeChatRef.current) {
         realtimeChatRef.current.disconnect();
       }
@@ -304,7 +502,6 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
     switch (connectionStatus) {
       case 'connected': return 'text-green-500';
       case 'connecting': return 'text-yellow-500';
-      case 'retrying': return 'text-orange-500';
       case 'error': return 'text-red-500';
       default: return 'text-gray-500';
     }
@@ -312,19 +509,17 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
 
   const getConnectionStatusText = () => {
     switch (connectionStatus) {
-      case 'connected': return 'Conectado';
-      case 'connecting': return 'Conectando...';
-      case 'retrying': return 'Reintentando...';
-      case 'error': return 'Error de conexión';
-      case 'idle': return 'Listo para conectar';
-      default: return 'Desconectado';
+      case 'connected': return 'Connected';
+      case 'connecting': return 'Connecting...';
+      case 'error': return 'Connection Error';
+      case 'idle': return 'Ready to Connect';
+      default: return 'Disconnected';
     }
   };
 
   return (
     <div className="flex flex-col items-center space-y-6">
       {!microphoneGranted ? (
-        // Show microphone permission component
         <MicrophonePermission
           onPermissionGranted={handleMicrophoneGranted}
           onPermissionDenied={handleMicrophoneDenied}
@@ -339,60 +534,42 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
 
           {/* Recording Button */}
           <div className="relative">
-            {connectionStatus !== 'connected' ? (
-              <Button
-                onClick={startConversation}
-                disabled={connectionStatus === 'connecting' || connectionStatus === 'retrying'}
-                className="w-24 h-24 rounded-full bg-primary hover:bg-primary/90 text-white shadow-lg"
-              >
-                {(connectionStatus === 'connecting' || connectionStatus === 'retrying') ? (
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                ) : (
-                  <Mic className="w-8 h-8" />
-                )}
-              </Button>
-            ) : (
-              <div className="relative">
-                <Button
-                  onClick={endConversation}
-                  className={`w-24 h-24 rounded-full shadow-lg transition-all ${
-                    isRecording && !isAISpeaking
-                      ? 'bg-red-500 hover:bg-red-600 animate-pulse'
-                      : 'bg-gray-500 hover:bg-gray-600'
-                  }`}
-                >
-                  {isAISpeaking ? (
-                    <Volume2 className="w-8 h-8 text-white animate-pulse" />
-                  ) : isRecording ? (
-                    <Mic className="w-8 h-8 text-white" />
-                  ) : (
-                    <MicOff className="w-8 h-8 text-white" />
-                  )}
-                </Button>
+            <Button
+              onClick={endConversation}
+              className={`w-24 h-24 rounded-full shadow-lg transition-all ${
+                isRecording && !isAISpeaking
+                  ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                  : 'bg-gray-500 hover:bg-gray-600'
+              }`}
+            >
+              {isAISpeaking ? (
+                <Volume2 className="w-8 h-8 text-white animate-pulse" />
+              ) : isRecording ? (
+                <Mic className="w-8 h-8 text-white" />
+              ) : (
+                <MicOff className="w-8 h-8 text-white" />
+              )}
+            </Button>
 
-                {/* Waveform Animation */}
-                {isRecording && !isAISpeaking && (
-                  <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-red-400 animate-ping"></div>
-                )}
+            {/* Waveform Animation */}
+            {isRecording && !isAISpeaking && (
+              <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-red-400 animate-ping"></div>
+            )}
 
-                {/* AI Speaking Animation */}
-                {isAISpeaking && (
-                  <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-blue-400 animate-pulse"></div>
-                )}
-              </div>
+            {/* AI Speaking Animation */}
+            {isAISpeaking && (
+              <div className="absolute inset-0 w-24 h-24 rounded-full border-4 border-blue-400 animate-pulse"></div>
             )}
           </div>
 
           {/* Status Text */}
           <div className="text-center">
             {isAISpeaking ? (
-              <p className="text-blue-600 font-medium animate-pulse">IA hablando...</p>
+              <p className="text-blue-600 font-medium animate-pulse">AI Speaking...</p>
             ) : isRecording ? (
-              <p className="text-red-600 font-medium">Escuchando...</p>
-            ) : connectionStatus === 'connected' ? (
-              <p className="text-gray-600">Presiona para finalizar</p>
+              <p className="text-red-600 font-medium">Listening...</p>
             ) : (
-              <p className="text-gray-600">Presiona para comenzar conversación de voz</p>
+              <p className="text-gray-600">Press to end conversation</p>
             )}
           </div>
         </>
@@ -403,13 +580,13 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         <div className="w-full max-w-md bg-muted/50 rounded-lg p-4">
           {currentUserTranscript && (
             <div className="mb-2">
-              <span className="text-xs text-muted-foreground">Tú:</span>
+              <span className="text-xs text-muted-foreground">You:</span>
               <p className="text-sm text-primary">{currentUserTranscript}</p>
             </div>
           )}
           {currentAITranscript && (
             <div>
-              <span className="text-xs text-muted-foreground">IA:</span>
+              <span className="text-xs text-muted-foreground">AI:</span>
               <p className="text-sm text-blue-600">{currentAITranscript}</p>
             </div>
           )}
