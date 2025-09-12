@@ -22,20 +22,33 @@ const ResetPassword = () => {
   const type = searchParams.get("type");
 
   useEffect(() => {
-    // Handle both old and new token formats
-    if (accessToken && type === "recovery") {
-      // New format: just access_token with type=recovery
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || "", // refresh_token might be null in new format
-      });
-    } else if (accessToken && refreshToken) {
-      // Old format: both tokens present
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-    }
+    const setAuthSession = async () => {
+      if (accessToken && type === "recovery") {
+        try {
+          // For password recovery, we need to verify the session
+          const { data: session, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || ""
+          });
+          
+          if (error) {
+            console.error("Session setup error:", error);
+            setError("Invalid or expired reset link. Please request a new password reset.");
+            return;
+          }
+          
+          if (!session?.user) {
+            setError("Invalid reset link. Please request a new password reset.");
+            return;
+          }
+        } catch (err) {
+          console.error("Auth session error:", err);
+          setError("Unable to verify reset link. Please try again.");
+        }
+      }
+    };
+    
+    setAuthSession();
   }, [accessToken, refreshToken, type]);
 
   // If no access token, redirect to auth page
