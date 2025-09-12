@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   MessageCircle, 
   TrendingUp, 
@@ -20,6 +22,7 @@ import {
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -27,6 +30,8 @@ const Dashboard = () => {
   const [oceanProfile, setOceanProfile] = useState<any>(null);
   const [allInsights, setAllInsights] = useState<any[]>([]);
   const [personalizedSummary, setPersonalizedSummary] = useState<string>('');
+  const [managerEmail, setManagerEmail] = useState('');
+  const [isInvitingManager, setIsInvitingManager] = useState(false);
   const [sharingSettings, setSharingSettings] = useState({
     profile: false,
     insights: false,
@@ -137,6 +142,54 @@ const Dashboard = () => {
       ...prev,
       [setting]: !prev[setting as keyof typeof prev]
     }));
+  };
+
+  const handleInviteManager = async () => {
+    if (!managerEmail.trim()) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your manager's email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!managerEmail.includes('@')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsInvitingManager(true);
+
+    try {
+      const { error } = await supabase.functions.invoke('invite-manager', {
+        body: { managerEmail: managerEmail.trim() },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Invitation Sent!",
+        description: `Manager invitation has been sent to ${managerEmail}`,
+      });
+
+      setManagerEmail(''); // Clear the input
+    } catch (error: any) {
+      console.error('Error inviting manager:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send manager invitation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsInvitingManager(false);
+    }
   };
 
   return (
@@ -400,13 +453,31 @@ const Dashboard = () => {
               <span className="text-sm text-muted-foreground">Share</span>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Share selected insights with your manager to improve communication and professional development.
             </p>
-            <Button variant="outline" size="sm" disabled>
+            
+            <div className="space-y-2">
+              <Label htmlFor="manager-email">Manager's Email</Label>
+              <Input
+                id="manager-email"
+                type="email"
+                placeholder="manager@company.com"
+                value={managerEmail}
+                onChange={(e) => setManagerEmail(e.target.value)}
+                disabled={isInvitingManager}
+              />
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleInviteManager}
+              disabled={isInvitingManager || !managerEmail.trim()}
+            >
               <Share2 className="mr-1 h-3 w-3" />
-              Send Invitation
+              {isInvitingManager ? "Sending..." : "Send Invitation"}
             </Button>
           </CardContent>
         </Card>
