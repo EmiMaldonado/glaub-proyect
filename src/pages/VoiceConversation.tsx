@@ -116,8 +116,6 @@ const VoiceConversation: React.FC = () => {
   // Send AI first message with context
   const sendAIFirstMessage = async (conversationId: string, userName: string) => {
     try {
-      setIsLoading(true);
-      
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
           message: `Hello ${userName}! Welcome to your therapy session. To get started, tell me a bit about yourself - whatever feels comfortable to share.`,
@@ -144,8 +142,6 @@ const VoiceConversation: React.FC = () => {
         description: "Could not initialize conversation with AI",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
