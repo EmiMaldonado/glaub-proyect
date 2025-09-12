@@ -159,14 +159,14 @@ const Auth = () => {
               onClick={() => setShowResetPassword(false)}
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Volver
+              Back
             </Button>
             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Mail className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle>Restablecer Contraseña</CardTitle>
+            <CardTitle>Reset Password</CardTitle>
             <CardDescription>
-              Te enviaremos un enlace para restablecer tu contraseña
+              We'll send you a link to reset your password
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -185,7 +185,7 @@ const Auth = () => {
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
-                Enviar Enlace
+                Send Link
               </Button>
             </form>
           </CardContent>
