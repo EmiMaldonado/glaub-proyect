@@ -96,8 +96,15 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   // Start recording user's voice
   const startRecording = useCallback(async () => {
+    console.log('🎯 Recording attempt - Current state:', {
+      voiceState,
+      isProcessing,
+      microphoneGranted,
+      hasActiveRecorder: !!mediaRecorderRef.current
+    });
+
     if (isProcessing) {
-      console.log('🚫 Cannot start recording - already processing, isProcessing:', isProcessing);
+      console.log('🚫 Cannot start recording - already processing');
       toast({
         title: "Still Processing",
         description: "Please wait for the current message to finish processing",
@@ -106,11 +113,18 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       return;
     }
 
-    console.log('✅ Starting recording, isProcessing:', isProcessing);
+    if (voiceState !== 'idle') {
+      console.log('🚫 Cannot start recording - not in idle state:', voiceState);
+      return;
+    }
+
+    console.log('✅ Starting recording...');
 
     try {
-      setVoiceState('recording');
+      // Clear any existing audio blob first
+      setAudioBlob(null);
       audioChunksRef.current = [];
+      setVoiceState('recording');
 
       // Request fresh microphone stream for recording
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -131,26 +145,33 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
+        console.log('📊 Audio data available:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        if (!isProcessing) { // Only process if not already processing
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
-          setAudioBlob(audioBlob);
-          setVoiceState('processing');
-        }
+        console.log('🛑 MediaRecorder stopped, creating blob...');
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
+        console.log('📦 Audio blob created:', audioBlob.size, 'bytes');
+        setAudioBlob(audioBlob);
+        setVoiceState('processing');
         
-        // Immediately release microphone
+        // Release microphone
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
         }
       };
 
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        setVoiceState('error');
+      };
+
       mediaRecorder.start();
+      console.log('🎙️ Recording started successfully');
       
       toast({
         title: "🎙️ Recording...",
@@ -166,7 +187,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         variant: "destructive",
       });
     }
-  }, [isProcessing]);
+  }, [voiceState, isProcessing, microphoneGranted]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
@@ -283,6 +304,19 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
   // Cleanup function to stop all audio when leaving
   const cleanup = useCallback(() => {
+    console.log('🧹 Cleanup called - Current state:', {
+      voiceState,
+      isProcessing,
+      hasRecorder: !!mediaRecorderRef.current,
+      hasAudio: !!currentAudio
+    });
+
+    // Only cleanup if we're not actively recording
+    if (voiceState === 'recording' && mediaRecorderRef.current?.state === 'recording') {
+      console.log('⚠️ Skipping cleanup - recording in progress');
+      return;
+    }
+    
     // Stop any playing audio
     if (currentAudio) {
       currentAudio.pause();
@@ -290,8 +324,8 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       setCurrentAudio(null);
     }
     
-    // Stop any recording
-    if (mediaRecorderRef.current && voiceState === 'recording') {
+    // Stop recording only if it's in a stoppable state
+    if (mediaRecorderRef.current && ['recording', 'paused'].includes(mediaRecorderRef.current.state)) {
       mediaRecorderRef.current.stop();
     }
     
@@ -301,10 +335,13 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       streamRef.current = null;
     }
     
-    setVoiceState('idle');
-    setIsProcessing(false); // Reset processing state
-    console.log('🧹 Cleanup completed, all states reset');
-  }, [currentAudio, voiceState]);
+    // Reset states only if not processing
+    if (!isProcessing) {
+      setVoiceState('idle');
+    }
+    
+    console.log('🧹 Cleanup completed');
+  }, [voiceState, currentAudio, isProcessing]);
 
   // Cleanup on unmount or when leaving
   useEffect(() => {
@@ -431,9 +468,16 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   // Process audio when blob is ready
   useEffect(() => {
     if (audioBlob && voiceState === 'processing' && !isProcessing) {
+      console.log('🎵 Processing audio blob:', audioBlob.size, 'bytes');
       const processAudioAsync = async () => {
-        await processAudio(audioBlob);
-        setAudioBlob(null); // Clear the blob after processing
+        try {
+          await processAudio(audioBlob);
+        } catch (error) {
+          console.error('Error in audio processing:', error);
+          setVoiceState('error');
+        } finally {
+          setAudioBlob(null); // Clear the blob after processing
+        }
       };
       processAudioAsync();
     }
