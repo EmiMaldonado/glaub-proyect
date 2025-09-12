@@ -316,6 +316,10 @@ export type Database = {
         Args: { conversation_uuid: string }
         Returns: undefined
       }
+      is_invitation_manager: {
+        Args: { invitation_manager_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
