@@ -36,7 +36,7 @@ const Navigation = () => {
                   <Link to="/dashboard">Dashboard</Link>
                 </Button>
                 <Button variant="default" size="sm" asChild>
-                  <Link to="/conversation/voice">
+                  <Link to="/conversation">
                     Start Conversation
                   </Link>
                 </Button>
