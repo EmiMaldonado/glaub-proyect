@@ -369,8 +369,6 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
           model: 'gpt-5-mini-2025-08-07', // Faster model for better response times
           messages: chatMessages,
           max_completion_tokens: 150, // Shorter for voice responses
-          presence_penalty: 0.3,
-          frequency_penalty: 0.3,
         }),
     });
 
