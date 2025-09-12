@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Volume2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import MicrophonePermission from '@/components/MicrophonePermission';
 
 interface RealtimeChatProps {
   onTranscriptionUpdate: (text: string, isUser: boolean) => void;
@@ -239,77 +240,6 @@ class RealtimeChat {
   }
 }
 
-// Microphone Permission Component
-const MicrophonePermission: React.FC<{
-  onPermissionGranted: (stream: MediaStream) => void;
-  onPermissionDenied: () => void;
-}> = ({ onPermissionGranted, onPermissionDenied }) => {
-  const [isRequesting, setIsRequesting] = useState(false);
-
-  const requestPermission = async () => {
-    setIsRequesting(true);
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        }
-      });
-      
-      console.log('Microphone permission granted:', {
-        streamId: stream.id,
-        active: stream.active,
-        audioTracks: stream.getAudioTracks().length
-      });
-      
-      onPermissionGranted(stream);
-    } catch (error) {
-      console.error('Microphone permission denied:', error);
-      onPermissionDenied();
-    } finally {
-      setIsRequesting(false);
-    }
-  };
-
-  useEffect(() => {
-    // Auto-request permission when component mounts
-    requestPermission();
-  }, []);
-
-  return (
-    <div className="flex flex-col items-center space-y-4">
-      <div className="text-center">
-        <Mic className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
-          Microphone Access Required
-        </h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Please allow microphone access to start voice conversation
-        </p>
-      </div>
-      
-      <Button 
-        onClick={requestPermission}
-        disabled={isRequesting}
-        className="flex items-center space-x-2"
-      >
-        {isRequesting ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Requesting Permission...</span>
-          </>
-        ) : (
-          <>
-            <Mic className="w-4 h-4" />
-            <span>Allow Microphone</span>
-          </>
-        )}
-      </Button>
-    </div>
-  );
-};
 
 // Main Component
 const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
