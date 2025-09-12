@@ -86,7 +86,7 @@ const Navigation = () => {
                 <Button variant="ghost" asChild>
                   <Link to="/auth">Sign In</Link>
                 </Button>
-                <Button variant="hero" asChild>
+                <Button variant="default" asChild>
                   <Link to="/auth?mode=signup">Start Free</Link>
                 </Button>
               </>
