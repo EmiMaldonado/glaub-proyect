@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, Navigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,35 +10,44 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "@/hooks/use-toast";
 
 const ResetPassword = () => {
-  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdated, setIsUpdated] = useState(false);
   const [error, setError] = useState("");
   const [validToken, setValidToken] = useState<boolean | null>(null);
-  
-  const token = searchParams.get("token");
 
   useEffect(() => {
-    const validateToken = async () => {
-      if (!token) {
-        setError("No reset token provided. Please request a new password reset.");
+    const handleRecoveryFlow = async () => {
+      // Check for hash parameters from Supabase recovery flow
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const token = hashParams.get('access_token');
+      const type = hashParams.get('type');
+      
+      if (!token || type !== 'recovery') {
+        setError("No valid reset token provided. Please request a new password reset.");
         setValidToken(false);
         return;
       }
-
-      // Token validation will happen when user submits the form
+      
       setValidToken(true);
+      
+      // Set the session with the recovery token
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: hashParams.get('refresh_token') || ''
+      });
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        setError("Invalid or expired reset link. Please request a new one.");
+        setValidToken(false);
+      }
     };
     
-    validateToken();
-  }, [token]);
-
-  // If no token, redirect to auth page
-  if (!token) {
-    return <Navigate to="/auth" replace />;
-  }
+    handleRecoveryFlow();
+  }, []);
 
   const validatePassword = (password: string) => {
     if (password.length < 8) {
@@ -80,29 +89,25 @@ const ResetPassword = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('reset-password', {
-        body: {
-          token: token,
-          new_password: password
-        }
+      // Use Supabase's built-in updateUser method
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password
       });
 
-      if (error) {
-        console.error("Reset password error:", error);
-        setError(error.message || "Failed to update password");
-        return;
-      }
-
-      if (data?.error) {
-        setError(data.error);
+      if (updateError) {
+        console.error("Reset password error:", updateError);
+        setError(updateError.message || "Failed to update password");
         return;
       }
 
       setIsUpdated(true);
       toast({
         title: "Password Updated",
-        description: "Your password has been successfully updated.",
+        description: "Your password has been successfully updated. You can now sign in.",
       });
+      
+      // Sign out after password reset so user can sign in with new password
+      await supabase.auth.signOut();
     } catch (err: any) {
       console.error("Unexpected error:", err);
       setError("An unexpected error occurred");
@@ -110,6 +115,14 @@ const ResetPassword = () => {
       setIsLoading(false);
     }
   };
+
+  if (validToken === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-4">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   if (validToken === false) {
     return (
