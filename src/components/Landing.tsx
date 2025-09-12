@@ -168,7 +168,7 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
             <div className="text-center space-y-6">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-primary-foreground">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-white" style={{ backgroundColor: '#A5C7B9' }}>
                 1
               </div>
               <h3 className="text-2xl font-semibold text-foreground">Natural Conversation</h3>
@@ -179,7 +179,7 @@ const Landing = () => {
             </div>
 
             <div className="text-center space-y-6">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-primary-foreground">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-white" style={{ backgroundColor: '#A5C7B9' }}>
                 2
               </div>
               <h3 className="text-2xl font-semibold text-foreground">OCEAN Analysis and Insights</h3>
@@ -190,7 +190,7 @@ const Landing = () => {
             </div>
 
             <div className="text-center space-y-6">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-primary-foreground">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-white" style={{ backgroundColor: '#A5C7B9' }}>
                 3
               </div>
               <h3 className="text-2xl font-semibold text-foreground">Share with Total Control</h3>
