@@ -158,10 +158,15 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
 
   // Handle microphone permission granted
   const handleMicrophoneGranted = useCallback((stream: MediaStream) => {
-    console.log('Microphone permission granted, starting voice connection...');
+    console.log('Microphone permission granted, starting voice connection...', {
+      streamActive: stream.active,
+      audioTracks: stream.getAudioTracks().length,
+      streamId: stream.id
+    });
     setMicrophoneStream(stream);
     setMicrophoneGranted(true);
-    startConversation();
+    // Pass stream directly to avoid React state race condition
+    startConversationWithStream(stream);
   }, []);
 
   // Handle microphone permission denied
@@ -175,21 +180,56 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
     });
   }, []);
 
-  const startConversation = async () => {
-    if (!microphoneStream) {
-      console.error('No microphone stream available');
+  // Start conversation with specific stream (avoids race condition)
+  const startConversationWithStream = async (stream: MediaStream) => {
+    if (!stream || !stream.active) {
+      console.error('Invalid microphone stream provided:', {
+        hasStream: !!stream,
+        streamActive: stream?.active,
+        audioTracks: stream?.getAudioTracks().length
+      });
       toast({
         title: "Error de micrófono",
-        description: "No se detectó stream de micrófono",
+        description: "Stream de micrófono inválido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate audio tracks
+    const audioTracks = stream.getAudioTracks();
+    if (audioTracks.length === 0) {
+      console.error('No audio tracks found in stream');
+      toast({
+        title: "Error de micrófono",
+        description: "No se encontraron pistas de audio",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if audio tracks are live
+    const liveTrack = audioTracks.find(track => track.readyState === 'live');
+    if (!liveTrack) {
+      console.error('No live audio tracks found:', audioTracks.map(t => ({ id: t.id, state: t.readyState })));
+      toast({
+        title: "Error de micrófono",
+        description: "Pistas de audio no están activas",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      console.log('Starting OpenAI Realtime connection with microphone stream...');
+      console.log('Starting OpenAI Realtime connection with validated stream:', {
+        streamId: stream.id,
+        active: stream.active,
+        audioTracks: audioTracks.length,
+        liveTrack: liveTrack.id
+      });
+      
       realtimeChatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
-      await realtimeChatRef.current.connect(microphoneStream);
+      await realtimeChatRef.current.connect(stream);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error starting conversation:', errorMessage);
@@ -199,6 +239,21 @@ const RealtimeChatInterface: React.FC<RealtimeChatProps> = ({
         variant: "destructive",
       });
     }
+  };
+
+  // Fallback method using stored stream (for manual start button)
+  const startConversation = async () => {
+    if (!microphoneStream) {
+      console.error('No stored microphone stream available');
+      toast({
+        title: "Error de micrófono",
+        description: "No hay stream de micrófono disponible",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    await startConversationWithStream(microphoneStream);
   };
 
   const endConversation = () => {
