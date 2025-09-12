@@ -22,6 +22,7 @@ interface VoiceState {
   idle: 'idle';
   recording: 'recording';
   processing: 'processing';
+  ai_thinking: 'ai_thinking';
   ai_speaking: 'ai_speaking';
   error: 'error';
 }
@@ -227,6 +228,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
       onTranscriptionUpdate(transcribedText.trim(), true);
 
       // Step 2: Send transcribed text to AI for response
+      setVoiceState('ai_thinking');
       const chatResponse = await supabase.functions.invoke('ai-chat', {
         body: {
           message: transcribedText.trim(),
@@ -431,6 +433,8 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         return "Recording your message...";
       case 'processing':
         return "Processing your message...";
+      case 'ai_thinking':
+        return "AI is thinking...";
       case 'ai_speaking':
         return "AI is responding...";
       case 'error':
@@ -455,6 +459,14 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           label: "Processing...",
           icon: <Loader2 className="w-6 h-6 animate-spin" />,
           color: "bg-yellow-500 text-white",
+          onClick: () => {},
+          disabled: true
+        };
+      case 'ai_thinking':
+        return {
+          label: "AI Thinking...",
+          icon: <Loader2 className="w-6 h-6 animate-spin" />,
+          color: "bg-purple-500 text-white",
           onClick: () => {},
           disabled: true
         };
@@ -512,7 +524,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           <div className="w-full bg-gray-300 rounded-full h-2">
             <div 
               className="bg-[#24476e] h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercentage}%` }}
+              style={{ width: `${Math.min(progressPercentage, 100)}%` }}
             />
           </div>
         </div>
@@ -543,13 +555,13 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
               {/* Animated Star Icon */}
               <div className="relative">
-                <Star 
+                 <Star 
                   className={`w-16 h-16 text-[#a5c7b9] ${
-                    voiceState === 'ai_speaking' || voiceState === 'recording' ? 'animate-pulse' : ''
+                    voiceState === 'ai_speaking' || voiceState === 'ai_thinking' || voiceState === 'recording' ? 'animate-pulse' : ''
                   }`} 
                   fill="currentColor"
                 />
-                {(voiceState === 'ai_speaking' || voiceState === 'recording') && (
+                {(voiceState === 'ai_speaking' || voiceState === 'ai_thinking' || voiceState === 'recording') && (
                   <div className="absolute inset-0 w-16 h-16 border-2 border-[#a5c7b9] rounded-full animate-ping" />
                 )}
               </div>

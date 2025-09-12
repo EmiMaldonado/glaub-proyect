@@ -48,7 +48,7 @@ const VoiceConversation: React.FC = () => {
     pause: pauseTimer,
     reset: resetTimer
   } = useConversationTimer({
-    maxDurationMinutes: 15,
+    maxDurationMinutes: 5,
     onTimeWarning: () => {
       toast({
         title: "⏰ Time Almost Up",
@@ -285,8 +285,14 @@ const VoiceConversation: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#f8f9fa]">
         <div className="text-center space-y-4">
+          <div className="animate-pulse">
+            <div className="w-16 h-16 bg-[#6889b4] rounded-full mx-auto mb-4 animate-bounce"></div>
+          </div>
           <LoadingSpinner />
-          <p className="text-gray-600">Starting new voice session...</p>
+          <div className="space-y-2">
+            <p className="text-gray-600 font-medium">Starting new voice session...</p>
+            <p className="text-sm text-gray-500">Setting up AI assistant and preparing conversation</p>
+          </div>
         </div>
       </div>
     );

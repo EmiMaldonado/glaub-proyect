@@ -9,10 +9,10 @@ interface UseConversationTimerOptions {
 }
 
 export const useConversationTimer = ({
-  maxDurationMinutes = 15,
+  maxDurationMinutes = 5,
   onTimeWarning,
   onTimeUp,
-  warningAtMinutes = 14
+  warningAtMinutes = 4
 }: UseConversationTimerOptions = {}) => {
   const [sessionTime, setSessionTime] = useState(0);
   const [isActive, setIsActive] = useState(false);
