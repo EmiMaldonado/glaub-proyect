@@ -10,12 +10,15 @@ const Landing = () => {
         
       </header>
 
+    <div className="p-6">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden mx-6 my-6" style={{
+      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden" style={{
         backgroundImage: `url('/lovable-uploads/25a658b9-53b0-4b57-92f8-a630720ba2aa.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat'
+        backgroundRepeat: 'no-repeat',
+        width: '100%',
+        height: '100vh'
       }}>
         <div className="absolute inset-0" style={{ backgroundColor: 'rgba(36, 71, 110, 0.05)' }}></div>
         <div className="relative w-full h-full flex items-center justify-end pr-[5%] py-[5%]">
@@ -48,6 +51,7 @@ const Landing = () => {
           </div>
         </div>
       </section>
+    </div>
 
       {/* Benefits Section */}
       <section className="py-20 bg-gray-50">
