@@ -4,10 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import RealtimeChatInterface from '@/components/RealtimeChat';
+import VoiceInterface from '@/components/VoiceInterface';
 import VoiceErrorBoundary from '@/components/VoiceErrorBoundary';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import { useConversationTimer } from '@/hooks/useConversationTimer';
 
 interface Message {
@@ -38,7 +36,7 @@ const VoiceConversation: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [sessionTranscripts, setSessionTranscripts] = useState<Message[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [currentAIResponse, setCurrentAIResponse] = useState<string>('');
   
   // Session timer
   const {
@@ -53,8 +51,8 @@ const VoiceConversation: React.FC = () => {
     maxDurationMinutes: 15,
     onTimeWarning: () => {
       toast({
-        title: "⏰ Tiempo casi agotado",
-        description: "Te queda 1 minuto de conversación",
+        title: "⏰ Time Almost Up",
+        description: "You have 1 minute of conversation remaining",
       });
     },
     onTimeUp: handleEndSession
@@ -67,6 +65,7 @@ const VoiceConversation: React.FC = () => {
     setIsSpeaking(false);
     setIsLoading(false);
     setConversation(null);
+    setCurrentAIResponse('');
     resetTimer();
   };
 
@@ -83,7 +82,7 @@ const VoiceConversation: React.FC = () => {
         .from('conversations')
         .insert({
           user_id: user.id,
-          title: `Sesión de Voz ${new Date().toLocaleDateString()}`,
+          title: `Voice Session ${new Date().toLocaleDateString()}`,
           status: 'active'
         })
         .select()
@@ -100,13 +99,13 @@ const VoiceConversation: React.FC = () => {
         .single();
 
       // Get AI first message with context
-      await sendAIFirstMessage(newConversation.id, profile?.display_name || profile?.full_name || 'Usuario');
+      await sendAIFirstMessage(newConversation.id, profile?.display_name || profile?.full_name || 'User');
 
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear la nueva conversación",
+        description: "Could not create new conversation",
         variant: "destructive",
       });
     } finally {
@@ -121,7 +120,7 @@ const VoiceConversation: React.FC = () => {
       
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: `Inicia una nueva sesión de terapia por voz con ${userName}. Saluda de manera cálida y profesional, pregunta cómo se siente hoy y qué le gustaría explorar en esta sesión. Mantén un tono conversacional apropiado para comunicación por voz.`,
+          message: `Start a new voice therapy session with ${userName}. Greet them warmly and professionally, ask how they're feeling today and what they'd like to explore in this session. Keep a conversational tone appropriate for voice communication.`,
           conversationId: conversationId,
           userId: user?.id,
           isFirstMessage: true,
@@ -132,11 +131,17 @@ const VoiceConversation: React.FC = () => {
       if (response.error) {
         throw new Error(response.error.message);
       }
+
+      // Set the AI's first message for display
+      if (response.data?.message) {
+        setCurrentAIResponse(response.data.message);
+      }
+
     } catch (error) {
       console.error('Error sending AI first message:', error);
       toast({
         title: "Error",
-        description: "No se pudo inicializar la conversación con IA",
+        description: "Could not initialize conversation with AI",
         variant: "destructive",
       });
     } finally {
@@ -144,7 +149,7 @@ const VoiceConversation: React.FC = () => {
     }
   };
 
-  // Handle transcription updates from RealtimeChat
+  // Handle transcription updates from VoiceInterface
   const handleTranscriptionUpdate = async (text: string, isUser: boolean) => {
     if (!conversation || !text.trim()) return;
 
@@ -173,6 +178,11 @@ const VoiceConversation: React.FC = () => {
         };
         
         setSessionTranscripts(prev => [...prev, newMessage]);
+
+        // Update current AI response if it's from AI
+        if (!isUser) {
+          setCurrentAIResponse(text.trim());
+        }
       }
     } catch (error) {
       console.error('Error handling transcription:', error);
@@ -185,6 +195,43 @@ const VoiceConversation: React.FC = () => {
     if (speaking && !isTimerActive) {
       startTimer();
     }
+  };
+
+  // Handle end session
+  async function handleEndSession() {
+    if (!conversation) return;
+
+    try {
+      pauseTimer();
+      
+      await supabase
+        .from('conversations')
+        .update({ 
+          status: 'completed',
+          ended_at: new Date().toISOString(),
+          duration_minutes: Math.floor(progressPercentage / 100 * 15)
+        })
+        .eq('id', conversation.id);
+
+      toast({
+        title: "✅ Session Completed",
+        description: "The voice session has been saved",
+      });
+
+      navigate(`/session-summary?conversation_id=${conversation.id}`);
+    } catch (error) {
+      console.error('Error ending session:', error);
+      toast({
+        title: "Error",
+        description: "Could not end the session",
+        variant: "destructive",
+      });
+    }
+  }
+
+  // Handle back navigation
+  const handleBack = () => {
+    navigate('/dashboard');
   };
 
   // Initialize conversation on component mount
@@ -217,6 +264,11 @@ const VoiceConversation: React.FC = () => {
             );
             return exists ? prev : [...prev, newMessage];
           });
+
+          // Update current AI response if it's from AI
+          if (newMessage.role === 'assistant') {
+            setCurrentAIResponse(newMessage.content);
+          }
         }
       )
       .subscribe();
@@ -226,170 +278,32 @@ const VoiceConversation: React.FC = () => {
     };
   }, [conversation]);
 
-  // Scroll to bottom when transcripts update
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [sessionTranscripts]);
-
-  // Handle end session
-  async function handleEndSession() {
-    if (!conversation) return;
-
-    try {
-      pauseTimer();
-      
-      await supabase
-        .from('conversations')
-        .update({ 
-          status: 'completed',
-          ended_at: new Date().toISOString(),
-          duration_minutes: Math.floor(progressPercentage / 100 * 15)
-        })
-        .eq('id', conversation.id);
-
-      toast({
-        title: "✅ Sesión completada",
-        description: "La sesión de voz ha sido guardada",
-      });
-
-      navigate(`/session-summary?conversation_id=${conversation.id}`);
-    } catch (error) {
-      console.error('Error ending session:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo finalizar la sesión",
-        variant: "destructive",
-      });
-    }
-  }
-
-  // Handle new conversation
-  const handleNewConversation = () => {
-    createNewConversation();
-  };
-
   if (isInitializing) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-[#f8f9fa]">
         <div className="text-center space-y-4">
           <LoadingSpinner />
-          <p className="text-muted-foreground">Iniciando nueva sesión de voz...</p>
+          <p className="text-gray-600">Starting new voice session...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-background border-b px-4 py-3">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <div className="flex items-center space-x-3">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate('/dashboard')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-lg font-medium">Sesión de Voz</h1>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-muted-foreground">
-              {formattedTime} / {formattedTimeRemaining} restante
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNewConversation}
-              disabled={isLoading}
-            >
-              Nueva Sesión
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEndSession}
-              disabled={!conversation}
-            >
-              Finalizar
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Progress Bar */}
-      <div className="bg-background border-b px-4 py-2">
-        <div className="max-w-4xl mx-auto">
-          <div className="w-full bg-muted rounded-full h-2">
-            <div 
-              className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercentage}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-hidden p-4">
-          <div className="max-w-4xl mx-auto h-full flex flex-col">
-            {/* Transcripts */}
-            <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-              {sessionTranscripts.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] px-4 py-3 rounded-lg ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed">{message.content}</p>
-                    <span className="text-xs opacity-70">
-                      {new Date(message.created_at).toLocaleTimeString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              
-              {isSpeaking && (
-                <div className="flex justify-start">
-                  <div className="bg-blue-100 px-4 py-3 rounded-lg border-2 border-blue-200">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      </div>
-                      <span className="text-sm text-blue-700">IA hablando...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Realtime Voice Interface */}
-            <div className="border-t bg-background p-6">
-              <VoiceErrorBoundary onRetry={handleNewConversation}>
-                <RealtimeChatInterface
-                  onTranscriptionUpdate={handleTranscriptionUpdate}
-                  onSpeakingChange={handleSpeakingChange}
-                  conversationId={conversation?.id}
-                  userId={user?.id}
-                />
-              </VoiceErrorBoundary>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <VoiceErrorBoundary onRetry={createNewConversation}>
+      <VoiceInterface
+        onTranscriptionUpdate={handleTranscriptionUpdate}
+        onSpeakingChange={handleSpeakingChange}
+        conversationId={conversation?.id}
+        userId={user?.id}
+        onEndSession={handleEndSession}
+        onBack={handleBack}
+        progressPercentage={progressPercentage}
+        formattedTime={formattedTime}
+        formattedTimeRemaining={formattedTimeRemaining}
+        currentAIResponse={currentAIResponse}
+      />
+    </VoiceErrorBoundary>
   );
 };
 

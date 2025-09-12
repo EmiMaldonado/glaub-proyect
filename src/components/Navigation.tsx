@@ -86,7 +86,7 @@ const Navigation = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer" onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
-                      Cerrar Sesión
+                      Log Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

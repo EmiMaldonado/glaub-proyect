@@ -83,7 +83,7 @@ const ChatConversation: React.FC = () => {
       console.error('Error creating conversation:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear la nueva conversación",
+        description: "Could not create new conversation",
         variant: "destructive",
       });
     } finally {
@@ -98,7 +98,7 @@ const ChatConversation: React.FC = () => {
       
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: `Inicia una nueva sesión de conversación terapéutica con ${userName}. Saluda de manera cálida y profesional, pregunta cómo se siente hoy y qué le gustaría explorar en esta sesión.`,
+          message: `Start a new therapeutic conversation session with ${userName}. Greet them warmly and professionally, ask how they're feeling today and what they'd like to explore in this session.`,
           conversationId: conversationId,
           userId: user?.id,
           isFirstMessage: true
@@ -112,7 +112,7 @@ const ChatConversation: React.FC = () => {
       console.error('Error sending AI first message:', error);
       toast({
         title: "Error",
-        description: "No se pudo inicializar la conversación con IA",
+        description: "Could not initialize conversation with AI",
         variant: "destructive",
       });
     } finally {
@@ -213,8 +213,8 @@ const ChatConversation: React.FC = () => {
         .eq('id', conversation.id);
 
       toast({
-        title: "✅ Sesión completada",
-        description: "La conversación ha sido guardada",
+        title: "✅ Session Completed",
+        description: "The conversation has been saved",
       });
 
       navigate(`/session-summary?conversation_id=${conversation.id}`);

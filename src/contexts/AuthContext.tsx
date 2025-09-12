@@ -57,14 +57,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         toast({
-          title: "Error de inicio de sesión",
+          title: "Login error",
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
           title: "¡Bienvenido!",
-          description: "Has iniciado sesión correctamente",
+          description: "You have successfully logged in",
         });
       }
       
@@ -123,13 +123,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
       toast({
-        title: "Sesión cerrada",
-        description: "Has cerrado sesión correctamente",
+        title: "Session ended",
+        description: "You have successfully logged out",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudo cerrar la sesión",
+        description: "Could not log out",
         variant: "destructive",
       });
     }
