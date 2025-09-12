@@ -183,7 +183,7 @@ const Landing = () => {
                 2
               </div>
               <h3 className="text-2xl font-semibold text-foreground">OCEAN Analysis and Insights</h3>
-              <p className="text-muted-foreground text-lg leading-relaxed">
+              <p className="text-muted-foreground text-base leading-relaxed">
                 We generate your personality profile based on the scientific Big Five (OCEAN) model, 
                 with deep insights and personalized recommendations.
               </p>
