@@ -585,35 +585,6 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           </Button>
           <h1 className="text-lg font-medium text-[#24476e]">Voice Session</h1>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onExtendSession}
-            disabled={!onExtendSession}
-            className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white"
-          >
-            +5 min
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onStopSession}
-            disabled={!onStopSession}
-            className="border-red-500 text-red-600 hover:bg-red-500 hover:text-white"
-          >
-            Stop
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onEndSession}
-            className="border-[#24476e] text-[#24476e] hover:bg-[#24476e] hover:text-white"
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Finish
-          </Button>
-        </div>
       </header>
 
       {/* Progress Section */}
@@ -682,7 +653,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
             </div>
 
             {/* Main Action Button */}
-            <div className="mt-8 flex justify-center pb-10">
+            <div className="mt-8 flex flex-col items-center pb-10 space-y-4">
               <Button
                 size="sm"
                 className={`${buttonProps.color} rounded-full px-6 py-3 text-sm font-medium shadow-lg transition-all duration-200 transform hover:scale-105`}
@@ -692,6 +663,37 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
                 {buttonProps.icon}
                 <span className="ml-2">{buttonProps.label}</span>
               </Button>
+
+              {/* Session Control Buttons */}
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onExtendSession}
+                  disabled={!onExtendSession}
+                  className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white"
+                >
+                  +5 min
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onStopSession}
+                  disabled={!onStopSession}
+                  className="border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white"
+                >
+                  Pause Session
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onEndSession}
+                  className="border-[#24476e] text-[#24476e] hover:bg-[#24476e] hover:text-white"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Finish
+                </Button>
+              </div>
             </div>
           </>
         )}
