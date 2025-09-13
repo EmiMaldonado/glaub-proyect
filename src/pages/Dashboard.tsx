@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
@@ -15,6 +15,7 @@ const Dashboard = () => {
   const {
     user
   } = useAuth();
+  const navigate = useNavigate();
   const [lastConversation, setLastConversation] = useState<any>(null);
   const [pausedConversations, setPausedConversations] = useState<any[]>([]);
   const [oceanProfile, setOceanProfile] = useState<any>(null);
@@ -42,6 +43,13 @@ const Dashboard = () => {
       loadDashboardData();
     }
   }, [user]);
+
+  // Redirect managers to manager dashboard
+  useEffect(() => {
+    if (userProfile?.role === 'manager') {
+      navigate('/dashboard-manager', { replace: true });
+    }
+  }, [userProfile, navigate]);
   const loadDashboardData = async () => {
     if (!user) return;
     try {
