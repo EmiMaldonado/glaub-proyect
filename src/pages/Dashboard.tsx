@@ -16,7 +16,7 @@ const Dashboard = () => {
     user
   } = useAuth();
   const [lastConversation, setLastConversation] = useState<any>(null);
-  const [pausedConversation, setPausedConversation] = useState<any>(null);
+  const [pausedConversations, setPausedConversations] = useState<any[]>([]);
   const [oceanProfile, setOceanProfile] = useState<any>(null);
   const [allInsights, setAllInsights] = useState<any[]>([]);
   const [personalizedSummary, setPersonalizedSummary] = useState<string>('');
@@ -52,8 +52,8 @@ const Dashboard = () => {
       });
 
       // Check for paused conversations
-      const pausedConversation = conversations?.find(c => c.status === 'paused');
-      setPausedConversation(pausedConversation || null);
+      const pausedConversations = conversations?.filter(c => c.status === 'paused') || [];
+      setPausedConversations(pausedConversations);
 
       // Load all insights from all conversations
       const {
@@ -189,42 +189,31 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* Section 1: New Conversation - Prominent */}
+      {/* Section 1: New Conversation - Always show start new conversation */}
       <Card className="bg-gradient-primary text-primary-foreground shadow-elegant">
         <CardContent className="p-8">
           <div className="flex items-center justify-between">
             <div className="space-y-3">
-              {pausedConversation ? (
-                <>
-                  <h2 className="text-2xl font-bold">Speak with Glai</h2>
-                  <p className="text-primary-foreground/90">Start a new conversation or resume your paused conversation from {new Date(pausedConversation.created_at).toLocaleDateString()}</p>
-                   <div className="flex gap-3 mt-4">
-                     <Button variant="secondary" size="lg" asChild>
-                       <Link to="/conversation">
-                         <Plus className="mr-2 h-5 w-5" />
-                         Start New Session
-                       </Link>
-                     </Button>
-                     <Button variant="default" size="lg" asChild>
-                       <Link to={`/conversation?resume=${pausedConversation.id}`}>
-                         <MessageCircle className="mr-2 h-5 w-5" />
-                         Continue Session
-                       </Link>
-                     </Button>
-                   </div>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-2xl font-bold">Speak with Glai</h2>
-                  <p className="text-primary-foreground/90">Start a new conversation</p>
-                  <Button variant="secondary" size="lg" className="mt-4" asChild>
-                    <Link to="/conversation">
-                      <Plus className="mr-2 h-5 w-5" />
-                      Start Now
+              <h2 className="text-2xl font-bold">Speak with Glai</h2>
+              <p className="text-primary-foreground/90">
+                Start a new conversation{pausedConversations.length > 0 ? ` or resume one of your ${pausedConversations.length} paused conversation${pausedConversations.length > 1 ? 's' : ''}` : ''}
+              </p>
+              <div className="flex gap-3 mt-4">
+                <Button variant="secondary" size="lg" asChild>
+                  <Link to="/conversation">
+                    <Plus className="mr-2 h-5 w-5" />
+                    Start New Session
+                  </Link>
+                </Button>
+                {pausedConversations.length > 0 && (
+                  <Button variant="default" size="lg" asChild>
+                    <Link to={`/conversation?resume=${pausedConversations[0].id}`}>
+                      <MessageCircle className="mr-2 h-5 w-5" />
+                      Continue Latest Session
                     </Link>
                   </Button>
-                </>
-              )}
+                )}
+              </div>
             </div>
             <div className="hidden md:block">
               <MessageCircle className="h-16 w-16 text-primary-foreground/20" />
@@ -232,6 +221,45 @@ const Dashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Section: Paused Conversations (if any) */}
+      {pausedConversations.length > 1 && (
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              Your Paused Conversations
+            </CardTitle>
+            <CardDescription>
+              You have {pausedConversations.length} paused conversations that you can continue
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pausedConversations.slice(0, 3).map((conversation, index) => (
+                <div key={conversation.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{conversation.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Paused on {new Date(conversation.updated_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/conversation?resume=${conversation.id}`}>
+                      Continue
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+              {pausedConversations.length > 3 && (
+                <p className="text-sm text-muted-foreground text-center pt-2">
+                  And {pausedConversations.length - 3} more paused conversation{pausedConversations.length - 3 > 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Section 2: Your Last Meeting */}
       <Card className="shadow-soft">
