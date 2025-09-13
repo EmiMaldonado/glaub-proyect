@@ -45,9 +45,13 @@ const VoiceConversation: React.FC = () => {
     formattedTimeRemaining,
     progressPercentage,
     isActive: isTimerActive,
+    extensionsUsed,
+    currentMaxDuration,
     start: startTimer,
     pause: pauseTimer,
-    reset: resetTimer
+    reset: resetTimer,
+    extendSession,
+    stopSession
   } = useConversationTimer({
     maxDurationMinutes: 5,
     onTimeWarning: () => {
@@ -242,6 +246,16 @@ const VoiceConversation: React.FC = () => {
     setIsSpeaking(speaking);
   };
 
+  // Handle extend session
+  const handleExtendSession = () => {
+    extendSession();
+  };
+
+  // Handle stop session (user-initiated)
+  const handleStopSession = () => {
+    stopSession();
+  };
+
   // Handle end session
   async function handleEndSession() {
     if (!conversation) return;
@@ -349,10 +363,13 @@ const VoiceConversation: React.FC = () => {
         conversationId={conversation?.id}
         userId={user?.id}
         onEndSession={handleEndSession}
+        onExtendSession={handleExtendSession}
+        onStopSession={handleStopSession}
         onBack={handleBack}
         progressPercentage={isTimerActive ? progressPercentage : 0}
         formattedTime={isTimerActive ? formattedTime : "00:00"}
         formattedTimeRemaining={isTimerActive ? formattedTimeRemaining : "05:00"}
+        extensionsUsed={extensionsUsed}
         currentAIResponse={currentAIResponse}
       />
     </VoiceErrorBoundary>

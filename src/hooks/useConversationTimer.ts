@@ -17,9 +17,11 @@ export const useConversationTimer = ({
   const [sessionTime, setSessionTime] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [hasWarned, setHasWarned] = useState(false);
+  const [extensionsUsed, setExtensionsUsed] = useState(0);
+  const [currentMaxDuration, setCurrentMaxDuration] = useState(maxDurationMinutes);
   const intervalRef = useRef<NodeJS.Timeout>();
 
-  const maxSeconds = maxDurationMinutes * 60;
+  const maxSeconds = currentMaxDuration * 60;
   const warningSeconds = warningAtMinutes * 60;
 
   useEffect(() => {
@@ -72,6 +74,23 @@ export const useConversationTimer = ({
     setSessionTime(0);
     setIsActive(false);
     setHasWarned(false);
+    setExtensionsUsed(0);
+    setCurrentMaxDuration(maxDurationMinutes);
+  };
+
+  const extendSession = () => {
+    setCurrentMaxDuration(prev => prev + 5);
+    setExtensionsUsed(prev => prev + 1);
+    setHasWarned(false); // Reset warning for new extended period
+    toast({
+      title: "⏰ Sesión Extendida",
+      description: `Se agregaron 5 minutos más. Extensiones usadas: ${extensionsUsed + 1}`,
+    });
+  };
+
+  const stopSession = () => {
+    setIsActive(false);
+    onTimeUp?.();
   };
 
   const formatTime = (seconds: number) => {
@@ -91,9 +110,13 @@ export const useConversationTimer = ({
     progressPercentage: getProgressPercentage(),
     isActive,
     hasWarned,
+    extensionsUsed,
+    currentMaxDuration,
     start,
     pause,
     reset,
+    extendSession,
+    stopSession,
     formatTime,
     formattedTime: formatTime(sessionTime),
     formattedTimeRemaining: formatTime(getTimeRemaining()),

@@ -11,10 +11,13 @@ interface VoiceInterfaceProps {
   conversationId?: string;
   userId?: string;
   onEndSession: () => void;
+  onExtendSession?: () => void;
+  onStopSession?: () => void;
   onBack: () => void;
   progressPercentage: number;
   formattedTime: string;
   formattedTimeRemaining: string;
+  extensionsUsed?: number;
   currentAIResponse?: string;
 }
 
@@ -34,10 +37,13 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   conversationId,
   userId,
   onEndSession,
+  onExtendSession,
+  onStopSession,
   onBack,
   progressPercentage,
   formattedTime,
   formattedTimeRemaining,
+  extensionsUsed = 0,
   currentAIResponse
 }) => {
   const [voiceState, setVoiceState] = useState<VoiceStateKey>('idle');
@@ -579,15 +585,35 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           </Button>
           <h1 className="text-lg font-medium text-[#24476e]">Voice Session</h1>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onEndSession}
-          className="border-[#24476e] text-[#24476e] hover:bg-[#24476e] hover:text-white"
-        >
-          <Check className="h-4 w-4 mr-2" />
-          Finish Conversation
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onExtendSession}
+            disabled={!onExtendSession}
+            className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white"
+          >
+            +5 min
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onStopSession}
+            disabled={!onStopSession}
+            className="border-red-500 text-red-600 hover:bg-red-500 hover:text-white"
+          >
+            Stop
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onEndSession}
+            className="border-[#24476e] text-[#24476e] hover:bg-[#24476e] hover:text-white"
+          >
+            <Check className="h-4 w-4 mr-2" />
+            Finish
+          </Button>
+        </div>
       </header>
 
       {/* Progress Section */}
@@ -596,7 +622,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-[#24476e] font-medium">Progress</span>
             <span className="text-sm text-[#24476e]">
-              {formattedTime} / {formattedTimeRemaining} remaining for minimum conversation
+              {formattedTime} / {formattedTimeRemaining} remaining | Extensions: {extensionsUsed}
             </span>
           </div>
           <div className="w-full bg-gray-300 rounded-full h-2">
