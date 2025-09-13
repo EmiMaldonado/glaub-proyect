@@ -82,10 +82,10 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
   };
 
   const sendInvitation = async () => {
-    if (!email) {
+    if (!email.trim() || !userProfile) {
       toast({
         title: "Email required",
-        description: "Please enter a valid email",
+        description: "Please enter a valid email address",
         variant: "destructive",
       });
       return;
@@ -93,22 +93,61 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
 
     setLoading(true);
     try {
+      // Ensure we have a fresh session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        toast({
+          title: "Authentication Error",
+          description: "Please refresh the page and try again - session expired",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Creating invitation for:', email);
+      console.log('Manager profile ID:', userProfile.id);
+      console.log('Session user ID:', session.user.id);
+
       // Create invitation directly in database
       const { data: invitation, error } = await supabase
         .from('invitations')
         .insert({
           email: email.trim(),
           token: crypto.randomUUID(),
-          manager_id: userProfile?.id,
+          manager_id: userProfile.id,
           status: 'pending'
         })
         .select('token')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating invitation:', error);
+        if (error.message.includes('duplicate key value violates unique constraint')) {
+          toast({
+            title: "Duplicate Invitation",
+            description: "An invitation has already been sent to this email address",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('row-level security')) {
+          toast({
+            title: "Authentication Error",
+            description: "Please refresh the page and try again",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error creating invitation",
+            description: error.message || "An unexpected error occurred",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      console.log('Invitation created successfully');
 
       // Generate invitation URL
-      const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
+      const invitationUrl = `${window.location.origin}/accept-invitation?token=${invitation.token}`;
       
       // Copy to clipboard
       await navigator.clipboard.writeText(invitationUrl);
@@ -121,6 +160,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
       setEmail('');
       fetchInvitations(); // Refresh invitations list
     } catch (error: any) {
+      console.error('Error in sendInvitation:', error);
       toast({
         title: "Error creating invitation",
         description: error.message || "An unexpected error occurred",
