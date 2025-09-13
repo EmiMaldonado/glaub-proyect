@@ -33,14 +33,33 @@ serve(async (req: Request) => {
       throw new Error("Unauthorized");
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    // Get user profile or create one if it doesn't exist
+    let { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", user.id)
       .single();
 
-    if (profileError || !profile) {
+    if (profileError && profileError.code === 'PGRST116') {
+      // Profile doesn't exist, create one
+      const { data: newProfile, error: createError } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: user.id,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Error creating profile:", createError);
+        throw new Error("Failed to create user profile");
+      }
+
+      profile = newProfile;
+    } else if (profileError || !profile) {
+      console.error("Error fetching profile:", profileError);
       throw new Error("Profile not found");
     }
 
