@@ -52,12 +52,20 @@ const ChatConversation: React.FC = () => {
       setIsInitializing(true);
       resetConversationState();
 
+      // Count existing conversations to get the next number
+      const { count } = await supabase
+        .from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      const conversationNumber = (count || 0) + 1;
+
       // Create new conversation
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          title: `Chat ${new Date().toLocaleDateString()}`,
+          title: `Conversation ${conversationNumber}`,
           status: 'active'
         })
         .select()
@@ -74,7 +82,7 @@ const ChatConversation: React.FC = () => {
         .single();
 
       // Get AI first message with context
-      await sendAIFirstMessage(newConversation.id, profile?.display_name || profile?.full_name || 'Usuario');
+      await sendAIFirstMessage(newConversation.id, profile?.display_name || profile?.full_name || 'User');
 
     } catch (error) {
       console.error('Error creating conversation:', error);
