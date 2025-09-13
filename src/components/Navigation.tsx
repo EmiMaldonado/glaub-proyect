@@ -54,10 +54,7 @@ const Navigation = () => {
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/profile" className="cursor-pointer">
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
-                      </Link>
+                      
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       
