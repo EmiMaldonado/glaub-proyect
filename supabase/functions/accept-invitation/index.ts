@@ -12,17 +12,42 @@ serve(async (req: Request) => {
   }
 
   try {
+    console.log("Processing invitation acceptance request");
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
+    
+    console.log("Token received:", token ? "✓" : "✗");
 
     if (!token) {
-      throw new Error("Token is required");
+      console.error("No token provided");
+      return new Response(
+        `
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h1 style="color: #dc3545;">Invalid Link</h1>
+            <p>No invitation token provided.</p>
+            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+          </body>
+        </html>
+        `,
+        {
+          headers: { "Content-Type": "text/html" },
+          status: 400,
+        }
+      );
     }
 
-    // Create Supabase client with service role key
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create Supabase client with service role key (bypasses RLS)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
-    // Find the invitation
+    console.log("Looking up invitation with token:", token);
+
+    // Find the invitation using service role
     const { data: invitation, error: invitationError } = await supabase
       .from("invitations")
       .select(`
@@ -31,14 +56,39 @@ serve(async (req: Request) => {
       `)
       .eq("token", token)
       .eq("status", "pending")
-      .single();
+      .maybeSingle();
 
-    if (invitationError || !invitation) {
+    console.log("Invitation lookup result:", { 
+      found: !!invitation, 
+      error: invitationError?.message 
+    });
+
+    if (invitationError) {
+      console.error("Database error:", invitationError);
       return new Response(
         `
         <html>
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: #dc3545;">Invalid or Expired Invitation</h1>
+            <h1 style="color: #dc3545;">Database Error</h1>
+            <p>Error looking up invitation: ${invitationError.message}</p>
+            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+          </body>
+        </html>
+        `,
+        {
+          headers: { "Content-Type": "text/html" },
+          status: 500,
+        }
+      );
+    }
+
+    if (!invitation) {
+      console.log("No pending invitation found for token");
+      return new Response(
+        `
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h1 style="color: #dc3545;">Invalid or Used Invitation</h1>
             <p>This invitation link is invalid or has already been used.</p>
             <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
           </body>
@@ -53,6 +103,7 @@ serve(async (req: Request) => {
 
     // Check if invitation has expired
     if (new Date() > new Date(invitation.expires_at)) {
+      console.log("Invitation has expired");
       return new Response(
         `
         <html>
@@ -70,22 +121,54 @@ serve(async (req: Request) => {
       );
     }
 
+    console.log("Checking if user exists for email:", invitation.email);
+
     // Check if user with this email already exists
     const { data: existingUser, error: userCheckError } = await supabase.auth.admin.listUsers();
     
+    if (userCheckError) {
+      console.error("Error checking users:", userCheckError);
+      return new Response(
+        `
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h1 style="color: #dc3545;">Error</h1>
+            <p>Error checking user accounts: ${userCheckError.message}</p>
+            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+          </body>
+        </html>
+        `,
+        {
+          headers: { "Content-Type": "text/html" },
+          status: 500,
+        }
+      );
+    }
+    
     const userExists = existingUser?.users?.find(u => u.email === invitation.email);
+    console.log("User exists:", !!userExists);
 
     if (userExists) {
+      console.log("Processing invitation for existing user:", userExists.id);
+      
       // User exists - update their profile to link to manager and accept invitation
       const { data: userProfile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", userExists.id)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !userProfile) {
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError);
+        throw new Error(`Profile lookup failed: ${profileError.message}`);
+      }
+
+      if (!userProfile) {
+        console.error("User profile not found for user:", userExists.id);
         throw new Error("User profile not found");
       }
+
+      console.log("Updating profile and invitation status");
 
       // Update user profile with manager_id
       const { error: updateProfileError } = await supabase
@@ -96,7 +179,8 @@ serve(async (req: Request) => {
         .eq("id", userProfile.id);
 
       if (updateProfileError) {
-        throw new Error("Failed to update user profile");
+        console.error("Error updating profile:", updateProfileError);
+        throw new Error(`Failed to update user profile: ${updateProfileError.message}`);
       }
 
       // Update invitation status
@@ -109,7 +193,8 @@ serve(async (req: Request) => {
         .eq("id", invitation.id);
 
       if (updateInvitationError) {
-        throw new Error("Failed to update invitation status");
+        console.error("Error updating invitation:", updateInvitationError);
+        throw new Error(`Failed to update invitation status: ${updateInvitationError.message}`);
       }
 
       // Promote manager to manager role
@@ -121,6 +206,8 @@ serve(async (req: Request) => {
       if (promoteManagerError) {
         console.error("Error promoting manager:", promoteManagerError);
       }
+
+      console.log("Invitation acceptance completed successfully");
 
       return new Response(
         `
@@ -144,6 +231,7 @@ serve(async (req: Request) => {
         }
       );
     } else {
+      console.log("User doesn't exist, redirecting to signup");
       // User doesn't exist - redirect to signup with special parameters
       const signupUrl = `https://bmrifufykczudfxomenr.supabase.co/auth?mode=signup&invitation_token=${token}&email=${encodeURIComponent(invitation.email)}`;
       
