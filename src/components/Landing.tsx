@@ -12,11 +12,8 @@ const Landing = () => {
 
     <div className="p-6">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden" style={{
+      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden bg-cover bg-center bg-no-repeat" style={{
         backgroundImage: `url('/lovable-uploads/25a658b9-53b0-4b57-92f8-a630720ba2aa.png')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat',
         width: '100%',
         height: '100vh'
       }}>
@@ -37,12 +34,12 @@ const Landing = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-end">
-              <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary-700 text-lg px-8" asChild>
+              <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary-700 text-sm md:text-lg px-4 md:px-8 py-2 md:py-3" asChild>
                 <Link to="/auth?mode=signup">
                   Start conversation →
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-primary text-lg px-8" asChild>
+              <Button variant="outline" size="default" className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-primary text-sm md:text-lg px-4 md:px-8 py-2 md:py-3" asChild>
                 <Link to="/auth">
                   Register
                 </Link>
