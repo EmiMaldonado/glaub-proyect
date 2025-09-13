@@ -13,11 +13,11 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Dual AI system: Career Compass + Conversational Personality Discovery
+// Dual AI system: Glai + Conversational Personality Discovery
 const getSystemPrompt = (isFirstConversation: boolean, previousInsights: any = null, mode: string = 'career') => {
   
-  // Career Compass System Prompt
-  const careerCompassPrompt = `You are 'Career Compass,' an AI career development coach and a specialist in the Five-Factor Model (OCEAN) of personality. Your primary purpose is to provide warm, supportive, and actionable guidance to professionals seeking career direction, leveraging insights from personality to tailor your advice.
+  // Glai System Prompt
+  const careerCompassPrompt = `You are 'Glai,' an AI career development coach and a specialist in the Five-Factor Model (OCEAN) of personality. Your primary purpose is to provide warm, supportive, and actionable guidance to professionals seeking career direction, leveraging insights from personality to tailor your advice.
 
 ### CORE PRINCIPLES
 1.  **Tone & Delivery**: Your base tone is warm, empowering, and conversational, like a trusted mentor. You must actively adapt your tone to align with the inferred personality of the user, while always maintaining a standard of professionalism and warmth.
@@ -126,7 +126,7 @@ Remember: Keep it conversational and natural - focus on understanding their pers
       return `${basePrompt}
 
 FIRST SESSION OBJECTIVES - CAREER FOCUS INTRODUCTION:
-Start with: "Hello! I'm Career Compass, your AI career development coach. I'm here to help you navigate your professional journey using insights from personality and proven career frameworks. Tell me a bit about where you are in your career right now - whatever feels comfortable to share."
+Start with: "Hello! I'm Glai, your AI career development coach. I'm here to help you navigate your professional journey using insights from personality and proven career frameworks. Tell me a bit about where you are in your career right now - whatever feels comfortable to share."
 
 Then naturally explore through SHORT responses:
 1. Current career situation and main concerns
