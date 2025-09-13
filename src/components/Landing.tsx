@@ -12,13 +12,13 @@ const Landing = () => {
 
     <div className="p-6">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden bg-cover bg-center bg-no-repeat" style={{
+      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden bg-contain bg-center bg-no-repeat" style={{
         backgroundImage: `url('/lovable-uploads/25a658b9-53b0-4b57-92f8-a630720ba2aa.png')`,
         width: '100%',
         height: '100vh'
       }}>
         <div className="absolute inset-0" style={{ backgroundColor: 'rgba(36, 71, 110, 0.05)' }}></div>
-        <div className="relative w-full h-full flex items-center justify-end pr-[5%] py-[5%]">
+        <div className="relative w-full h-full flex items-center justify-end pl-6 pr-[5%] py-[5%]">
           <div className="w-full max-w-2xl text-right text-white space-y-8">
             <Badge className="bg-warning/50 text-warning-foreground px-3 py-1 text-xs font-medium rounded-full backdrop-blur-sm">
               ⚠️ This is not a real company, this is Master's thesis project
