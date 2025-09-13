@@ -36,6 +36,7 @@ const Dashboard = () => {
     sharedInsights: 0,
     teamMembers: 0
   });
+  const [userProfile, setUserProfile] = useState<any>(null);
   useEffect(() => {
     if (user) {
       loadDashboardData();
@@ -44,6 +45,15 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     if (!user) return;
     try {
+      // Load user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      setUserProfile(profile);
+
       // Load all conversations for comprehensive analysis
       const {
         data: conversations
@@ -498,9 +508,18 @@ const Dashboard = () => {
                 <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-muted-foreground text-sm">No team data available</p>
               </div>}
-            <Button variant="outline" size="sm" disabled>
-              <Users className="mr-1 h-3 w-3" />
-              Manage Team
+            <Button variant="outline" size="sm" asChild={userProfile?.role === 'manager'} disabled={userProfile?.role !== 'manager'}>
+              {userProfile?.role === 'manager' ? (
+                <Link to="/dashboard-manager">
+                  <Users className="mr-1 h-3 w-3" />
+                  Manager Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Users className="mr-1 h-3 w-3" />
+                  Manage Team
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>

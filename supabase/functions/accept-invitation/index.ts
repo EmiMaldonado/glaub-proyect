@@ -40,7 +40,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invalid or Expired Invitation</h1>
             <p>This invitation link is invalid or has already been used.</p>
-            <a href="${supabaseUrl.replace('/functions/v1', '')}" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -59,7 +59,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invitation Expired</h1>
             <p>This invitation has expired. Please ask your manager to send a new one.</p>
-            <a href="${supabaseUrl.replace('/functions/v1', '')}" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -129,7 +129,7 @@ serve(async (req: Request) => {
             <h1 style="color: #28a745;">Welcome to the Team!</h1>
             <p>You've successfully joined ${invitation.manager?.display_name || invitation.manager?.full_name}'s team on EmpathAI.</p>
             <p>You can now log in to your existing account to access team features.</p>
-            <a href="${supabaseUrl.replace('/functions/v1', '')}/auth" 
+            <a href="https://bmrifufykczudfxomenr.supabase.co/auth" 
                style="background-color: #007bff; color: white; padding: 15px 30px; 
                       text-decoration: none; border-radius: 5px; display: inline-block; 
                       font-weight: bold; margin-top: 20px;">
@@ -145,7 +145,7 @@ serve(async (req: Request) => {
       );
     } else {
       // User doesn't exist - redirect to signup with special parameters
-      const signupUrl = `${supabaseUrl.replace('/functions/v1', '')}/auth?mode=signup&invitation_token=${token}&email=${encodeURIComponent(invitation.email)}`;
+      const signupUrl = `https://bmrifufykczudfxomenr.supabase.co/auth?mode=signup&invitation_token=${token}&email=${encodeURIComponent(invitation.email)}`;
       
       return new Response(
         `
@@ -178,7 +178,7 @@ serve(async (req: Request) => {
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
           <h1 style="color: #dc3545;">Error</h1>
           <p>An error occurred while processing your invitation: ${error.message}</p>
-          <a href="${supabaseUrl.replace('/functions/v1', '')}" style="color: #007bff;">Go to EmpathAI</a>
+          <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
         </body>
       </html>
       `,

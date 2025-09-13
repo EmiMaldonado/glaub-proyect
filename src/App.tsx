@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
+import DashboardManager from "./pages/DashboardManager";
 import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
 import ChatConversation from "./pages/ChatConversation";
@@ -76,6 +77,12 @@ const App = () => (
                   <AuthGuard>
                     <Navigation />
                     <Dashboard />
+                  </AuthGuard>
+                } />
+                <Route path="/dashboard-manager" element={
+                  <AuthGuard>
+                    <Navigation />
+                    <DashboardManager />
                   </AuthGuard>
                 } />
                 <Route path="/conversation" element={
