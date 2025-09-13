@@ -12,7 +12,7 @@ const Landing = () => {
 
     <div className="p-6">
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden bg-contain bg-center bg-no-repeat" style={{
+      <section className="relative min-h-screen flex items-center rounded-[32px] overflow-hidden bg-cover bg-center bg-no-repeat" style={{
         backgroundImage: `url('/lovable-uploads/25a658b9-53b0-4b57-92f8-a630720ba2aa.png')`,
         width: '100%',
         height: '100vh'
