@@ -9,6 +9,7 @@ import AuthGuard from "@/components/AuthGuard";
 import Navigation from "@/components/Navigation";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
@@ -60,6 +61,7 @@ const App = () => (
                     <Auth />
                   </AuthGuard>
                 } />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/voice-assistant" element={<VoiceAssistant />} />
                 <Route path="/500" element={<ServerError />} />

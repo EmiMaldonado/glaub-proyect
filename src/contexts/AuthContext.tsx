@@ -11,6 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
+  resendConfirmation: (email: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,15 +57,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
-        toast({
-          title: "Login error",
-          description: error.message,
-          variant: "destructive",
-        });
+        // Mejor manejo de errores específicos
+        if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email no confirmado",
+            description: "Por favor confirma tu email. Revisa tu bandeja de entrada y carpeta de spam.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Credenciales incorrectas",
+            description: "Email o contraseña incorrectos. Verifica tus datos.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error de login",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
-          title: "Welcome!",
-          description: "You have successfully logged in",
+          title: "¡Bienvenido!",
+          description: "Has iniciado sesión exitosamente",
         });
       }
       
@@ -87,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: fullName,
             display_name: fullName?.split(' ')[0],
@@ -121,15 +137,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      // Logout completo que limpia TODO
       await supabase.auth.signOut();
+      
+      // Limpiar localStorage y sessionStorage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Resetear estados de React
+      setUser(null);
+      setSession(null);
+      
       toast({
-        title: "Session ended",
-        description: "You have successfully logged out",
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión exitosamente",
       });
     } catch (error) {
+      console.error("Error during logout:", error);
+      
+      // Aunque haya error, forzar limpieza local
+      localStorage.clear();
+      sessionStorage.clear();
+      setUser(null);
+      setSession(null);
+      
       toast({
         title: "Error",
-        description: "Could not log out",
+        description: "Hubo un problema al cerrar sesión, pero se ha limpiado localmente",
         variant: "destructive",
       });
     }
@@ -137,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/reset-password`;
+      const redirectUrl = `${window.location.origin}/auth/callback`;
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
@@ -167,6 +201,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resendConfirmation = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        }
+      });
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Email reenviado",
+          description: "Se ha enviado un nuevo email de confirmación. Revisa tu bandeja de entrada.",
+        });
+      }
+      
+      return { error };
+    } catch (error) {
+      toast({
+        title: "Error inesperado",
+        description: "No se pudo reenviar el email de confirmación",
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -175,6 +243,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     resetPassword,
+    resendConfirmation,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

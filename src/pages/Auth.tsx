@@ -12,7 +12,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "@/hooks/use-toast";
 
 const Auth = () => {
-  const { signIn, signUp, resetPassword, user, loading } = useAuth();
+  const { signIn, signUp, resetPassword, resendConfirmation, user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'signin';
@@ -27,6 +27,7 @@ const Auth = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showEmailNotConfirmed, setShowEmailNotConfirmed] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -45,12 +46,24 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setShowEmailNotConfirmed(false);
     
     try {
       const { error } = await signIn(formData.email, formData.password);
       if (!error) {
         navigate('/dashboard');
+      } else if (error.message.includes('Email not confirmed')) {
+        setShowEmailNotConfirmed(true);
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    setIsLoading(true);
+    try {
+      await resendConfirmation(formData.email);
     } finally {
       setIsLoading(false);
     }
@@ -255,6 +268,38 @@ const Auth = () => {
                     {isLoading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
                     Sign In
                   </Button>
+                  
+                  {/* Alert para email no confirmado */}
+                  {showEmailNotConfirmed && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mt-4">
+                      <div className="flex items-start">
+                        <Mail className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-yellow-800 mb-2">
+                            Por favor confirma tu email
+                          </h3>
+                          <p className="text-sm text-yellow-700 mb-3">
+                            Revisa tu bandeja de entrada y carpeta de spam. ¿No recibiste el email?
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleResendConfirmation}
+                            disabled={isLoading}
+                            className="border-yellow-300 text-yellow-800 hover:bg-yellow-100"
+                          >
+                            {isLoading ? (
+                              <LoadingSpinner size="sm" className="mr-2" />
+                            ) : (
+                              <Mail className="h-4 w-4 mr-2" />
+                            )}
+                            Reenviar email de confirmación
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <Button
                     type="button"
                     variant="ghost"
