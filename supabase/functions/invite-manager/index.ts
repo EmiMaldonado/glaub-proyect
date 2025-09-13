@@ -33,34 +33,37 @@ serve(async (req: Request) => {
       throw new Error("Unauthorized");
     }
 
-    // Get user profile or create one if it doesn't exist
+    // Get user profile or create one if it doesn't exist using service role
     let { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError && profileError.code === 'PGRST116') {
-      // Profile doesn't exist, create one
+    if (!profile && !profileError) {
+      // Profile doesn't exist, create one using service role to bypass RLS
       const { data: newProfile, error: createError } = await supabase
         .from("profiles")
         .insert({
           user_id: user.id,
           full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          display_name: user.user_metadata?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
         })
         .select()
         .single();
 
       if (createError) {
         console.error("Error creating profile:", createError);
-        throw new Error("Failed to create user profile");
+        throw new Error(`Failed to create user profile: ${createError.message}`);
       }
 
       profile = newProfile;
-    } else if (profileError || !profile) {
+      console.log("Created new profile for user:", user.id);
+    } else if (profileError) {
       console.error("Error fetching profile:", profileError);
-      throw new Error("Profile not found");
+      throw new Error(`Profile error: ${profileError.message}`);
+    } else if (!profile) {
+      throw new Error("Profile not found and could not be created");
     }
 
     const { managerEmail }: ManagerInvitationRequest = await req.json();
@@ -76,7 +79,7 @@ serve(async (req: Request) => {
       .eq("manager_id", profile.id)
       .eq("email", managerEmail)
       .eq("status", "pending")
-      .single();
+      .maybeSingle();
 
     if (existingInvitation) {
       throw new Error("Invitation already sent to this manager");
