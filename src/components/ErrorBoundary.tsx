@@ -22,7 +22,34 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    // Filter out external script errors (Google Ads, browser extensions, etc.)
+    const isExternalError = this.isExternalScriptError(error);
+    
+    if (!isExternalError) {
+      console.error('Application error caught by boundary:', error, errorInfo);
+      // Only report actual app errors, not external script errors
+    } else {
+      console.warn('External script error filtered:', error.message);
+    }
+  }
+
+  private isExternalScriptError(error: Error): boolean {
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorStack = error.stack?.toLowerCase() || '';
+    
+    // Common external script error patterns
+    const externalPatterns = [
+      'google', 'gads', 'doubleclick', 'googleads',
+      'postmessage', 'target origin', 'recipient window',
+      'extension', 'chrome-extension', 'moz-extension',
+      'listener indicated an asynchronous response',
+      'message channel closed',
+      'script error', 'non-same-origin'
+    ];
+    
+    return externalPatterns.some(pattern => 
+      errorMessage.includes(pattern) || errorStack.includes(pattern)
+    );
   }
 
   render() {
