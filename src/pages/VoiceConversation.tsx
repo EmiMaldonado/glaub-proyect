@@ -122,8 +122,9 @@ const VoiceConversation: React.FC = () => {
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
+      let formattedMessages: Message[] = [];
       if (existingMessages) {
-        const formattedMessages = existingMessages.map(msg => ({
+        formattedMessages = existingMessages.map(msg => ({
           id: msg.id,
           role: msg.role as 'user' | 'assistant',
           content: msg.content,
@@ -133,10 +134,22 @@ const VoiceConversation: React.FC = () => {
         setSessionTranscripts(formattedMessages);
       }
 
-      // Resume AI conversation
+      // Resume AI conversation with recap
+      let recapMessage = "Welcome back! Let's continue our conversation.";
+      
+      if (formattedMessages.length > 0) {
+        // Get the last few messages to create a brief recap
+        const lastFewMessages = formattedMessages.slice(-6); // Last 6 messages for context
+        const conversationContext = lastFewMessages.map(msg => 
+          `${msg.role === 'user' ? 'You' : 'I'}: ${msg.content.substring(0, 100)}...`
+        ).join('\n');
+        
+        recapMessage = `Please provide a brief, warm recap of what we were discussing in our last conversation and ask a thoughtful follow-up question to naturally continue our dialogue. Here's what we were talking about:\n\n${conversationContext}`;
+      }
+      
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: "I'm ready to continue our conversation from where we left off.",
+          message: recapMessage,
           conversationId: conversationId,
           userId: user.id,
           isFirstMessage: false,
