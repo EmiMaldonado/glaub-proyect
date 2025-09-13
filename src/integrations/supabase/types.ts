@@ -347,7 +347,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_profile_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       is_invitation_manager: {
+        Args: { invitation_manager_id: string }
+        Returns: boolean
+      }
+      is_invitation_manager_secure: {
         Args: { invitation_manager_id: string }
         Returns: boolean
       }
