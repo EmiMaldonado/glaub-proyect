@@ -196,8 +196,8 @@ const Dashboard = () => {
             <div className="space-y-3">
               {pausedConversation ? (
                 <>
-                  <h2 className="text-2xl font-bold">Continue Previous Session</h2>
-                  <p className="text-primary-foreground/90">Resume your paused conversation from {new Date(pausedConversation.created_at).toLocaleDateString()}</p>
+                  <h2 className="text-2xl font-bold">Speak with Glai</h2>
+                  <p className="text-primary-foreground/90">Start a new conversation or resume your paused conversation from {new Date(pausedConversation.created_at).toLocaleDateString()}</p>
                    <div className="flex gap-3 mt-4">
                      <Button variant="secondary" size="lg" asChild>
                        <Link to="/conversation">
@@ -215,8 +215,8 @@ const Dashboard = () => {
                 </>
               ) : (
                 <>
-                  <h2 className="text-2xl font-bold">New Conversation</h2>
-                  <p className="text-primary-foreground/90">Start a new 5 minutes session to discover new insights about your personality</p>
+                  <h2 className="text-2xl font-bold">Speak with Glai</h2>
+                  <p className="text-primary-foreground/90">Start a new conversation</p>
                   <Button variant="secondary" size="lg" className="mt-4" asChild>
                     <Link to="/conversation">
                       <Plus className="mr-2 h-5 w-5" />
