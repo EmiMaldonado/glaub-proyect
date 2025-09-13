@@ -84,8 +84,8 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
   const sendInvitation = async () => {
     if (!email) {
       toast({
-                  title: "Email required",
-                  description: "Please enter a valid email",
+        title: "Email required",
+        description: "Please enter a valid email",
         variant: "destructive",
       });
       return;
@@ -93,23 +93,37 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-invitation', {
-        body: { email },
-      });
+      // Create invitation directly in database
+      const { data: invitation, error } = await supabase
+        .from('invitations')
+        .insert({
+          email: email.trim(),
+          token: crypto.randomUUID(),
+          manager_id: userProfile?.id,
+          status: 'pending'
+        })
+        .select('token')
+        .single();
 
       if (error) throw error;
 
+      // Generate invitation URL
+      const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(invitationUrl);
+
       toast({
-        title: "¡Invitación enviada!",
-        description: `Se ha enviado una invitación a ${email}`,
+        title: "Invitation Created!",
+        description: `Invitation link copied to clipboard. Share it with ${email}`,
       });
 
       setEmail('');
       fetchInvitations(); // Refresh invitations list
     } catch (error: any) {
       toast({
-        title: "Error al enviar invitación",
-        description: error.message || "Ha ocurrido un error inesperado",
+        title: "Error creating invitation",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -157,12 +171,12 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
               />
               <Button onClick={sendInvitation} disabled={loading}>
                 <Plus className="h-4 w-4 mr-2" />
-                {loading ? 'Enviando...' : 'Invitar'}
+                {loading ? 'Creating...' : 'Create Invite Link'}
               </Button>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            Cuando alguien acepte tu invitación, automáticamente obtendrás acceso a funciones de gestión de equipo.
+            Create a shareable invitation link that will be copied to your clipboard. Share it with the person you want to add to your team.
           </p>
         </CardContent>
       </Card>
@@ -237,7 +251,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
                 />
                 <Button onClick={sendInvitation} disabled={loading}>
                   <Plus className="h-4 w-4 mr-2" />
-                  {loading ? 'Enviando...' : 'Invitar'}
+                  {loading ? 'Creating...' : 'Create Invite Link'}
                 </Button>
               </div>
             </div>

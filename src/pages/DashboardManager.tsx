@@ -171,15 +171,29 @@ const DashboardManager = () => {
 
     setIsInviting(true);
     try {
-      const { error } = await supabase.functions.invoke('send-invitation', {
-        body: { email: memberEmail.trim() }
-      });
+      // Create invitation directly in database
+      const { data: invitation, error } = await supabase
+        .from('invitations')
+        .insert({
+          email: memberEmail.trim(),
+          token: crypto.randomUUID(),
+          manager_id: userProfile?.id,
+          status: 'pending'
+        })
+        .select('token')
+        .single();
 
       if (error) throw error;
 
+      // Generate invitation URL
+      const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(invitationUrl);
+
       toast({
-        title: "Invitation Sent!",
-        description: `Team member invitation sent to ${memberEmail}`
+        title: "Invitation Created!",
+        description: `Invitation link copied to clipboard. Share it with ${memberEmail}`
       });
       setMemberEmail('');
       loadManagerData(); // Refresh data
@@ -188,7 +202,7 @@ const DashboardManager = () => {
       console.error('Error inviting member:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to send invitation",
+        description: error.message || "Failed to create invitation",
         variant: "destructive"
       });
     } finally {
@@ -304,7 +318,7 @@ const DashboardManager = () => {
                 onClick={handleInviteMember}
                 disabled={isInviting}
               >
-                {isInviting ? 'Sending...' : 'Invite'}
+                {isInviting ? 'Creating...' : 'Create Invite Link'}
               </Button>
             </div>
           </div>

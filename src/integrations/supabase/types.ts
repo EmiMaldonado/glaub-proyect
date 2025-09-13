@@ -69,6 +69,7 @@ export type Database = {
           email: string
           expires_at: string
           id: string
+          invitation_url: string | null
           invited_at: string
           manager_id: string
           status: string
@@ -81,6 +82,7 @@ export type Database = {
           email: string
           expires_at?: string
           id?: string
+          invitation_url?: string | null
           invited_at?: string
           manager_id: string
           status?: string
@@ -93,6 +95,7 @@ export type Database = {
           email?: string
           expires_at?: string
           id?: string
+          invitation_url?: string | null
           invited_at?: string
           manager_id?: string
           status?: string
@@ -342,6 +345,10 @@ export type Database = {
       clear_conversation_messages: {
         Args: { conversation_uuid: string }
         Returns: undefined
+      }
+      generate_invitation_url: {
+        Args: { invitation_id: string }
+        Returns: string
       }
       generate_reset_token: {
         Args: Record<PropertyKey, never>

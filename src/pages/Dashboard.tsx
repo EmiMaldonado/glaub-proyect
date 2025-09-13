@@ -170,26 +170,39 @@ const Dashboard = () => {
     }
     setIsInvitingManager(true);
     try {
-      const {
-        error
-      } = await supabase.functions.invoke('invite-manager', {
-        body: {
-          managerEmail: managerEmail.trim()
-        }
-      });
+      // Create invitation directly in database
+      const { data: invitation, error } = await supabase
+        .from('invitations')
+        .insert({
+          email: managerEmail.trim(),
+          token: crypto.randomUUID(),
+          manager_id: userProfile?.id,
+          status: 'pending'
+        })
+        .select('token')
+        .single();
+
       if (error) {
         throw error;
       }
+
+      // Generate invitation URL
+      const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(invitationUrl);
+      
       toast({
-        title: "Invitation Sent!",
-        description: `Manager invitation has been sent to ${managerEmail}`
+        title: "Invitation Created!",
+        description: `Invitation link copied to clipboard. Share it with ${managerEmail}`,
       });
       setManagerEmail(''); // Clear the input
+      
     } catch (error: any) {
-      console.error('Error inviting manager:', error);
+      console.error('Error creating invitation:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to send manager invitation",
+        description: error.message || "Failed to create manager invitation",
         variant: "destructive"
       });
     } finally {
@@ -471,7 +484,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Share selected insights with your manager to improve communication and professional development.
+              Create a shareable invitation link for your manager. The link will be copied to your clipboard.
             </p>
             
             <div className="space-y-2">
@@ -481,7 +494,7 @@ const Dashboard = () => {
             
             <Button variant="outline" size="sm" onClick={handleInviteManager} disabled={isInvitingManager || !managerEmail.trim()}>
               <Share2 className="mr-1 h-3 w-3" />
-              {isInvitingManager ? "Sending..." : "Send Invitation"}
+              {isInvitingManager ? "Creating..." : "Create Invitation Link"}
             </Button>
           </CardContent>
         </Card>
