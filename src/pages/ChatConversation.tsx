@@ -224,7 +224,7 @@ const ChatConversation: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
           <LoadingSpinner />
-          <p className="text-muted-foreground">Iniciando nueva conversación...</p>
+          <p className="text-muted-foreground">Starting new conversation...</p>
         </div>
       </div>
     );
@@ -243,26 +243,10 @@ const ChatConversation: React.FC = () => {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-lg font-medium">Chat Terapéutico</h1>
+            <h1 className="text-lg font-medium">Therapeutic Chat</h1>
           </div>
-          
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNewConversation}
-              disabled={isLoading}
-            >
-              Pausar sesión y continuar después
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEndSession}
-              disabled={!conversation}
-            >
-              Finalizar
-            </Button>
+            {/* Session controls moved below input */}
           </div>
         </div>
       </header>
@@ -295,7 +279,7 @@ const ChatConversation: React.FC = () => {
                   <div className="bg-muted px-4 py-3 rounded-lg">
                     <div className="flex items-center space-x-2">
                       <LoadingSpinner />
-                      <span className="text-sm text-muted-foreground">Escribiendo...</span>
+                      <span className="text-sm text-muted-foreground">Writing...</span>
                     </div>
                   </div>
                 </div>
@@ -305,7 +289,7 @@ const ChatConversation: React.FC = () => {
             </div>
 
             {/* Input */}
-            <div className="border-t bg-background p-4">
+            <div className="border-t bg-background p-4 space-y-4">
               <div className="flex space-x-2">
                 <input
                   type="text"
@@ -317,7 +301,7 @@ const ChatConversation: React.FC = () => {
                       setTextInput('');
                     }
                   }}
-                  placeholder="Escribe tu mensaje..."
+                  placeholder="Write your message..."
                   className="flex-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                   disabled={isLoading}
                 />
@@ -328,7 +312,27 @@ const ChatConversation: React.FC = () => {
                   }}
                   disabled={!textInput.trim() || isLoading}
                 >
-                  Enviar
+                  Send
+                </Button>
+              </div>
+              
+              {/* Session Controls */}
+              <div className="flex items-center justify-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNewConversation}
+                  disabled={isLoading}
+                >
+                  Pause Session & Continue Later
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEndSession}
+                  disabled={!conversation}
+                >
+                  End Session
                 </Button>
               </div>
             </div>
