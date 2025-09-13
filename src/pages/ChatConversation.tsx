@@ -253,7 +253,7 @@ const ChatConversation: React.FC = () => {
               onClick={handleNewConversation}
               disabled={isLoading}
             >
-              Nueva Conversación
+              Pausar sesión y continuar después
             </Button>
             <Button
               variant="outline"

@@ -91,7 +91,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
             <Button variant="default" size="sm" onClick={() => navigate('/dashboard')} className="bg-primary hover:bg-primary-600 text-primary-foreground">
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-lg font-medium text-gray-900">Chat With AI</h1>
+            <h1 className="text-lg font-medium text-gray-900">Chat Terapéutico</h1>
           </div>
           
           {/* Center Section - Mode Toggle */}
@@ -248,7 +248,7 @@ const ModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                         value={textInput} 
                         onChange={e => onTextInputChange(e.target.value)} 
                         onKeyPress={handleKeyPress} 
-                        placeholder="Write your message" 
+                        placeholder="Escribe tu mensaje" 
                         className="min-h-[48px] max-h-32 resize-none bg-gray-50 border-gray-200 rounded-lg" 
                         disabled={isLoading} 
                       />
