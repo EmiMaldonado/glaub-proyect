@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -30,6 +30,8 @@ interface Conversation {
 const VoiceConversation: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const resumeConversationId = searchParams.get('resume');
   const { speak, isSpeaking: isTTSSpeaking } = useTextToSpeech();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -72,6 +74,101 @@ const VoiceConversation: React.FC = () => {
     setConversation(null);
     setCurrentAIResponse('');
     resetTimer();
+  };
+
+  // Resume existing paused conversation
+  const resumeExistingConversation = async (conversationId: string) => {
+    if (!user) return;
+
+    try {
+      setIsInitializing(true);
+      resetConversationState();
+
+      // Load the paused conversation
+      const { data: existingConversation, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .eq('user_id', user.id)
+        .eq('status', 'paused')
+        .single();
+
+      if (error) throw error;
+      
+      if (!existingConversation) {
+        toast({
+          title: "Conversation Not Found",
+          description: "The paused conversation could not be found.",
+          variant: "destructive",
+        });
+        navigate('/dashboard');
+        return;
+      }
+
+      // Update conversation status to active
+      const { error: updateError } = await supabase
+        .from('conversations')
+        .update({ status: 'active' })
+        .eq('id', conversationId);
+
+      if (updateError) throw updateError;
+
+      setConversation(existingConversation as Conversation);
+
+      // Load existing messages
+      const { data: existingMessages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (existingMessages) {
+        const formattedMessages = existingMessages.map(msg => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          created_at: msg.created_at,
+          metadata: msg.metadata
+        }));
+        setSessionTranscripts(formattedMessages);
+      }
+
+      // Resume AI conversation
+      const response = await supabase.functions.invoke('ai-chat', {
+        body: {
+          message: "I'm ready to continue our conversation from where we left off.",
+          conversationId: conversationId,
+          userId: user.id,
+          isFirstMessage: false,
+          modalityType: 'voice'
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.message) {
+        setCurrentAIResponse(response.data.message);
+        speak(response.data.message);
+      }
+
+      toast({
+        title: "✅ Session Resumed",
+        description: "Your conversation has been resumed successfully",
+      });
+
+    } catch (error) {
+      console.error('Error resuming conversation:', error);
+      toast({
+        title: "Error",
+        description: "Could not resume conversation. Starting a new one instead.",
+        variant: "destructive",
+      });
+      createNewConversation();
+    } finally {
+      setIsInitializing(false);
+    }
   };
 
   // Create new conversation and get AI first message
@@ -252,7 +349,32 @@ const VoiceConversation: React.FC = () => {
   };
 
   // Handle stop session (user-initiated)
-  const handleStopSession = () => {
+  const handleStopSession = async () => {
+    // Set conversation status to paused instead of completed
+    if (conversation) {
+      try {
+        await supabase
+          .from('conversations')
+          .update({ 
+            status: 'paused',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', conversation.id);
+
+        toast({
+          title: "🔄 Session Paused",
+          description: "You can continue this conversation later from the dashboard",
+        });
+        navigate('/dashboard');
+      } catch (error) {
+        console.error('Error pausing session:', error);
+        toast({
+          title: "Error",
+          description: "Could not pause the session",
+          variant: "destructive",
+        });
+      }
+    }
     stopSession();
   };
 
@@ -299,8 +421,13 @@ const VoiceConversation: React.FC = () => {
   // Initialize conversation on component mount
   useEffect(() => {
     if (!user) return;
-    createNewConversation();
-  }, [user]);
+    
+    if (resumeConversationId) {
+      resumeExistingConversation(resumeConversationId);
+    } else {
+      createNewConversation();
+    }
+  }, [user, resumeConversationId]);
 
   // Real-time message updates (for any other messages not from realtime)
   useEffect(() => {
