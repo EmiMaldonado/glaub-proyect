@@ -273,7 +273,7 @@ const ChatConversation: React.FC = () => {
           <div className="max-w-4xl mx-auto h-full flex flex-col">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-              {messages.map((message) => (
+              {messages.slice(1).map((message) => (
                 <div
                   key={message.id}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
