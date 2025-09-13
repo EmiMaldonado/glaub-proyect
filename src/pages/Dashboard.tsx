@@ -198,20 +198,20 @@ const Dashboard = () => {
                 <>
                   <h2 className="text-2xl font-bold">Continue Previous Session</h2>
                   <p className="text-primary-foreground/90">Resume your paused conversation from {new Date(pausedConversation.created_at).toLocaleDateString()}</p>
-                  <div className="flex gap-3 mt-4">
-                    <Button variant="secondary" size="lg" asChild>
-                      <Link to={`/conversation/voice?resume=${pausedConversation.id}`}>
-                        <MessageCircle className="mr-2 h-5 w-5" />
-                        Continue Session
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="lg" className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10" asChild>
-                      <Link to="/conversation">
-                        <Plus className="mr-2 h-5 w-5" />
-                        Start New
-                      </Link>
-                    </Button>
-                  </div>
+                   <div className="flex gap-3 mt-4">
+                     <Button variant="default" size="lg" asChild>
+                       <Link to="/conversation">
+                         <Plus className="mr-2 h-5 w-5" />
+                         Start New Session
+                       </Link>
+                     </Button>
+                     <Button variant="outline" size="lg" className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10" asChild>
+                       <Link to={`/conversation/voice?resume=${pausedConversation.id}`}>
+                         <MessageCircle className="mr-2 h-5 w-5" />
+                         Continue Session
+                       </Link>
+                     </Button>
+                   </div>
                 </>
               ) : (
                 <>
