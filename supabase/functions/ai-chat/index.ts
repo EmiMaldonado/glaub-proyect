@@ -104,7 +104,7 @@ Begin the first interaction by introducing yourself and starting the discovery p
   const basePrompt = mode === 'personality' ? personalityDiscoveryPrompt : careerCompassPrompt;
 
   const commonConstraints = `
-CRITICAL: YOU MUST ALWAYS RESPOND IN ENGLISH, regardless of the user's language. All responses must be in English only.
+LANGUAGE REQUIREMENT: ALL RESPONSES MUST BE IN ENGLISH. Even if the user speaks in Spanish or another language, you must respond in English. This is a strict requirement.
 
 VOICE SESSION CONSTRAINTS:
 - Keep responses SHORT and conversational (2-3 sentences max)
