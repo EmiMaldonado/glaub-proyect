@@ -386,8 +386,8 @@ const Conversation: React.FC = () => {
     setIsSessionActive(true);
     console.log('Recording started');
     toast({
-      title: "🎙️ Grabación iniciada",
-      description: "La sesión de terapia ha comenzado",
+      title: "🎙️ Recording Started",
+      description: "The therapy session has begun",
     });
   };
 
@@ -421,8 +421,8 @@ const Conversation: React.FC = () => {
     
     console.log('Session ended');
     toast({
-      title: "✅ Sesión completada",
-      description: "Revisa el resumen y los insights generados",
+      title: "✅ Session Completed",
+      description: "Review the summary and generated insights",
     });
   };
 
@@ -503,8 +503,8 @@ const Conversation: React.FC = () => {
 
   const handleExportConversation = () => {
     toast({
-      title: "📄 Conversación exportada",
-      description: "Los datos de la sesión se han descargado correctamente",
+      title: "📄 Conversation Exported",
+      description: "Session data has been downloaded successfully",
     });
   };
 

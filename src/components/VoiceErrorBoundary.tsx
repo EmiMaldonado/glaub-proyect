@@ -37,31 +37,31 @@ class VoiceErrorBoundary extends React.Component<VoiceErrorBoundaryProps, VoiceE
         <div className="flex flex-col items-center justify-center p-8 space-y-4">
           <div className="flex items-center space-x-2 text-red-600">
             <AlertTriangle className="w-6 h-6" />
-            <h3 className="text-lg font-semibold">Error en la conexión de voz</h3>
+            <h3 className="text-lg font-semibold">Voice connection error</h3>
           </div>
           
           <p className="text-center text-muted-foreground max-w-md">
-            Ocurrió un problema con la conexión de voz. Esto puede deberse a problemas de 
-            conectividad o permisos del micrófono.
+            A problem occurred with the voice connection. This may be due to 
+            connectivity or microphone permissions.
           </p>
           
           <div className="flex flex-col space-y-2 text-sm text-muted-foreground">
-            <p>• Asegúrate de tener permisos de micrófono habilitados</p>
-            <p>• Verifica tu conexión a internet</p>
-            <p>• Intenta recargar la página si el problema persiste</p>
+            <p>• Make sure you have microphone permissions enabled</p>
+            <p>• Check your internet connection</p>
+            <p>• Try reloading the page if the problem persists</p>
           </div>
 
           <div className="flex space-x-2">
             <Button onClick={this.handleRetry} className="flex items-center space-x-2">
               <RefreshCcw className="w-4 h-4" />
-              <span>Reintentar</span>
+              <span>Retry</span>
             </Button>
             
             <Button 
               variant="outline" 
               onClick={() => window.location.reload()}
             >
-              Recargar página
+              Reload Page
             </Button>
           </div>
         </div>

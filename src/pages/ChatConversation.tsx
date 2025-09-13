@@ -208,7 +208,7 @@ const ChatConversation: React.FC = () => {
       console.error('Error ending session:', error);
       toast({
         title: "Error",
-        description: "No se pudo finalizar la sesión",
+        description: "Could not end the session",
         variant: "destructive",
       });
     }

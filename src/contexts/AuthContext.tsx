@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         toast({
           title: "¡Bienvenido!",
-          description: "Has iniciado sesión exitosamente",
+          description: "You have successfully signed in",
         });
       }
       
@@ -149,8 +149,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       
       toast({
-        title: "Sesión cerrada",
-        description: "Has cerrado sesión exitosamente",
+        title: "Session Closed",
+        description: "You have successfully signed out",
       });
     } catch (error) {
       console.error("Error during logout:", error);
@@ -163,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Error",
-        description: "Hubo un problema al cerrar sesión, pero se ha limpiado localmente",
+        description: "There was a problem signing out, but it has been cleared locally",
         variant: "destructive",
       });
     }

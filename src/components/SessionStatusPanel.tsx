@@ -41,8 +41,8 @@ const SessionStatusPanel: React.FC<SessionStatusPanelProps> = ({
   };
 
   const getStatusText = () => {
-    if (isRecording) return 'Grabando';
-    if (isSessionActive) return 'Sesión Activa';
+    if (isRecording) return 'Recording';
+    if (isSessionActive) return 'Active Session';
     return 'Inactiva';
   };
 
@@ -55,7 +55,7 @@ const SessionStatusPanel: React.FC<SessionStatusPanelProps> = ({
         {/* Header */}
         <div className="text-center">
           <Activity className="h-6 w-6 text-primary mx-auto mb-1" />
-          <h3 className="text-sm font-semibold text-foreground">Estado de Sesión</h3>
+          <h3 className="text-sm font-semibold text-foreground">Session Status</h3>
         </div>
 
         {/* Session Status */}

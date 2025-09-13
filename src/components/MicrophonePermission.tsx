@@ -131,8 +131,8 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
         console.log('Microphone test completed successfully');
         
         toast({
-          title: "🎤 Micrófono listo",
-          description: "Micrófono configurado correctamente",
+          title: "🎤 Microphone Ready",
+          description: "Microphone configured correctly",
         });
         
         onPermissionGranted(mediaStream);
@@ -142,18 +142,18 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
       console.error('Microphone permission error:', error);
       setPermissionState('denied');
       
-      let errorMessage = "No se pudo acceder al micrófono";
+      let errorMessage = "Could not access microphone";
       
       if (error.name === 'NotAllowedError') {
-        errorMessage = "Permiso de micrófono denegado. Por favor, habilítalo en la configuración del navegador.";
+        errorMessage = "Microphone permission denied. Please enable it in your browser settings.";
       } else if (error.name === 'NotFoundError') {
-        errorMessage = "No se encontró micrófono. Conecta un micrófono e inténtalo de nuevo.";
+        errorMessage = "No microphone found. Please connect a microphone and try again.";
       } else if (error.name === 'NotSupportedError') {
-        errorMessage = "Micrófono no compatible con este dispositivo.";
+        errorMessage = "Microphone not supported on this device.";
       }
       
       toast({
-        title: "Error de micrófono",
+        title: "Microphone Error",
         description: errorMessage,
         variant: "destructive",
       });
@@ -221,7 +221,7 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
             <div className="animate-spin">
               <RefreshCw className="w-8 h-8 mx-auto text-muted-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground">Verificando permisos de micrófono...</p>
+            <p className="text-sm text-muted-foreground">Checking microphone permissions...</p>
           </div>
         );
 
@@ -232,7 +232,7 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
             <div>
               <h3 className="font-medium text-red-600">Navegador no compatible</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Tu navegador no soporta conversaciones de voz. 
+                Your browser does not support voice conversations. 
                 Usa Chrome, Safari o Firefox actualizado.
               </p>
             </div>
@@ -244,9 +244,9 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
           <div className="text-center space-y-4">
             <Mic className="w-12 h-12 mx-auto text-primary" />
             <div>
-              <h3 className="font-medium">Permitir acceso al micrófono</h3>
+              <h3 className="font-medium">Allow microphone access</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Necesitamos acceso a tu micrófono para la conversación de voz
+                We need access to your microphone for voice conversation
               </p>
             </div>
             <Button 
@@ -254,7 +254,7 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
               className="w-full"
             >
               <Mic className="w-4 h-4 mr-2" />
-              Permitir Micrófono
+              Allow Microphone
             </Button>
           </div>
         );
@@ -271,7 +271,7 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
               </div>
             </div>
             <div>
-              <h3 className="font-medium text-yellow-600">Probando micrófono...</h3>
+              <h3 className="font-medium text-yellow-600">Testing microphone...</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {isTestingMicrophone ? 'Di algo para probar el audio' : 'Configurando...'}
               </p>
@@ -286,7 +286,7 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
             <div>
               <h3 className="font-medium text-red-600">Acceso denegado</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Para usar conversaciones de voz, habilita el micrófono en la configuración del navegador
+                To use voice conversations, enable microphone in browser settings
               </p>
             </div>
             <div className="space-y-2">
@@ -299,8 +299,8 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
                 Intentar de nuevo
               </Button>
               <div className="text-xs text-muted-foreground">
-                Chrome: Configuración → Privacidad → Micrófono<br />
-                Safari: Sitio web → Micrófono → Permitir
+                Chrome: Settings → Privacy → Microphone<br />
+                Safari: Website → Microphone → Allow
               </div>
             </div>
           </div>
@@ -313,7 +313,7 @@ const MicrophonePermission: React.FC<MicrophonePermissionProps> = ({
               <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-3">
                 <Mic className="w-8 h-8 text-green-600" />
               </div>
-              <p className="text-sm font-medium text-green-600">Micrófono configurado</p>
+              <p className="text-sm font-medium text-green-600">Microphone configured</p>
               <div className="mt-2">
                 <AudioLevelDisplay audioLevel={audioLevel} />
               </div>

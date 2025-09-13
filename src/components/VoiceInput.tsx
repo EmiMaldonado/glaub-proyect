@@ -67,7 +67,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
         console.log('Final audio blob:', audioBlob.size, 'bytes');
         
-        // Detener los tracks del micrófono
+        // Stop microphone tracks
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -155,7 +155,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
         
         {/* Texto de estado */}
         <span className="text-sm font-medium text-gray-700">
-          {isRecording ? 'Grabando...' : 'Listo para grabar'}
+          {isRecording ? 'Recording...' : 'Ready to record'}
         </span>
       </div>
 

@@ -35,8 +35,8 @@ export const useConversationTimer = ({
             setHasWarned(true);
             onTimeWarning?.();
             toast({
-              title: "⏰ Tiempo casi agotado",
-              description: `Te queda ${maxDurationMinutes - warningAtMinutes} minuto de conversación`,
+              title: "⏰ Time Almost Up",
+              description: `You have ${maxDurationMinutes - warningAtMinutes} minute of conversation remaining`,
             });
           }
           
@@ -45,7 +45,7 @@ export const useConversationTimer = ({
             setIsActive(false);
             onTimeUp?.();
             toast({
-              title: "⏰ Tiempo agotado",
+              title: "⏰ Time Up",
               description: "The conversation session has ended",
               variant: "destructive",
             });
@@ -83,8 +83,8 @@ export const useConversationTimer = ({
     setExtensionsUsed(prev => prev + 1);
     setHasWarned(false); // Reset warning for new extended period
     toast({
-      title: "⏰ Sesión Extendida",
-      description: `Se agregaron 5 minutos más. Extensiones usadas: ${extensionsUsed + 1}`,
+      title: "⏰ Session Extended",
+      description: `Added 5 more minutes. Extensions used: ${extensionsUsed + 1}`,
     });
   };
 

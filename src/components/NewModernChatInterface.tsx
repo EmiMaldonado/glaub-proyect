@@ -55,7 +55,7 @@ const NewModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
             <p className="text-sm text-muted-foreground">
               Tiempo: {formatTime(sessionTime)}
               {inputMode === 'realtime' && isAISpeaking && (
-                <span className="ml-2 text-primary animate-pulse">🔊 AI hablando</span>
+                <span className="ml-2 text-primary animate-pulse">🔊 AI speaking</span>
               )}
             </p>
           </div>
@@ -69,7 +69,7 @@ const NewModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
               <FileDown className="w-4 h-4" />
             </Button>
             <Button variant="destructive" size="sm" onClick={onEndSession}>
-              Finalizar Sesión
+              End Session
             </Button>
           </div>
         </div>

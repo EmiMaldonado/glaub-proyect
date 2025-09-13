@@ -69,8 +69,8 @@ export const useTextToSpeech = () => {
       console.error('TTS error:', error);
       setIsSpeaking(false);
       toast({
-        title: "Error de síntesis de voz",
-        description: "No se pudo convertir el texto a voz",
+        title: "Voice synthesis error",
+        description: "Could not convert text to speech",
         variant: "destructive",
       });
     } finally {

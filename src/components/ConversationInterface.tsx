@@ -149,9 +149,9 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
 
               {/* Welcome Text */}
               <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold">Iniciar Sesión</h2>
+                <h2 className="text-2xl font-bold">Start Session</h2>
                 <p className="text-muted-foreground max-w-md">
-                  Presiona el botón para comenzar tu sesión de terapia usando {inputMode === 'audio' ? 'solo voz' : inputMode === 'text' ? 'solo texto' : 'voz y texto'}
+                  Press the button to start your therapy session using {inputMode === 'audio' ? 'voice only' : inputMode === 'text' ? 'text only' : 'voice and text'}
                 </p>
               </div>
             </div>
@@ -163,9 +163,9 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
               
               {/* Recording Status */}
               <div className="text-center space-y-4">
-                <h3 className="text-xl font-semibold mb-2">Sesión Activa</h3>
+                <h3 className="text-xl font-semibold mb-2">Active Session</h3>
                 <p className="text-muted-foreground">
-                  {isRecording ? 'Grabando... Habla ahora' : 'Presiona el botón para comenzar a grabar'}
+                  {isRecording ? 'Recording... Speak now' : 'Press the button to start recording'}
                 </p>
               </div>
 
@@ -198,10 +198,10 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
               {/* Recording Status Text */}
               <div className="text-center">
                 <h4 className="text-lg font-semibold">
-                  {isRecording ? 'Grabando...' : 'Listo para grabar'}
+                  {isRecording ? 'Recording...' : 'Ready to record'}
                 </h4>
                 <p className="text-sm text-muted-foreground">
-                  {isRecording ? 'Presiona para pausar la grabación' : 'Presiona para continuar hablando'}
+                  {isRecording ? 'Press to pause recording' : 'Press to continue speaking'}
                 </p>
               </div>
             </div>
@@ -234,7 +234,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
                       {message.role === 'assistant' && isAISpeaking && (
                         <div className="flex items-center gap-1">
                           <Volume2 className="h-3 w-3 animate-pulse" />
-                          <span className="text-xs animate-pulse">Hablando...</span>
+                          <span className="text-xs animate-pulse">Speaking...</span>
                         </div>
                       )}
                     </div>
@@ -294,7 +294,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
                   {isRecording && (
                     <div className="flex items-center gap-1 text-red-600">
                       <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
-                      <span className="text-xs">Grabando</span>
+                      <span className="text-xs">Recording</span>
                     </div>
                   )}
                 </div>
@@ -330,7 +330,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
                 variant="outline"
                 size="sm"
               >
-                Terminar Sesión
+                End Session
               </Button>
             </div>
           </div>

@@ -82,7 +82,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         setPermissionGranted(false);
         toast({
           title: "Permisos requeridos",
-          description: "Se necesita acceso al micrófono para grabar audio",
+          description: "Microphone access is needed to record audio",
           variant: "destructive",
         });
       }
@@ -108,7 +108,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     if (!permissionGranted) {
       toast({
         title: "Error",
-        description: "No se puede acceder al micrófono",
+        description: "Cannot access microphone",
         variant: "destructive",
       });
       return;
@@ -163,7 +163,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
       toast({
         title: "🎙️ Grabación iniciada",
-        description: "Habla claramente hacia el micrófono",
+        description: "Speak clearly towards the microphone",
       });
 
     } catch (error) {
@@ -351,7 +351,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       {permissionGranted === false && (
         <div className="text-center text-error max-w-sm">
           <p className="text-sm">
-            Se necesita acceso al micrófono para usar esta función. 
+            Microphone access is needed to use this feature. 
             Por favor, permite el acceso y recarga la página.
           </p>
         </div>
