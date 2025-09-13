@@ -50,23 +50,11 @@ const ResetPassword = () => {
   }, []);
 
   const validatePassword = (password: string) => {
-    if (password.length < 8) {
-      return "Password must be at least 8 characters long";
+    if (password.length < 6) {
+      return "Password must be at least 6 characters long";
     }
     if (password.length > 128) {
       return "Password must be less than 128 characters";
-    }
-    if (!/[a-z]/.test(password)) {
-      return "Password must contain at least one lowercase letter";
-    }
-    if (!/[A-Z]/.test(password)) {
-      return "Password must contain at least one uppercase letter";
-    }
-    if (!/[0-9]/.test(password)) {
-      return "Password must contain at least one number";
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      return "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)";
     }
     return null;
   };
@@ -179,7 +167,7 @@ const ResetPassword = () => {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center mb-8">
           <Link to="/" className="flex items-center space-x-2">
-            <img src="/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" className="h-6 w-auto" />
+            <img src="/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" className="h-12 w-auto" />
           </Link>
         </div>
 
@@ -190,7 +178,7 @@ const ResetPassword = () => {
             </div>
             <CardTitle>Create a New Password</CardTitle>
             <CardDescription>
-              Create a strong password with at least 8 characters including uppercase, lowercase, numbers, and special characters
+              Create a new password (minimum 6 characters)
             </CardDescription>
           </CardHeader>
           <CardContent>
