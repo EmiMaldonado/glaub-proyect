@@ -199,13 +199,13 @@ const Dashboard = () => {
                   <h2 className="text-2xl font-bold">Continue Previous Session</h2>
                   <p className="text-primary-foreground/90">Resume your paused conversation from {new Date(pausedConversation.created_at).toLocaleDateString()}</p>
                    <div className="flex gap-3 mt-4">
-                     <Button variant="default" size="lg" asChild>
+                     <Button variant="outline" size="lg" className="bg-success text-success-foreground hover:bg-success/90 border-success" asChild>
                        <Link to="/conversation">
                          <Plus className="mr-2 h-5 w-5" />
                          Start New Session
                        </Link>
                      </Button>
-                     <Button variant="outline" size="lg" className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10" asChild>
+                     <Button variant="outline" size="lg" className="bg-info text-info-foreground hover:bg-info/90 border-info" asChild>
                        <Link to={`/conversation/voice?resume=${pausedConversation.id}`}>
                          <MessageCircle className="mr-2 h-5 w-5" />
                          Continue Session
@@ -217,7 +217,7 @@ const Dashboard = () => {
                 <>
                   <h2 className="text-2xl font-bold">New Conversation</h2>
                   <p className="text-primary-foreground/90">Start a new 5 minutes session to discover new insights about your personality</p>
-                  <Button variant="secondary" size="lg" className="mt-4" asChild>
+                  <Button variant="outline" size="lg" className="mt-4 bg-success text-success-foreground hover:bg-success/90 border-success" asChild>
                     <Link to="/conversation">
                       <Plus className="mr-2 h-5 w-5" />
                       Start Now
