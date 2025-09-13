@@ -18,34 +18,34 @@ const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-orange-600">
+          <DialogTitle className="flex items-center gap-2 text-blue-600">
             <AlertTriangle className="h-5 w-5" />
-            Leave Session?
+            Pause Session?
           </DialogTitle>
           <DialogDescription className="text-gray-600">
-            If you leave now, your current session will be lost and won't be saved. 
-            All conversation data from this session will be permanently deleted.
+            Your session will be paused and saved. You can continue this conversation 
+            later from the dashboard whenever you're ready.
           </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-            <p className="text-sm text-orange-800">
-              <strong>Warning:</strong> This action cannot be undone. Your session progress and conversation history will be completely lost.
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> Your conversation progress will be saved and you can resume exactly where you left off from the dashboard.
             </p>
           </div>
         </div>
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose}>
-            Stay in Session
+            Continue Session
           </Button>
           <Button 
-            variant="destructive" 
+            variant="secondary" 
             onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            Leave & Delete Session
+            Pause session & continue later
           </Button>
         </DialogFooter>
       </DialogContent>
