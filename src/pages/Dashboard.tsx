@@ -206,7 +206,7 @@ const Dashboard = () => {
                        </Link>
                      </Button>
                      <Button variant="default" size="lg" asChild>
-                       <Link to={`/conversation/voice?resume=${pausedConversation.id}`}>
+                       <Link to={`/conversation?resume=${pausedConversation.id}`}>
                          <MessageCircle className="mr-2 h-5 w-5" />
                          Continue Session
                        </Link>
