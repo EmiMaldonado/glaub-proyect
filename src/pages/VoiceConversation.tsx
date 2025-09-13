@@ -134,22 +134,10 @@ const VoiceConversation: React.FC = () => {
         setSessionTranscripts(formattedMessages);
       }
 
-      // Resume AI conversation with recap
-      let recapMessage = "Welcome back! Let's continue our conversation.";
-      
-      if (formattedMessages.length > 0) {
-        // Get the last few messages to create a brief recap
-        const lastFewMessages = formattedMessages.slice(-6); // Last 6 messages for context
-        const conversationContext = lastFewMessages.map(msg => 
-          `${msg.role === 'user' ? 'You' : 'I'}: ${msg.content.substring(0, 100)}...`
-        ).join('\n');
-        
-        recapMessage = `Please provide a brief, warm recap of what we were discussing in our last conversation and ask a thoughtful follow-up question to naturally continue our dialogue. Here's what we were talking about:\n\n${conversationContext}`;
-      }
-      
+      // Resume AI conversation without providing a summary - let AI handle naturally
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: recapMessage,
+          message: "Continue the conversation naturally - this is a resumed session.",
           conversationId: conversationId,
           userId: user.id,
           isFirstMessage: false,
@@ -228,58 +216,36 @@ const VoiceConversation: React.FC = () => {
     }
   };
 
-  // Send AI first message with context and previous insights
+  // Send AI first message with context and check if truly first session
   const sendAIFirstMessage = async (conversationId: string, userName: string) => {
     try {
-      // Get user's previous conversations for personalized greeting
-      const { data: previousConversations } = await supabase
+      // Check if user has any previous completed conversations to determine if this is their first session ever
+      const { data: previousCompletedConversations } = await supabase
         .from('conversations')
-        .select('insights, ocean_signals, ended_at')
+        .select('id, insights, ocean_signals, ended_at')
         .eq('user_id', user?.id)
         .eq('status', 'completed')
         .order('ended_at', { ascending: false })
         .limit(3);
 
-      let greeting = `Hello ${userName}! Welcome back to your therapy session.`;
+      let isFirstSessionEver = !previousCompletedConversations || previousCompletedConversations.length === 0;
       
-      if (previousConversations && previousConversations.length > 0) {
-        const lastSession = previousConversations[0];
-        const lastSessionDate = new Date(lastSession.ended_at).toLocaleDateString();
-        
-        // Create specific questions based on previous insights
-        let specificQuestions = [];
-        
-        const insights = lastSession.insights as any;
-        const oceanSignals = lastSession.ocean_signals as any;
-        
-        if (insights?.themes?.includes('work')) {
-          specificQuestions.push("How have things been going with work since we last talked?");
-        }
-        if (insights?.themes?.includes('relationships')) {
-          specificQuestions.push("Have there been any developments in your relationships since our last session?");
-        }
-        if (insights?.emotional_tone === 'sad' || insights?.emotional_tone === 'anxious') {
-          specificQuestions.push("How have you been feeling emotionally since our last conversation?");
-        }
-        if (oceanSignals?.neuroticism_high) {
-          specificQuestions.push("Have you been able to practice any of the coping strategies we discussed?");
-        }
-        
-        if (specificQuestions.length > 0) {
-          greeting = `Hello ${userName}! Welcome back to your therapy session. I remember we talked on ${lastSessionDate}. ${specificQuestions[0]}`;
-        } else {
-          greeting = `Hello ${userName}! Welcome back to your therapy session. It's been since ${lastSessionDate} that we last talked. How have you been feeling since then?`;
-        }
+      let initialMessage;
+      
+      if (isFirstSessionEver) {
+        // First session ever - use the standard Glai introduction
+        initialMessage = "Start the first conversation with this user using the standard Glai introduction and personality discovery protocol.";
       } else {
-        greeting = `Hello ${userName}! Welcome to your first therapy session with me. I'm here to listen and support you. What brings you here today, and what would you like to explore in our conversation?`;
+        // Returning user - recall previous conversations and ask about new topics
+        initialMessage = "This is a returning user. Greet them warmly, recall what you discussed in previous sessions, and ask if there are other topics they'd like to explore today.";
       }
 
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: greeting,
+          message: initialMessage,
           conversationId: conversationId,
           userId: user?.id,
-          isFirstMessage: true,
+          isFirstMessage: isFirstSessionEver,
           modalityType: 'voice'
         }
       });

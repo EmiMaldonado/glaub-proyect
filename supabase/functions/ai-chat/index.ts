@@ -84,14 +84,12 @@ On the very first message from a new user, your sole objective is to begin a nat
 For every conversation after the first one (Session 2, 3, 4, etc.), you MUST follow this two-step structure:
 
 **STEP 1: RECALL & RECONNECT**
-- Start the conversation by recalling a key insight or theme from the **previous session**. This demonstrates active listening and builds continuity.
-- **Formula**: "Welcome back. Last time we spoke, we talked about [mention a specific topic, e.g., your approach to complex projects]. A key insight was [briefly state the user's main point or a deduced trait, e.g., your very structured and methodical process really highlights your conscientious nature]."
+- Start the conversation by recalling a key insight or theme from **previous completed sessions**. This demonstrates active listening and builds continuity.
+- **Formula**: "Welcome back! I remember from our previous conversations that we discussed [mention a specific topic from their completed sessions]. You mentioned [briefly reference something specific they shared]."
 
-**STEP 2: PROGRESS & PROBE**
-- After recalling the past session, you have two options. For a Session 2, use option A. For Session 3 or higher, use option B.
-  - **A. (For Session 2)**: "I'd like to explore another aspect of how you think, if that's okay." Then, choose the next natural question from the OCEAN list that you haven't asked yet.
-  - **B. (For Session 3+)**: "I was thinking about our previous conversation on [previous session's topic] and it made me wonder... [ask a thoughtful, open-ended follow-up question that digs deeper into that same personality facet]."
-- **Finally, always conclude with**: "And besides that, is there anything else you'd like to talk about or explore today?"
+**STEP 2: PROGRESS & EXPLORE**  
+- After recalling previous sessions, ask: "How have things been going since we last talked? And is there anything new or different you'd like to explore today?"
+- This allows users to continue previous topics or introduce new ones naturally.
 
 ### **CORE KNOWLEDGE & BEHAVIOR**
 - You possess the detailed knowledge of the OCEAN model from the previous prompt (traits, adjectives, impact, gender/role correlations).
@@ -169,14 +167,16 @@ ${commonConstraints}`;
     } else {
       return `${basePrompt}
 
-FOLLOW-UP SESSION - BUILD ON PREVIOUS CAREER DISCUSSION:
+FOLLOW-UP SESSION - BUILD ON PREVIOUS CONVERSATIONS:
 ${insightsContext}
 
+Welcome back! Recall what we discussed in previous completed sessions and ask if there are other topics they'd like to explore.
+
 VOICE SESSION APPROACH:
-- Reference previous career conversation naturally in 1 sentence
-- Focus on ONE main career theme per session
+- Reference previous conversations naturally in 1 sentence  
+- Ask about new topics or ongoing concerns
 - Use reflective listening with brief responses
-- Offer simple, actionable career insights
+- Keep the conversation open and user-directed
 
 ${commonConstraints}`;
     }
@@ -437,35 +437,62 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
 
     debugInfo.processing_steps.push('User message saved successfully');
 
-    // Check if this is first conversation and get previous insights
+    // Check if this is first conversation ever (user has never completed a session) and get previous insights
     let previousInsights = null;
-    let isFirstConversation = isFirstMessage || (messages?.length || 0) === 0;
+    let isFirstConversationEver = false;
     
-    if (!isFirstConversation && effectiveUserId !== 'system') {
-      debugInfo.processing_steps.push('Fetching previous insights for personalization');
-      const { data: insights } = await supabase
-        .from('key_insights')
-        .select('insights, personality_notes, next_steps')
-        .in('conversation_id', await supabase
-          .from('conversations')
-          .select('id')
-          .eq('user_id', effectiveUserId)
-          .neq('id', conversationId)
-          .then(res => res.data?.map(c => c.id) || [])
-        )
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+    if (effectiveUserId !== 'system') {
+      debugInfo.processing_steps.push('Checking if user has any previous completed conversations');
       
-      if (insights) {
-        previousInsights = {
-          key_insights: insights.insights,
-          personality_notes: insights.personality_notes,
-          next_steps: insights.next_steps
-        };
-        debugInfo.processing_steps.push('Previous insights loaded for personalization');
+      // Check if user has any completed conversations
+      const { data: completedConversations, error: completedError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', effectiveUserId)
+        .eq('status', 'completed')
+        .limit(1);
+        
+      if (completedError) {
+        console.error('Error checking completed conversations:', completedError);
+        // Default to treating as first conversation on error
+        isFirstConversationEver = true;
+      } else {
+        isFirstConversationEver = !completedConversations || completedConversations.length === 0;
       }
+      
+      // For returning users, get previous insights for personalization
+      if (!isFirstConversationEver) {
+        debugInfo.processing_steps.push('Fetching previous insights for returning user');
+        const { data: insights } = await supabase
+          .from('key_insights')
+          .select('insights, personality_notes, next_steps')
+          .in('conversation_id', await supabase
+            .from('conversations')
+            .select('id')
+            .eq('user_id', effectiveUserId)
+            .eq('status', 'completed')
+            .then(res => res.data?.map(c => c.id) || [])
+          )
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (insights) {
+          previousInsights = {
+            key_insights: insights.insights,
+            personality_notes: insights.personality_notes,
+            next_steps: insights.next_steps
+          };
+          debugInfo.processing_steps.push('Previous insights loaded for returning user personalization');
+        }
+      }
+    } else {
+      // System user defaults to first conversation
+      isFirstConversationEver = true;
     }
+    
+    // Use the updated logic for determining first conversation
+    const isFirstConversation = isFirstConversationEver;
 
     // Prepare messages for OpenAI with personalized system prompt
     const systemPrompt = getSystemPrompt(isFirstConversation, previousInsights);
