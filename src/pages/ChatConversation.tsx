@@ -193,6 +193,35 @@ const ChatConversation: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Handle pause session
+  const handlePauseSession = async () => {
+    if (!conversation) return;
+
+    try {
+      await supabase
+        .from('conversations')
+        .update({ 
+          status: 'paused',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', conversation.id);
+
+      toast({
+        title: "✅ Session Paused",
+        description: "Your conversation has been saved and you can continue later from the dashboard",
+      });
+
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error pausing session:', error);
+      toast({
+        title: "Error",
+        description: "Could not pause the session",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Handle end session
   const handleEndSession = async () => {
     if (!conversation) return;
@@ -329,7 +358,7 @@ const ChatConversation: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleNewConversation}
+                  onClick={handlePauseSession}
                   disabled={isLoading}
                 >
                   Pause Session & Continue Later
