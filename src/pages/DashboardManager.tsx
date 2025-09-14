@@ -70,14 +70,24 @@ const DashboardManager = () => {
         .select('id, user_id, full_name, display_name')
         .eq('manager_id', profile?.id);
 
-      // Get emails for team members
-      const membersWithEmails = await Promise.all((members || []).map(async (member) => {
-        const { data: userData } = await supabase.auth.admin.getUserById(member.user_id);
-        return {
-          ...member,
-          email: userData.user?.email
-        };
-      }));
+      // Get emails for team members from auth.users
+      const membersWithEmails = [];
+      for (const member of members || []) {
+        try {
+          // Try to get user data from auth
+          const { data: { user: userData } } = await supabase.auth.admin.getUserById(member.user_id);
+          membersWithEmails.push({
+            ...member,
+            email: userData?.email || 'No email available'
+          });
+        } catch (error) {
+          // If auth lookup fails, still show the member
+          membersWithEmails.push({
+            ...member,
+            email: 'Email not accessible'
+          });
+        }
+      }
 
       setTeamMembers(membersWithEmails || []);
 
@@ -494,20 +504,45 @@ const DashboardManager = () => {
             </Card>
           )}
 
-          {/* Recent Insights */}
-          {selectedMemberData.insights.length > 0 && (
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5 text-primary" />
-                  Recent Shared Insights
-                </CardTitle>
-                <CardDescription>
-                  Latest insights from {selectedMemberData.member.display_name || selectedMemberData.member.full_name}'s conversations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+          {/* Team Member Details & Insights */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary" />
+                {selectedMemberData.member.display_name || selectedMemberData.member.full_name}'s Information
+              </CardTitle>
+              <CardDescription>
+                Team member profile and shared insights
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Member Basic Info */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+                <div>
+                  <span className="text-sm text-muted-foreground">Full Name:</span>
+                  <p className="font-medium">{selectedMemberData.member.full_name || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Display Name:</span>
+                  <p className="font-medium">{selectedMemberData.member.display_name || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Email:</span>
+                  <p className="font-medium">{selectedMemberData.member.email || 'Not available'}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Team Status:</span>
+                  <Badge variant="secondary">Active Team Member</Badge>
+                </div>
+              </div>
+
+              {/* Recent Insights */}
+              {selectedMemberData.insights.length > 0 ? (
                 <div className="space-y-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-primary" />
+                    Recent Shared Insights
+                  </h4>
                   {selectedMemberData.insights.slice(0, 3).map((insight: any, index: number) => (
                     <div key={index} className="border rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-2">
@@ -528,63 +563,20 @@ const DashboardManager = () => {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <div className="text-center py-6">
+                  <Lightbulb className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">No shared insights available</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    This team member hasn't shared any insights yet
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 
-      {/* Quick Actions */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-secondary" />
-            Quick Actions
-          </CardTitle>
-          <CardDescription>
-            Common actions for managing your work and team
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
-              <Link to="/conversation">
-                <div className="p-2 bg-secondary/10 rounded-lg">
-                  <MessageCircle className="h-6 w-6 text-secondary" />
-                </div>
-                <div className="text-center">
-                  <div className="font-medium">Start New Session</div>
-                  <div className="text-xs text-muted-foreground">Begin a conversation</div>
-                </div>
-              </Link>
-            </Button>
-            
-            <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
-              <Link to="/dashboard">
-                <div className="p-2 bg-accent/10 rounded-lg">
-                  <History className="h-6 w-6 text-accent" />
-                </div>
-                <div className="text-center">
-                  <div className="font-medium">Session History</div>
-                  <div className="text-xs text-muted-foreground">Review past sessions</div>
-                </div>
-              </Link>
-            </Button>
-            
-            <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
-              <Link to="/dashboard">
-                <div className="p-2 bg-muted/50 rounded-lg">
-                  <Settings className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <div className="text-center">
-                  <div className="font-medium">Settings</div>
-                  <div className="text-xs text-muted-foreground">Manage preferences</div>
-                </div>
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

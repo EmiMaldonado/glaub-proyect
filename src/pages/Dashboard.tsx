@@ -206,12 +206,24 @@ const Dashboard = () => {
   return <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Welcome Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">
-          Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! 👋
-        </h1>
-        <p className="text-lg text-muted-foreground">
-          {personalizedSummary || "Your personal space for self-discovery and professional development."}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! 👋
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              {personalizedSummary || "Your personal space for self-discovery and professional development."}
+            </p>
+          </div>
+          {userProfile?.role === 'manager' && (
+            <Button variant="default" asChild>
+              <Link to="/dashboard/manager">
+                <Users className="mr-2 h-4 w-4" />
+                Go to Manager Dashboard
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Section 1: New Conversation - Always show start new conversation */}
