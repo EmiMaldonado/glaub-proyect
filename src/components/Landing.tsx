@@ -30,7 +30,7 @@ const Landing = () => {
             </h1>
             
             <p className="text-l md:text-base text-white/90 max-w-2xl drop-shadow-md">
-              Get personalized insights to help every individual thrive. It's not about evaluating, it's about understanding.
+              Get personalized insights to help every individual thrive.<br />It's not about evaluating, it's about understanding.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-end">
