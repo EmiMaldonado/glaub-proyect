@@ -38,6 +38,8 @@ const Dashboard = () => {
     teamMembers: 0
   });
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [currentManager, setCurrentManager] = useState<any>(null);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   useEffect(() => {
     if (user) {
       loadDashboardData();
@@ -120,6 +122,29 @@ const Dashboard = () => {
           key_insights: lastConvInsights
         });
       }
+      // Load current manager if user has one
+      if (profile?.manager_id) {
+        const { data: manager } = await supabase
+          .from('profiles')
+          .select('*, user_id')
+          .eq('id', profile.manager_id)
+          .single();
+        setCurrentManager(manager);
+      }
+
+      // Load pending invitations for this user's email
+      const { data: invitations } = await supabase
+        .from('invitations')
+        .select(`
+          *,
+          manager:profiles!invitations_manager_id_fkey(full_name, display_name)
+        `)
+        .eq('email', user.email)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString());
+      
+      setPendingInvitations(invitations || []);
+
       setStats({
         totalConversations: conversations?.length || 0,
         completedConversations: conversations?.filter(c => c.status === 'completed').length || 0,
@@ -201,6 +226,69 @@ const Dashboard = () => {
       });
     } finally {
       setIsInvitingManager(false);
+    }
+  };
+
+  const handleAcceptInvitation = async (invitation: any) => {
+    try {
+      const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/complete-invitation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: invitation.token,
+          user_id: user?.id
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Invitation Accepted!",
+          description: `You are now part of ${result.manager_name}'s team`,
+        });
+        // Reload dashboard data to reflect changes
+        loadDashboardData();
+      } else {
+        throw new Error(result.error || 'Failed to accept invitation');
+      }
+    } catch (error: any) {
+      console.error('Error accepting invitation:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to accept invitation",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeclineInvitation = async (invitationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('invitations')
+        .update({ status: 'declined' })
+        .eq('id', invitationId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Invitation Declined",
+        description: "You have declined the team invitation",
+      });
+      
+      // Remove from pending invitations
+      setPendingInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+    } catch (error: any) {
+      console.error('Error declining invitation:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to decline invitation",
+        variant: "destructive"
+      });
     }
   };
   return <div className="container mx-auto px-4 py-8 space-y-8">
@@ -506,48 +594,75 @@ const Dashboard = () => {
         </Card>
 
         <Card className="shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-purple-600" />
-              Build your Team
+                Team Status
               </CardTitle>
               <CardDescription>
-                Group insights and team dynamics
+                Your current team membership and invitations
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={sharingSettings.team} onCheckedChange={() => handleSharingToggle('team')} />
-              <span className="text-sm text-muted-foreground">Share</span>
-            </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {stats.teamMembers > 0 || stats.sharedInsights > 0 ? <div className="text-sm">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">Team members:</span>
-                  <span className="font-medium">{stats.teamMembers}</span>
+          <CardContent className="space-y-4">
+            {/* Current Manager */}
+            {currentManager ? (
+              <div className="p-3 border rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">Current Manager</p>
+                    <p className="text-muted-foreground text-xs">
+                      {currentManager.display_name || currentManager.full_name || 'Manager'}
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Active</Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Shared insights:</span>
-                  <span className="font-medium">{stats.sharedInsights}</span>
-                </div>
-              </div> : <div className="text-center py-4">
+              </div>
+            ) : (
+              <div className="text-center py-3">
                 <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-muted-foreground text-sm">No team data available</p>
-              </div>}
-            <Button variant="outline" size="sm" asChild={userProfile?.role === 'manager'} disabled={userProfile?.role !== 'manager'}>
-              {userProfile?.role === 'manager' ? (
-                <Link to="/dashboard/manager">
-                  <Users className="mr-1 h-3 w-3" />
-                  Go to Manager Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Users className="mr-1 h-3 w-3" />
-                  Manage Team
-                </>
-              )}
-            </Button>
+                <p className="text-muted-foreground text-sm">Not part of any team</p>
+              </div>
+            )}
+
+            {/* Pending Invitations */}
+            {pendingInvitations.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Pending Invitations</h4>
+                {pendingInvitations.map((invitation) => (
+                  <div key={invitation.id} className="p-3 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="font-medium text-sm">Team Invitation</p>
+                        <p className="text-muted-foreground text-xs">
+                          From {invitation.manager?.display_name || invitation.manager?.full_name || 'Manager'}
+                        </p>
+                      </div>
+                      <Badge variant="outline">Pending</Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => handleAcceptInvitation(invitation)}
+                        className="flex-1"
+                      >
+                        Accept
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDeclineInvitation(invitation.id)}
+                        className="flex-1"
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
