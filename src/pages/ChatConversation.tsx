@@ -151,6 +151,17 @@ const ChatConversation: React.FC = () => {
 
     setIsLoading(true);
 
+    // Add user message immediately for instant feedback
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: messageText.trim(),
+      created_at: new Date().toISOString(),
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setTextInput(''); // Clear input immediately
+
     try {
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
@@ -164,11 +175,19 @@ const ChatConversation: React.FC = () => {
         throw new Error(response.error.message);
       }
 
+      // The AI response will be added automatically via real-time subscription
+      // when it's saved to the database by the edge function
+      console.log('✅ Message sent successfully');
+
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Remove the user message that was added optimistically on error
+      setMessages(prev => prev.filter(msg => msg.id !== userMessage.id));
+      
       toast({
         title: "Error",
-        description: "Could not send message",
+        description: "Could not send message. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -355,7 +374,7 @@ const ChatConversation: React.FC = () => {
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !isLoading) {
                       handleSendMessage(textInput);
-                      setTextInput('');
+                      // Don't clear textInput here - handleSendMessage does it
                     }
                   }}
                   placeholder="Write your message..."
