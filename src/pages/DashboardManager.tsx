@@ -152,26 +152,28 @@ const DashboardManager = () => {
     }
     setIsInviting(true);
     try {
-      // Create invitation directly in database
-      const {
-        data: invitation,
-        error
-      } = await supabase.from('invitations').insert({
-        email: memberEmail.trim(),
-        token: crypto.randomUUID(),
-        manager_id: userProfile?.id,
-        status: 'pending'
-      }).select('token').single();
-      if (error) throw error;
+      console.log('Sending invitation for:', memberEmail);
+      
+      // Call the invite-manager edge function to send email
+      const { data, error } = await supabase.functions.invoke('invite-manager', {
+        body: { managerEmail: memberEmail.trim() }
+      });
 
-      // Generate invitation URL
-      const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
+      if (error) {
+        console.error('Error sending invitation:', error);
+        toast({
+          title: "Error sending invitation",
+          description: error.message || "Failed to send invitation email",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      // Copy to clipboard
-      await navigator.clipboard.writeText(invitationUrl);
+      console.log('Invitation sent successfully:', data);
+
       toast({
-        title: "Invitation Created!",
-        description: `Invitation link copied to clipboard. Share it with ${memberEmail}`
+        title: "Invitation Sent!",
+        description: `Invitation email sent to ${memberEmail}. They will receive instructions to join your team.`
       });
       setMemberEmail('');
       loadManagerData(); // Refresh data

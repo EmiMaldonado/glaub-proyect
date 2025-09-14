@@ -1,3 +1,4 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +26,27 @@ import ResetPassword from "./pages/ResetPassword";
 import OnboardingFlow from "@/components/OnboardingFlow";
 
 const queryClient = new QueryClient();
+
+// Component to handle invitation acceptance redirect
+const AcceptInvitationRedirect = () => {
+  React.useEffect(() => {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('token');
+    if (token) {
+      // Redirect to the edge function
+      window.location.href = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${token}`;
+    } else {
+      // No token, redirect to home
+      window.location.href = '/';
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>
+  );
+};
 
 // Separate component to use useNavigate hook
 const OnboardingRoute = () => {
@@ -69,6 +91,7 @@ const App = () => (
                 } />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/accept-invitation" element={<AcceptInvitationRedirect />} />
                 <Route path="/voice-assistant" element={<VoiceAssistant />} />
                 <Route path="/500" element={<ServerError />} />
 
