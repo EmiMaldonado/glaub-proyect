@@ -104,59 +104,33 @@ serve(async (req: Request) => {
       throw new Error("Failed to create manager invitation");
     }
 
-    // Send invitation email to manager
+    // Use Supabase's built-in email invitation system
     const acceptUrl = `${supabaseUrl}/functions/v1/accept-invitation?token=${token}`;
     
-    const emailResponse = await resend.emails.send({
-      from: "Gläub <noreply@resend.dev>",
-      to: [managerEmail],
-      subject: `${profile.display_name || profile.full_name || 'A team member'} wants you to be their manager on Gläub`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-          <div style="background-color: white; padding: 30px; border-radius: 10px; text-align: center;">
-            <img src="https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
-            
-            <h1 style="color: #333; margin-bottom: 20px;">You've been invited to become a manager on Gläub</h1>
-            
-            <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              <strong>${profile.display_name || profile.full_name || 'A team member'}</strong> has invited you to be their manager on Gläub, a platform for personality insights and professional development.
-            </p>
-            
-            <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-              As their manager, you'll be able to:
-            </p>
-            
-            <ul style="color: #666; font-size: 16px; line-height: 1.6; text-align: left; margin-bottom: 30px; padding-left: 20px;">
-              <li>View shared personality insights to better understand their work style</li>
-              <li>Access personalized recommendations for effective communication</li>
-              <li>Get suggestions for professional development opportunities</li>
-              <li>Build stronger team dynamics through personality awareness</li>
-            </ul>
-            
-            <a href="${acceptUrl}" style="background: linear-gradient(135deg, hsl(214, 28%, 56%), hsl(214, 28%, 65%)); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; margin-bottom: 20px;">
-              Accept Manager Invitation
-            </a>
-            
-            <p style="color: #999; font-size: 14px; margin-top: 30px;">
-              If the button doesn't work, copy and paste this link in your browser:<br>
-              <span style="color: #6889B4; word-break: break-all;">${acceptUrl}</span>
-            </p>
-            
-            <p style="color: #999; font-size: 12px; margin-top: 30px;">
-              This invitation will expire in 7 days.
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-            
-            <p style="color: #999; font-size: 12px; text-align: center;">
-              If you didn't expect this invitation, you can safely ignore this email.
-            </p>
-          </div>
-        </div>
-      `,
-    });
+    // Send invitation using Supabase's native auth system
+    const { data: authInvitation, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+      managerEmail,
+      {
+        redirectTo: acceptUrl,
+        data: {
+          invitation_token: token,
+          invited_by: profile.display_name || profile.full_name || 'A team member',
+          role: 'manager',
+          invitation_type: 'manager_invitation'
+        }
+      }
+    );
 
-    console.log("Manager invitation sent successfully:", { invitationId: invitation.id, emailResponse });
+    if (inviteError) {
+      console.error("Error sending invitation email:", inviteError);
+      // Don't throw error - invitation record was created, just log the email issue
+      console.log("Invitation record created but email failed to send:", invitation.id);
+    } else {
+      console.log("Manager invitation sent successfully via Supabase auth:", { 
+        invitationId: invitation.id, 
+        authInvitation 
+      });
+    }
 
     return new Response(
       JSON.stringify({ 

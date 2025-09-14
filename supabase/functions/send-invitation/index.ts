@@ -107,53 +107,33 @@ serve(async (req: Request) => {
       throw new Error("Failed to create invitation");
     }
 
-    // Send invitation email
+    // Use Supabase's built-in email invitation system
     const acceptUrl = `${supabaseUrl}/functions/v1/accept-invitation?token=${token}`;
     
-    const emailResponse = await resend.emails.send({
-      from: "EmpathAI <invitations@resend.dev>",
-      to: [email],
-      subject: `${profile.display_name || profile.full_name || 'Your colleague'} invited you to join their team on EmpathAI`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #333; text-align: center;">You're invited to join a team on EmpathAI</h1>
-          
-          <p style="font-size: 16px; line-height: 1.6; color: #555;">
-            Hi there!
-          </p>
-          
-          <p style="font-size: 16px; line-height: 1.6; color: #555;">
-            <strong>${profile.display_name || profile.full_name || 'Your colleague'}</strong> has invited you to join their team on EmpathAI, 
-            our AI-powered platform for workplace emotional intelligence and team insights.
-          </p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${acceptUrl}" 
-               style="background-color: #007bff; color: white; padding: 15px 30px; 
-                      text-decoration: none; border-radius: 5px; display: inline-block; 
-                      font-weight: bold; font-size: 16px;">
-              Join ${profile.display_name || profile.full_name || 'their'} Team on EmpathAI
-            </a>
-          </div>
-          
-          <p style="font-size: 14px; line-height: 1.6; color: #666;">
-            If you don't have an EmpathAI account yet, you'll be able to create one as part of accepting this invitation.
-          </p>
-          
-          <p style="font-size: 14px; line-height: 1.6; color: #666;">
-            This invitation will expire in 7 days.
-          </p>
-          
-          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-          
-          <p style="font-size: 12px; color: #999; text-align: center;">
-            If you didn't expect this invitation, you can safely ignore this email.
-          </p>
-        </div>
-      `,
-    });
+    // Send invitation using Supabase's native auth system
+    const { data: authInvitation, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+      email,
+      {
+        redirectTo: acceptUrl,
+        data: {
+          invitation_token: token,
+          invited_by: profile.display_name || profile.full_name || 'Your colleague',
+          role: 'team_member',
+          invitation_type: 'team_invitation'
+        }
+      }
+    );
 
-    console.log("Invitation sent successfully:", { invitationId: invitation.id, emailResponse });
+    if (inviteError) {
+      console.error("Error sending invitation email:", inviteError);
+      // Don't throw error - invitation record was created, just log the email issue
+      console.log("Invitation record created but email failed to send:", invitation.id);
+    } else {
+      console.log("Invitation sent successfully via Supabase auth:", { 
+        invitationId: invitation.id, 
+        authInvitation 
+      });
+    }
 
     return new Response(
       JSON.stringify({ 
