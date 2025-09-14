@@ -17,9 +17,9 @@ serve(async (req: Request) => {
   }
 
   try {
-    console.log("Complete invitation request received:", { token, user_id });
-    
     const { token, user_id }: CompleteInvitationRequest = await req.json();
+    
+    console.log("Complete invitation request received:", { token, user_id });
 
     if (!token || !user_id) {
       console.error("Missing required fields:", { token: !!token, user_id: !!user_id });
