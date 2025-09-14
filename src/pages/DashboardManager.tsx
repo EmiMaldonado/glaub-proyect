@@ -290,12 +290,22 @@ const DashboardManager = () => {
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Welcome Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">
-          Manager Dashboard 👨‍💼
-        </h1>
-        <p className="text-lg text-muted-foreground">
-          Manage your team and view shared insights from team members.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Manager Dashboard 👨‍💼
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Manage your team and view shared insights from team members.
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <Link to="/dashboard">
+              <Target className="mr-2 h-4 w-4" />
+              Go to Personal Dashboard
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Team Overview */}
@@ -339,10 +349,13 @@ const DashboardManager = () => {
                 
                 {selectedMemberId && (
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
-                    onClick={() => handleRemoveTeamMember(selectedMemberId)}
-                    className="text-destructive hover:text-destructive"
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to remove this team member? This action cannot be undone.`)) {
+                        handleRemoveTeamMember(selectedMemberId);
+                      }
+                    }}
                   >
                     Remove from Team
                   </Button>
@@ -533,21 +546,9 @@ const DashboardManager = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
-              <Link to="/dashboard">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <div className="text-center">
-                  <div className="font-medium">Personal Dashboard</div>
-                  <div className="text-xs text-muted-foreground">View your own insights</div>
-                </div>
-              </Link>
-            </Button>
-            
-            <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
-              <Link to="/conversation-selector">
+              <Link to="/conversation">
                 <div className="p-2 bg-secondary/10 rounded-lg">
                   <MessageCircle className="h-6 w-6 text-secondary" />
                 </div>
@@ -573,11 +574,11 @@ const DashboardManager = () => {
             <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
               <Link to="/dashboard">
                 <div className="p-2 bg-muted/50 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-muted-foreground" />
+                  <Settings className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div className="text-center">
-                  <div className="font-medium">Analytics</div>
-                  <div className="text-xs text-muted-foreground">View trends & insights</div>
+                  <div className="font-medium">Settings</div>
+                  <div className="text-xs text-muted-foreground">Manage preferences</div>
                 </div>
               </Link>
             </Button>

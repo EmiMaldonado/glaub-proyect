@@ -44,12 +44,6 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  // Redirect managers to manager dashboard
-  useEffect(() => {
-    if (userProfile?.role === 'manager') {
-      navigate('/dashboard-manager', { replace: true });
-    }
-  }, [userProfile, navigate]);
   const loadDashboardData = async () => {
     if (!user) return;
     try {
@@ -531,9 +525,9 @@ const Dashboard = () => {
               </div>}
             <Button variant="outline" size="sm" asChild={userProfile?.role === 'manager'} disabled={userProfile?.role !== 'manager'}>
               {userProfile?.role === 'manager' ? (
-                <Link to="/dashboard-manager">
+                <Link to="/dashboard/manager">
                   <Users className="mr-1 h-3 w-3" />
-                  Manager Dashboard
+                  Go to Manager Dashboard
                 </Link>
               ) : (
                 <>

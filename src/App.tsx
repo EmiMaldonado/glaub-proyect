@@ -79,7 +79,7 @@ const App = () => (
                     <Dashboard />
                   </AuthGuard>
                 } />
-                <Route path="/dashboard-manager" element={
+                <Route path="/dashboard/manager" element={
                   <AuthGuard>
                     <Navigation />
                     <DashboardManager />
