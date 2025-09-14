@@ -36,7 +36,7 @@ serve(async (req: Request) => {
     // Get user profile or create one if it doesn't exist using service role
     let { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("*")
+      .select("id, full_name, display_name, team_name")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -104,33 +104,63 @@ serve(async (req: Request) => {
       throw new Error("Failed to create manager invitation");
     }
 
-    // Use Supabase's built-in email invitation system
+    // Use Resend to send custom invitation email with team name
+    const managerName = profile.display_name || profile.full_name || 'Your manager';
+    const teamName = profile.team_name || `${managerName}'s Team`;
     const acceptUrl = `${supabaseUrl}/functions/v1/accept-invitation?token=${token}`;
     
-    // Send invitation using Supabase's native auth system
-    const { data: authInvitation, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-      managerEmail,
-      {
-        redirectTo: acceptUrl,
-        data: {
-          invitation_token: token,
-          invited_by: profile.display_name || profile.full_name || 'A team member',
-          role: 'manager',
-          invitation_type: 'manager_invitation'
-        }
-      }
-    );
+    // Send invitation email using Resend
+    const { error: emailError } = await resend.emails.send({
+      from: "EmpathAI <onboarding@resend.dev>",
+      to: [managerEmail],
+      subject: `Invitation to join ${teamName} on EmpathAI`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #2563eb; text-align: center;">You're Invited to Join ${teamName}!</h1>
+          
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
+              Hello! You've been invited by <strong>${managerName}</strong> to join their team "<strong>${teamName}</strong>" on EmpathAI.
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              EmpathAI is an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${acceptUrl}" 
+                 style="background-color: #2563eb; color: white; padding: 12px 24px; 
+                        text-decoration: none; border-radius: 6px; font-weight: bold; 
+                        display: inline-block;">
+                Accept Invitation & Join ${teamName}
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #64748b; margin-top: 20px;">
+              If the button doesn't work, you can also copy and paste this link into your browser:
+              <br><a href="${acceptUrl}" style="color: #2563eb;">${acceptUrl}</a>
+            </p>
+          </div>
+          
+          <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px;">
+            <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+              This invitation was sent by ${managerName}. If you believe this was sent in error, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      `,
+    });
 
-    if (inviteError) {
-      console.error("Error sending invitation email:", inviteError);
-      // Don't throw error - invitation record was created, just log the email issue
-      console.log("Invitation record created but email failed to send:", invitation.id);
-    } else {
-      console.log("Manager invitation sent successfully via Supabase auth:", { 
-        invitationId: invitation.id, 
-        authInvitation 
-      });
+    if (emailError) {
+      console.error("Error sending invitation email:", emailError);
+      throw new Error(`Failed to send invitation email: ${emailError.message}`);
     }
+
+    console.log("Manager invitation sent successfully:", { 
+      invitationId: invitation.id, 
+      email: managerEmail,
+      teamName: teamName
+    });
 
     return new Response(
       JSON.stringify({ 

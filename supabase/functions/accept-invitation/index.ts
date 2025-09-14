@@ -151,7 +151,7 @@ serve(async (req: Request) => {
     if (userExists) {
       console.log("Processing invitation for existing user:", userExists.id);
       
-      // User exists - update their profile to link to manager and accept invitation
+      // User exists - get their profile and add to team
       const { data: userProfile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -168,20 +168,36 @@ serve(async (req: Request) => {
         throw new Error("User profile not found");
       }
 
-      console.log("Updating profile and invitation status");
+      console.log("Adding user to team membership and updating invitation status");
 
-      // Update user profile with manager_id and ensure employee role
-      const { error: updateProfileError } = await supabase
-        .from("profiles")
-        .update({ 
-          manager_id: invitation.manager_id,
-          role: 'employee'
-        })
-        .eq("id", userProfile.id);
+      // Ensure user has employee role (if not manager already)
+      if (userProfile.role !== 'manager') {
+        const { error: updateRoleError } = await supabase
+          .from("profiles")
+          .update({ role: 'employee' })
+          .eq("id", userProfile.id);
 
-      if (updateProfileError) {
-        console.error("Error updating profile:", updateProfileError);
-        throw new Error(`Failed to update user profile: ${updateProfileError.message}`);
+        if (updateRoleError) {
+          console.error("Error updating user role:", updateRoleError);
+        }
+      }
+
+      // Add team membership (this will handle multi-team support)
+      const { error: membershipError } = await supabase
+        .from("team_memberships")
+        .insert({
+          employee_id: userProfile.id,
+          manager_id: invitation.manager_id
+        });
+
+      if (membershipError) {
+        // If it's a unique constraint violation, the user is already on this team
+        if (membershipError.code === '23505') {
+          console.log("User is already a member of this team");
+        } else {
+          console.error("Error creating team membership:", membershipError);
+          throw new Error(`Failed to add user to team: ${membershipError.message}`);
+        }
       }
 
       // Update invitation status
@@ -198,18 +214,23 @@ serve(async (req: Request) => {
         throw new Error(`Failed to update invitation status: ${updateInvitationError.message}`);
       }
 
-      // Check manager's current role and promote if needed
+      // Check manager's current role and promote if needed (with team name)
       const { data: managerProfile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, team_name, display_name, full_name")
         .eq("id", invitation.manager_id)
         .single();
 
       if (managerProfile?.role === "employee") {
         console.log("Promoting manager from employee to manager role");
+        const teamName = managerProfile.team_name || `${managerProfile.display_name || managerProfile.full_name || 'Team'}'s Team`;
+        
         const { error: promoteManagerError } = await supabase
           .from("profiles")
-          .update({ role: "manager" })
+          .update({ 
+            role: "manager",
+            team_name: teamName
+          })
           .eq("id", invitation.manager_id);
 
         if (promoteManagerError) {
@@ -227,7 +248,7 @@ serve(async (req: Request) => {
           </head>
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #28a745;">Welcome to the Team!</h1>
-            <p>You've successfully joined ${invitation.manager?.display_name || invitation.manager?.full_name}'s team on EmpathAI.</p>
+            <p>You've successfully joined ${managerProfile?.team_name || `${invitation.manager?.display_name || invitation.manager?.full_name}'s team`} on EmpathAI.</p>
             <p>You can now log in to your existing account to access team features.</p>
             <p>Redirecting to dashboard in 3 seconds...</p>
             <a href="https://xn--glub-thesis-m8a.com/dashboard" 
@@ -257,7 +278,7 @@ serve(async (req: Request) => {
           </head>
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #007bff;">Create Your EmpathAI Account</h1>
-            <p>You've been invited to join ${invitation.manager?.display_name || invitation.manager?.full_name}'s team on EmpathAI.</p>
+            <p>You've been invited to join ${invitation.manager?.team_name || `${invitation.manager?.display_name || invitation.manager?.full_name}'s team`} on EmpathAI.</p>
             <p>Click the button below to create your account and join the team.</p>
             <p>Redirecting to signup in 3 seconds...</p>
             <a href="${signupUrl}" 

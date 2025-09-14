@@ -255,6 +255,7 @@ export type Database = {
           manager_id: string | null
           organization: string | null
           role: string | null
+          team_name: string | null
           updated_at: string
           user_id: string
         }
@@ -267,6 +268,7 @@ export type Database = {
           manager_id?: string | null
           organization?: string | null
           role?: string | null
+          team_name?: string | null
           updated_at?: string
           user_id: string
         }
@@ -279,12 +281,52 @@ export type Database = {
           manager_id?: string | null
           organization?: string | null
           role?: string | null
+          team_name?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_memberships: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          joined_at: string
+          manager_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          joined_at?: string
+          manager_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          joined_at?: string
+          manager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_memberships_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -368,6 +410,10 @@ export type Database = {
       }
       is_invitation_manager_secure: {
         Args: { invitation_manager_id: string }
+        Returns: boolean
+      }
+      manager_has_team_members: {
+        Args: { manager_profile_id: string }
         Returns: boolean
       }
       validate_reset_token: {
