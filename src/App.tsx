@@ -12,8 +12,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
-import DashboardManagerModern from "./pages/DashboardManagerModern";
-import TeamOverview from "./pages/TeamOverview";
+// import DashboardManagerModern from "./pages/DashboardManagerModern";
+// import TeamOverview from "./pages/TeamOverview";
 import InvitationAccept from "./pages/InvitationAccept";
 import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
@@ -104,7 +104,7 @@ const App = () => (
                     <Dashboard />
                   </AuthGuard>
                 } />
-                <Route path="/dashboard/manager" element={
+                {/* <Route path="/dashboard/manager" element={
                   <AuthGuard>
                     <Navigation />
                     <DashboardManagerModern />
@@ -115,7 +115,7 @@ const App = () => (
                     <Navigation />
                     <TeamOverview />
                   </AuthGuard>
-                } />
+                } /> */}
                 <Route path="/invitation/:token" element={
                   <AuthGuard>
                     <InvitationAccept />

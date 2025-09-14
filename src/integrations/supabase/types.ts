@@ -250,6 +250,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           display_name: string | null
+          email: string | null
           full_name: string | null
           id: string
           manager_id: string | null
@@ -263,6 +264,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
           manager_id?: string | null
@@ -276,6 +278,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
           manager_id?: string | null
@@ -298,29 +301,119 @@ export type Database = {
       team_memberships: {
         Row: {
           created_at: string
-          employee_id: string
+          employee_1_id: string | null
+          employee_10_id: string | null
+          employee_2_id: string | null
+          employee_3_id: string | null
+          employee_4_id: string | null
+          employee_5_id: string | null
+          employee_6_id: string | null
+          employee_7_id: string | null
+          employee_8_id: string | null
+          employee_9_id: string | null
           id: string
-          joined_at: string
           manager_id: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          employee_id: string
+          employee_1_id?: string | null
+          employee_10_id?: string | null
+          employee_2_id?: string | null
+          employee_3_id?: string | null
+          employee_4_id?: string | null
+          employee_5_id?: string | null
+          employee_6_id?: string | null
+          employee_7_id?: string | null
+          employee_8_id?: string | null
+          employee_9_id?: string | null
           id?: string
-          joined_at?: string
           manager_id: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
-          employee_id?: string
+          employee_1_id?: string | null
+          employee_10_id?: string | null
+          employee_2_id?: string | null
+          employee_3_id?: string | null
+          employee_4_id?: string | null
+          employee_5_id?: string | null
+          employee_6_id?: string | null
+          employee_7_id?: string | null
+          employee_8_id?: string | null
+          employee_9_id?: string | null
           id?: string
-          joined_at?: string
           manager_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "team_memberships_employee_id_fkey"
-            columns: ["employee_id"]
+            foreignKeyName: "team_memberships_employee_1_id_fkey"
+            columns: ["employee_1_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_10_id_fkey"
+            columns: ["employee_10_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_2_id_fkey"
+            columns: ["employee_2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_3_id_fkey"
+            columns: ["employee_3_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_4_id_fkey"
+            columns: ["employee_4_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_5_id_fkey"
+            columns: ["employee_5_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_6_id_fkey"
+            columns: ["employee_6_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_7_id_fkey"
+            columns: ["employee_7_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_8_id_fkey"
+            columns: ["employee_8_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_employee_9_id_fkey"
+            columns: ["employee_9_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

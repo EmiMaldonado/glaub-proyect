@@ -29,6 +29,15 @@ interface EmployeeProfile {
   avatar_url: string;
 }
 
+interface ManagerProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  display_name: string;
+  avatar_url: string;
+  user_id: string;
+}
+
 interface TeamMembership {
   id: string;
   manager_id: string;
@@ -59,32 +68,32 @@ interface TeamMembership {
 const ManagerDashboard = () => {
   const { user } = useAuth();
   const [teamData, setTeamData] = useState<TeamMembership | null>(null);
-  const [managerProfile, setManagerProfile] = useState<any>(null);
+  const [managerProfile, setManagerProfile] = useState<ManagerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
 
   // Initialize team record if doesn't exist
   const initializeTeam = async () => {
-    if (!user?.id) return;
+    if (!user?.id || !managerProfile?.id) return;
 
     try {
       const { data, error } = await supabase
         .from('team_memberships')
         .select('id')
-        .eq('manager_id', user.id)
-        .single();
+        .eq('manager_id', managerProfile.id)
+        .maybeSingle();
         
       if (!data && !error) {
         await supabase
           .from('team_memberships')
-          .insert({ manager_id: user.id });
+          .insert({ manager_id: managerProfile.id });
       }
     } catch (err) {
       console.log("Initializing team record...");
       await supabase
         .from('team_memberships')
-        .insert({ manager_id: user.id });
+        .insert({ manager_id: managerProfile.id });
     }
   };
 
@@ -95,17 +104,36 @@ const ManagerDashboard = () => {
     try {
       setLoading(true);
       
-      // Initialize team if needed
-      await initializeTeam();
-
       // Get manager profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
+      if (!profile) {
+        toast({
+          title: "Error",
+          description: "Manager profile not found",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setManagerProfile(profile);
+
+      // Initialize team if needed
+      const { data: existingTeam } = await supabase
+        .from('team_memberships')
+        .select('id')
+        .eq('manager_id', profile.id)
+        .maybeSingle();
+        
+      if (!existingTeam) {
+        await supabase
+          .from('team_memberships')
+          .insert({ manager_id: profile.id });
+      }
 
       // Get team data with all employee profiles
       const { data: team, error } = await supabase
@@ -123,8 +151,8 @@ const ManagerDashboard = () => {
           employee_9:profiles!employee_9_id(id, email, full_name, display_name, avatar_url),
           employee_10:profiles!employee_10_id(id, email, full_name, display_name, avatar_url)
         `)
-        .eq('manager_id', user.id)
-        .single();
+        .eq('manager_id', profile.id)
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching team data:', error);
@@ -150,7 +178,7 @@ const ManagerDashboard = () => {
 
   // Add employee to first available slot
   const addEmployee = async (employeeId: string) => {
-    if (!teamData || !user?.id) return;
+    if (!teamData || !managerProfile?.id) return;
 
     const slots = ['employee_1_id', 'employee_2_id', 'employee_3_id', 'employee_4_id', 'employee_5_id', 
                   'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'];
@@ -161,7 +189,7 @@ const ManagerDashboard = () => {
           const { error } = await supabase
             .from('team_memberships')
             .update({ [slot]: employeeId })
-            .eq('manager_id', user.id);
+            .eq('manager_id', managerProfile.id);
 
           if (error) throw error;
 
@@ -187,7 +215,7 @@ const ManagerDashboard = () => {
 
   // Remove employee from slot
   const removeEmployee = async (slotNumber: number) => {
-    if (!user?.id) return;
+    if (!managerProfile?.id) return;
 
     try {
       const slotName = `employee_${slotNumber}_id`;
@@ -195,7 +223,7 @@ const ManagerDashboard = () => {
       const { error } = await supabase
         .from('team_memberships')
         .update({ [slotName]: null })
-        .eq('manager_id', user.id);
+        .eq('manager_id', managerProfile.id);
 
       if (error) throw error;
 

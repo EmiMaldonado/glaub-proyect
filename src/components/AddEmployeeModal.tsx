@@ -81,7 +81,7 @@ const AddEmployeeModal = ({ open, onOpenChange, onAddEmployee, selectedSlot }: A
         .from('profiles')
         .select('id, email, full_name, display_name, avatar_url')
         .eq('email', email.trim())
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         setFoundUser(null);

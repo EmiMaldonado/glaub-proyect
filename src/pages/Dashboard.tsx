@@ -11,7 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
-import MyTeams from "@/components/ui/MyTeams";
+// import MyTeams from "@/components/ui/MyTeams";
 const Dashboard = () => {
   const {
     user
@@ -548,7 +548,18 @@ const Dashboard = () => {
       {/* Section 5: My Teams - Combined team status and memberships */}
       <div className="space-y-6">
         {/* My Teams */}
-        <MyTeams userProfile={userProfile} />
+        {/* <MyTeams userProfile={userProfile} /> */}
+        <Card className="shadow-soft border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Team Management (Coming Soon)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">Team management features will be available soon.</p>
+          </CardContent>
+        </Card>
 
         {/* Pending Team Invitations */}
         {pendingInvitations.length > 0 && (
