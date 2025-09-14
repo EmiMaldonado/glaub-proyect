@@ -26,7 +26,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invalid Link</h1>
             <p>No invitation token provided.</p>
-            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -71,7 +71,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Database Error</h1>
             <p>Error looking up invitation: ${invitationError.message}</p>
-            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -90,7 +90,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invalid or Used Invitation</h1>
             <p>This invitation link is invalid or has already been used.</p>
-            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -110,7 +110,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invitation Expired</h1>
             <p>This invitation has expired. Please ask your manager to send a new one.</p>
-            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -134,7 +134,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Error</h1>
             <p>Error checking user accounts: ${userCheckError.message}</p>
-            <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -170,11 +170,12 @@ serve(async (req: Request) => {
 
       console.log("Updating profile and invitation status");
 
-      // Update user profile with manager_id
+      // Update user profile with manager_id and ensure employee role
       const { error: updateProfileError } = await supabase
         .from("profiles")
         .update({ 
-          manager_id: invitation.manager_id 
+          manager_id: invitation.manager_id,
+          role: 'employee'
         })
         .eq("id", userProfile.id);
 
@@ -197,14 +198,23 @@ serve(async (req: Request) => {
         throw new Error(`Failed to update invitation status: ${updateInvitationError.message}`);
       }
 
-      // Promote manager to manager role
-      const { error: promoteManagerError } = await supabase
+      // Check manager's current role and promote if needed
+      const { data: managerProfile } = await supabase
         .from("profiles")
-        .update({ role: "manager" })
-        .eq("id", invitation.manager_id);
+        .select("role")
+        .eq("id", invitation.manager_id)
+        .single();
 
-      if (promoteManagerError) {
-        console.error("Error promoting manager:", promoteManagerError);
+      if (managerProfile?.role === "employee") {
+        console.log("Promoting manager from employee to manager role");
+        const { error: promoteManagerError } = await supabase
+          .from("profiles")
+          .update({ role: "manager" })
+          .eq("id", invitation.manager_id);
+
+        if (promoteManagerError) {
+          console.error("Error promoting manager:", promoteManagerError);
+        }
       }
 
       console.log("Invitation acceptance completed successfully");
@@ -212,15 +222,19 @@ serve(async (req: Request) => {
       return new Response(
         `
         <html>
+          <head>
+            <meta http-equiv="refresh" content="3;url=https://xn--glub-thesis-m8a.com/dashboard">
+          </head>
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #28a745;">Welcome to the Team!</h1>
             <p>You've successfully joined ${invitation.manager?.display_name || invitation.manager?.full_name}'s team on EmpathAI.</p>
             <p>You can now log in to your existing account to access team features.</p>
-            <a href="https://bmrifufykczudfxomenr.supabase.co/auth" 
+            <p>Redirecting to dashboard in 3 seconds...</p>
+            <a href="https://xn--glub-thesis-m8a.com/dashboard" 
                style="background-color: #007bff; color: white; padding: 15px 30px; 
                       text-decoration: none; border-radius: 5px; display: inline-block; 
                       font-weight: bold; margin-top: 20px;">
-              Log In to EmpathAI
+              Go to Dashboard Now
             </a>
           </body>
         </html>
@@ -233,15 +247,19 @@ serve(async (req: Request) => {
     } else {
       console.log("User doesn't exist, redirecting to signup");
       // User doesn't exist - redirect to signup with special parameters
-      const signupUrl = `https://bmrifufykczudfxomenr.supabase.co/auth?mode=signup&invitation_token=${token}&email=${encodeURIComponent(invitation.email)}`;
+      const signupUrl = `https://xn--glub-thesis-m8a.com/auth?mode=signup&invitation_token=${token}&email=${encodeURIComponent(invitation.email)}`;
       
       return new Response(
         `
         <html>
+          <head>
+            <meta http-equiv="refresh" content="3;url=${signupUrl}">
+          </head>
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #007bff;">Create Your EmpathAI Account</h1>
             <p>You've been invited to join ${invitation.manager?.display_name || invitation.manager?.full_name}'s team on EmpathAI.</p>
             <p>Click the button below to create your account and join the team.</p>
+            <p>Redirecting to signup in 3 seconds...</p>
             <a href="${signupUrl}" 
                style="background-color: #28a745; color: white; padding: 15px 30px; 
                       text-decoration: none; border-radius: 5px; display: inline-block; 
@@ -263,10 +281,14 @@ serve(async (req: Request) => {
     return new Response(
       `
       <html>
+        <head>
+          <meta http-equiv="refresh" content="5;url=https://xn--glub-thesis-m8a.com/error?message=invitation-error">
+        </head>
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
           <h1 style="color: #dc3545;">Error</h1>
           <p>An error occurred while processing your invitation: ${error.message}</p>
-          <a href="https://bmrifufykczudfxomenr.supabase.co" style="color: #007bff;">Go to EmpathAI</a>
+          <p>Redirecting to error page in 5 seconds...</p>
+          <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
         </body>
       </html>
       `,
