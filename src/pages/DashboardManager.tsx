@@ -56,38 +56,22 @@ const DashboardManager = () => {
       } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       setUserProfile(profile);
 
-      // Get team members
+      // Get team members (excluding self from team list)
       const {
         data: members
-      } = await supabase.from('profiles').select('id, user_id, full_name, display_name').eq('manager_id', profile?.id);
+      } = await supabase.from('profiles').select('id, user_id, full_name, display_name').eq('manager_id', profile?.id).neq('user_id', user.id);
 
-      // Get emails for team members from auth.users
-      const membersWithEmails = [];
-      for (const member of members || []) {
-        try {
-          // Try to get user data from auth
-          const {
-            data: {
-              user: userData
-            }
-          } = await supabase.auth.admin.getUserById(member.user_id);
-          membersWithEmails.push({
-            ...member,
-            email: userData?.email || 'No email available'
-          });
-        } catch (error) {
-          // If auth lookup fails, still show the member
-          membersWithEmails.push({
-            ...member,
-            email: 'Email not accessible'
-          });
-        }
-      }
-      setTeamMembers(membersWithEmails || []);
+      // Set team members without trying to access emails from auth.users
+      // Email access requires service role permissions which aren't available in client-side code
+      const membersWithoutEmails = (members || []).map(member => ({
+        ...member,
+        email: 'Email not accessible'
+      }));
+      setTeamMembers(membersWithoutEmails || []);
 
       // Auto-select first team member if available
-      if (membersWithEmails && membersWithEmails.length > 0) {
-        setSelectedMemberId(membersWithEmails[0].id);
+      if (membersWithoutEmails && membersWithoutEmails.length > 0) {
+        setSelectedMemberId(membersWithoutEmails[0].id);
       }
     } catch (error) {
       console.error('Error loading manager data:', error);

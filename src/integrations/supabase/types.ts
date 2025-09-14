@@ -342,6 +342,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_create_invitation: {
+        Args: { invitation_manager_id: string }
+        Returns: boolean
+      }
       clear_conversation_messages: {
         Args: { conversation_uuid: string }
         Returns: undefined
