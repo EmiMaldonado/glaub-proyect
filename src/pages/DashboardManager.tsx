@@ -312,7 +312,7 @@ const DashboardManager = () => {
           <Button variant="outline" asChild>
             <Link to="/dashboard">
               <Target className="mr-2 h-4 w-4" />
-              6889B4
+              Go to Personal Dashboard
             </Link>
           </Button>
         </div>
