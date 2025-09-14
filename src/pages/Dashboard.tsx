@@ -231,10 +231,13 @@ const Dashboard = () => {
 
   const handleAcceptInvitation = async (invitation: any) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/complete-invitation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({
           token: invitation.token,

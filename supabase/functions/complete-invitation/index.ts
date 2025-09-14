@@ -17,14 +17,19 @@ serve(async (req: Request) => {
   }
 
   try {
+    console.log("Complete invitation request received:", { token, user_id });
+    
     const { token, user_id }: CompleteInvitationRequest = await req.json();
 
     if (!token || !user_id) {
+      console.error("Missing required fields:", { token: !!token, user_id: !!user_id });
       throw new Error("Token and user_id are required");
     }
 
     // Create Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log("Looking for invitation with token:", token);
 
     // Find the invitation
     const { data: invitation, error: invitationError } = await supabase
@@ -37,12 +42,21 @@ serve(async (req: Request) => {
       .eq("status", "pending")
       .single();
 
-    if (invitationError || !invitation) {
+    if (invitationError) {
+      console.error("Error finding invitation:", invitationError);
+      throw new Error("Invalid or expired invitation: " + invitationError.message);
+    }
+
+    if (!invitation) {
+      console.error("No invitation found for token:", token);
       throw new Error("Invalid or expired invitation");
     }
 
+    console.log("Found invitation:", { id: invitation.id, email: invitation.email, manager_id: invitation.manager_id });
+
     // Check if invitation has expired
     if (new Date() > new Date(invitation.expires_at)) {
+      console.error("Invitation expired:", { expires_at: invitation.expires_at, now: new Date().toISOString() });
       throw new Error("Invitation has expired");
     }
 
@@ -53,9 +67,17 @@ serve(async (req: Request) => {
       .eq("user_id", user_id)
       .single();
 
-    if (profileError || !userProfile) {
+    if (profileError) {
+      console.error("Error finding user profile:", profileError);
+      throw new Error("User profile not found: " + profileError.message);
+    }
+
+    if (!userProfile) {
+      console.error("No user profile found for user_id:", user_id);
       throw new Error("User profile not found");
     }
+
+    console.log("Found user profile:", { id: userProfile.id, user_id: userProfile.user_id });
 
     // Update user profile with manager_id
     const { error: updateProfileError } = await supabase
@@ -66,8 +88,11 @@ serve(async (req: Request) => {
       .eq("id", userProfile.id);
 
     if (updateProfileError) {
-      throw new Error("Failed to update user profile");
+      console.error("Error updating user profile:", updateProfileError);
+      throw new Error("Failed to update user profile: " + updateProfileError.message);
     }
+
+    console.log("Updated user profile with manager_id:", invitation.manager_id);
 
     // Update invitation status
     const { error: updateInvitationError } = await supabase
@@ -79,8 +104,11 @@ serve(async (req: Request) => {
       .eq("id", invitation.id);
 
     if (updateInvitationError) {
-      throw new Error("Failed to update invitation status");
+      console.error("Error updating invitation status:", updateInvitationError);
+      throw new Error("Failed to update invitation status: " + updateInvitationError.message);
     }
+
+    console.log("Updated invitation status to accepted");
 
     // Promote manager to manager role
     const { error: promoteManagerError } = await supabase
@@ -90,6 +118,8 @@ serve(async (req: Request) => {
 
     if (promoteManagerError) {
       console.error("Error promoting manager:", promoteManagerError);
+    } else {
+      console.log("Promoted manager to manager role");
     }
 
     console.log("Invitation completed successfully:", { 
