@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import TeamManagementModern from "@/components/TeamManagementModern";
+import TeamMembersList from "@/components/ui/TeamMembersList";
 
 interface TeamMember {
   id: string;
@@ -20,6 +21,8 @@ interface TeamMember {
   display_name: string;
   email?: string;
   membershipId: string;
+  role: string;
+  joinedAt?: string;
 }
 
 interface UserProfile {
@@ -89,7 +92,9 @@ const DashboardManagerModern = () => {
         full_name: membership.employee.full_name,
         display_name: membership.employee.display_name,
         email: 'Email not accessible',
-        membershipId: membership.id
+        membershipId: membership.id,
+        role: 'employee',
+        joinedAt: membership.joined_at
       }));
 
       setTeamMembers(members);
@@ -224,27 +229,33 @@ const DashboardManagerModern = () => {
 
   const handleRemoveTeamMember = async (membershipId: string) => {
     try {
-      // Remove member from team using team_memberships table
-      const { error } = await supabase
-        .from('team_memberships')
-        .delete()
-        .eq('id', membershipId);
+      const { data, error } = await supabase.functions.invoke('remove-team-member', {
+        body: { membershipId }
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing team member:', error);
+        toast({
+          title: "Error removing team member",
+          description: error.message || "Failed to remove team member",
+          variant: "destructive"
+        });
+        return;
+      }
 
       toast({
         title: "Team Member Removed",
-        description: "Team member has been removed from your team"
+        description: data.message || "Team member has been removed from your team"
       });
 
-      // Reload manager data
-      await loadManagerData();
+      // Update local team members state
+      setTeamMembers(data.teamMembers || []);
 
-      // Check if this was the last team member - demotion is handled by database trigger
-      if (teamMembers.length <= 1) {
+      // If this was the last member, handle demotion
+      if (data.wasLastMember) {
         toast({
           title: "Team Empty",
-          description: "Your team is now empty. You may be demoted to employee status.",
+          description: "Your team is now empty. You have been demoted to employee status.",
           variant: "destructive"
         });
 
@@ -252,6 +263,11 @@ const DashboardManagerModern = () => {
         setTimeout(() => {
           window.location.reload();
         }, 2000);
+      } else {
+        // Clear selection if we removed the selected member
+        if (selectedMemberId && !data.teamMembers.find((m: any) => m.id === selectedMemberId)) {
+          setSelectedMemberId(data.teamMembers.length > 0 ? data.teamMembers[0].id : "");
+        }
       }
     } catch (error: any) {
       console.error('Error removing team member:', error);
@@ -628,6 +644,19 @@ const DashboardManagerModern = () => {
           )}
         </>
       )}
+
+      {/* Team Members Management */}
+      <TeamMembersList 
+        teamMembers={teamMembers}
+        teamName={userProfile?.team_name || `${userProfile?.display_name || userProfile?.full_name}'s Team`}
+        onRemoveMember={(membershipId, memberName) => {
+          const member = teamMembers.find(m => m.membershipId === membershipId);
+          if (member) {
+            handleRemoveTeamMember(membershipId);
+          }
+        }}
+        loading={loading}
+      />
 
       {/* Team Management Component */}
       <TeamManagementModern userProfile={userProfile} />

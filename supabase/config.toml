@@ -23,3 +23,12 @@ verify_jwt = true
 
 [edge_functions.session-analysis]
 verify_jwt = true
+
+[edge_functions.invite-manager]
+verify_jwt = true
+
+[edge_functions.leave-team]
+verify_jwt = true
+
+[edge_functions.remove-team-member]
+verify_jwt = true

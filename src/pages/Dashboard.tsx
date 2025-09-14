@@ -11,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
+import MyTeams from "@/components/ui/MyTeams";
 const Dashboard = () => {
   const {
     user
@@ -595,6 +596,9 @@ const Dashboard = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* My Teams Section - Show user's team memberships */}
+        <MyTeams userProfile={userProfile} />
 
         <Card className="shadow-soft">
           <CardHeader>
