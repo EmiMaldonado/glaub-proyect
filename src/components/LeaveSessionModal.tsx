@@ -22,11 +22,10 @@ const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-blue-600">
             <AlertTriangle className="h-5 w-5" />
-            Pause Session?
+            You are about to exit the session.
           </DialogTitle>
           <DialogDescription className="text-gray-600">
-            Your session will be paused and saved. You can continue this conversation 
-            later from the dashboard whenever you're ready.
+            If you pause the session, all the information will be saved and you can resume later exactly where you left off. Delete note.
           </DialogDescription>
         </DialogHeader>
         
