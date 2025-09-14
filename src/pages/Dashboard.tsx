@@ -232,32 +232,25 @@ const Dashboard = () => {
 
   const handleAcceptInvitation = async (invitation: any) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/complete-invitation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('complete-invitation', {
+        body: {
           token: invitation.token,
           user_id: user?.id,
           action: 'accept'
-        })
+        }
       });
 
-      const result = await response.json();
+      if (error) throw error;
       
-      if (response.ok) {
+      if (data?.success) {
         toast({
           title: "Invitation Accepted!",
-          description: `You are now part of ${result.manager_name}'s team`,
+          description: `You are now part of ${data.manager_name}'s team`,
         });
         // Reload dashboard data to reflect changes
         loadDashboardData();
       } else {
-        throw new Error(result.error || 'Failed to accept invitation');
+        throw new Error(data?.error || 'Failed to accept invitation');
       }
     } catch (error: any) {
       console.error('Error accepting invitation:', error);
@@ -271,24 +264,17 @@ const Dashboard = () => {
 
   const handleDeclineInvitation = async (invitation: any) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/complete-invitation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('complete-invitation', {
+        body: {
           token: invitation.token,
           user_id: user?.id,
           action: 'decline'
-        })
+        }
       });
 
-      const result = await response.json();
+      if (error) throw error;
       
-      if (response.ok) {
+      if (data?.success) {
         toast({
           title: "Invitation Declined",
           description: "You have declined the team invitation",
@@ -297,7 +283,7 @@ const Dashboard = () => {
         // Remove from pending invitations
         setPendingInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
       } else {
-        throw new Error(result.error || 'Failed to decline invitation');
+        throw new Error(data?.error || 'Failed to decline invitation');
       }
     } catch (error: any) {
       console.error('Error declining invitation:', error);

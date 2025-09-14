@@ -13,6 +13,8 @@ import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import DashboardManagerModern from "./pages/DashboardManagerModern";
+import TeamOverview from "./pages/TeamOverview";
+import InvitationAccept from "./pages/InvitationAccept";
 import NotFound from "./pages/NotFound";
 import ServerError from "./pages/ServerError";
 import ChatConversation from "./pages/ChatConversation";
@@ -106,6 +108,17 @@ const App = () => (
                   <AuthGuard>
                     <Navigation />
                     <DashboardManagerModern />
+                  </AuthGuard>
+                } />
+                <Route path="/team-overview" element={
+                  <AuthGuard>
+                    <Navigation />
+                    <TeamOverview />
+                  </AuthGuard>
+                } />
+                <Route path="/invitation/:token" element={
+                  <AuthGuard>
+                    <InvitationAccept />
                   </AuthGuard>
                 } />
                 <Route path="/conversation" element={
