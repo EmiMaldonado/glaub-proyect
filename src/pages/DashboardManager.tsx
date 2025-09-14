@@ -12,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import TeamManagement from "@/components/TeamManagement";
-
 interface TeamMember {
   id: string;
   user_id: string;
@@ -20,15 +19,15 @@ interface TeamMember {
   display_name: string;
   email?: string;
 }
-
 interface UserProfile {
   id: string;
   role: string;
   full_name: string;
 }
-
 const DashboardManager = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -36,46 +35,42 @@ const DashboardManager = () => {
   const [loading, setLoading] = useState(true);
   const [memberEmail, setMemberEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
-
   useEffect(() => {
     if (user) {
       loadManagerData();
     }
   }, [user]);
-
   useEffect(() => {
     if (selectedMemberId) {
       loadSelectedMemberData(selectedMemberId);
     }
   }, [selectedMemberId]);
-
   const loadManagerData = async () => {
     if (!user) return;
-    
     try {
       setLoading(true);
-      
-      // Get manager profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
 
+      // Get manager profile
+      const {
+        data: profile
+      } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       setUserProfile(profile);
 
       // Get team members
-      const { data: members } = await supabase
-        .from('profiles')
-        .select('id, user_id, full_name, display_name')
-        .eq('manager_id', profile?.id);
+      const {
+        data: members
+      } = await supabase.from('profiles').select('id, user_id, full_name, display_name').eq('manager_id', profile?.id);
 
       // Get emails for team members from auth.users
       const membersWithEmails = [];
       for (const member of members || []) {
         try {
           // Try to get user data from auth
-          const { data: { user: userData } } = await supabase.auth.admin.getUserById(member.user_id);
+          const {
+            data: {
+              user: userData
+            }
+          } = await supabase.auth.admin.getUserById(member.user_id);
           membersWithEmails.push({
             ...member,
             email: userData?.email || 'No email available'
@@ -88,14 +83,12 @@ const DashboardManager = () => {
           });
         }
       }
-
       setTeamMembers(membersWithEmails || []);
 
       // Auto-select first team member if available
       if (membersWithEmails && membersWithEmails.length > 0) {
         setSelectedMemberId(membersWithEmails[0].id);
       }
-      
     } catch (error) {
       console.error('Error loading manager data:', error);
       toast({
@@ -107,30 +100,28 @@ const DashboardManager = () => {
       setLoading(false);
     }
   };
-
   const loadSelectedMemberData = async (memberId: string) => {
     try {
       const selectedMember = teamMembers.find(m => m.id === memberId);
       if (!selectedMember) return;
 
       // Load conversations for the selected team member
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', selectedMember.user_id)
-        .order('created_at', { ascending: false });
+      const {
+        data: conversations
+      } = await supabase.from('conversations').select('*').eq('user_id', selectedMember.user_id).order('created_at', {
+        ascending: false
+      });
 
       // Load insights for the selected team member
-      const { data: insights } = await supabase
-        .from('key_insights')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const {
+        data: insights
+      } = await supabase.from('key_insights').select('*').order('created_at', {
+        ascending: false
+      });
 
       // Filter insights that belong to user's conversations
       const userConversationIds = conversations?.map(c => c.id) || [];
-      const userInsights = insights?.filter(insight => 
-        userConversationIds.includes(insight.conversation_id)
-      ) || [];
+      const userInsights = insights?.filter(insight => userConversationIds.includes(insight.conversation_id)) || [];
 
       // Calculate OCEAN profile
       let oceanProfile = null;
@@ -142,11 +133,10 @@ const DashboardManager = () => {
             conscientiousness: Math.round(personalityData.reduce((sum, p: any) => sum + (p?.conscientiousness || 0), 0) / personalityData.length),
             extraversion: Math.round(personalityData.reduce((sum, p: any) => sum + (p?.extraversion || 0), 0) / personalityData.length),
             agreeableness: Math.round(personalityData.reduce((sum, p: any) => sum + (p?.agreeableness || 0), 0) / personalityData.length),
-            neuroticism: Math.round(personalityData.reduce((sum, p: any) => sum + (p?.neuroticism || 0), 0) / personalityData.length),
+            neuroticism: Math.round(personalityData.reduce((sum, p: any) => sum + (p?.neuroticism || 0), 0) / personalityData.length)
           };
         }
       }
-
       setSelectedMemberData({
         member: selectedMember,
         conversations: conversations || [],
@@ -158,7 +148,6 @@ const DashboardManager = () => {
           totalInsights: userInsights.length
         }
       });
-
     } catch (error) {
       console.error('Error loading member data:', error);
       toast({
@@ -168,7 +157,6 @@ const DashboardManager = () => {
       });
     }
   };
-
   const handleInviteMember = async () => {
     if (!memberEmail.trim()) {
       toast({
@@ -178,36 +166,31 @@ const DashboardManager = () => {
       });
       return;
     }
-
     setIsInviting(true);
     try {
       // Create invitation directly in database
-      const { data: invitation, error } = await supabase
-        .from('invitations')
-        .insert({
-          email: memberEmail.trim(),
-          token: crypto.randomUUID(),
-          manager_id: userProfile?.id,
-          status: 'pending'
-        })
-        .select('token')
-        .single();
-
+      const {
+        data: invitation,
+        error
+      } = await supabase.from('invitations').insert({
+        email: memberEmail.trim(),
+        token: crypto.randomUUID(),
+        manager_id: userProfile?.id,
+        status: 'pending'
+      }).select('token').single();
       if (error) throw error;
 
       // Generate invitation URL
       const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
-      
+
       // Copy to clipboard
       await navigator.clipboard.writeText(invitationUrl);
-
       toast({
         title: "Invitation Created!",
         description: `Invitation link copied to clipboard. Share it with ${memberEmail}`
       });
       setMemberEmail('');
       loadManagerData(); // Refresh data
-      
     } catch (error: any) {
       console.error('Error inviting member:', error);
       toast({
@@ -219,20 +202,18 @@ const DashboardManager = () => {
       setIsInviting(false);
     }
   };
-
   const handleRemoveTeamMember = async (memberId: string) => {
     try {
       // Remove member from team by setting manager_id to null
-      const { error } = await supabase
-        .from('profiles')
-        .update({ manager_id: null })
-        .eq('id', memberId);
-
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        manager_id: null
+      }).eq('id', memberId);
       if (error) throw error;
-
       toast({
         title: "Team Member Removed",
-        description: "Team member has been removed from your team",
+        description: "Team member has been removed from your team"
       });
 
       // Reload manager data
@@ -240,22 +221,21 @@ const DashboardManager = () => {
 
       // If no team members left, demote to employee
       if (teamMembers.length <= 1) {
-        const { error: roleError } = await supabase
-          .from('profiles')
-          .update({ role: 'employee' })
-          .eq('id', userProfile?.id);
-
+        const {
+          error: roleError
+        } = await supabase.from('profiles').update({
+          role: 'employee'
+        }).eq('id', userProfile?.id);
         if (!roleError) {
           toast({
             title: "Role Updated",
-            description: "You've been moved back to employee status as you have no team members",
+            description: "You've been moved back to employee status as you have no team members"
           });
-          
+
           // Redirect to employee dashboard
           window.location.href = '/dashboard';
         }
       }
-      
     } catch (error: any) {
       console.error('Error removing team member:', error);
       toast({
@@ -265,20 +245,15 @@ const DashboardManager = () => {
       });
     }
   };
-
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
+    return <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (!userProfile || userProfile.role !== 'manager') {
-    return (
-      <div className="container mx-auto px-4 py-8">
+    return <div className="container mx-auto px-4 py-8">
         <Card className="max-w-md mx-auto">
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
@@ -292,25 +267,20 @@ const DashboardManager = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+  return <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Welcome Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              Manager Dashboard 👨‍💼
-            </h1>
+            <h1 className="text-3xl font-bold text-foreground">Manager Dashboard 🎯</h1>
             <p className="text-lg text-muted-foreground">
               Manage your team and view shared insights from team members.
             </p>
           </div>
           <Button variant="outline" asChild>
-            <Link to="/dashboard" className="text-[#6889B4]">
+            <Link to="/dashboard" className="-bottom-0 ">
               <Target className="mr-2 h-4 w-4" />
               Go to Personal Dashboard
             </Link>
@@ -330,23 +300,17 @@ const DashboardManager = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {teamMembers.length > 0 ? (
-            <div className="space-y-4">
+          {teamMembers.length > 0 ? <div className="space-y-4">
               <div>
                 <Label htmlFor="member-select">Select Team Member</Label>
-                <Select 
-                  value={selectedMemberId} 
-                  onValueChange={setSelectedMemberId}
-                >
+                <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a team member" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teamMembers.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
+                    {teamMembers.map(member => <SelectItem key={member.id} value={member.id}>
                         {member.display_name || member.full_name} ({member.email})
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -357,30 +321,21 @@ const DashboardManager = () => {
                   {teamMembers.length} team member{teamMembers.length > 1 ? 's' : ''} under your management
                 </div>
                 
-                {selectedMemberId && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      if (window.confirm(`Are you sure you want to remove this team member? This action cannot be undone.`)) {
-                        handleRemoveTeamMember(selectedMemberId);
-                      }
-                    }}
-                  >
+                {selectedMemberId && <Button variant="destructive" size="sm" onClick={() => {
+              if (window.confirm(`Are you sure you want to remove this team member? This action cannot be undone.`)) {
+                handleRemoveTeamMember(selectedMemberId);
+              }
+            }}>
                     Remove from Team
-                  </Button>
-                )}
+                  </Button>}
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
+            </div> : <div className="text-center py-8">
               <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No team members yet</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Invite team members to start viewing their shared insights
               </p>
-            </div>
-          )}
+            </div>}
 
           {/* Invite New Member */}
           <div className="border-t pt-4 space-y-3">
@@ -389,17 +344,8 @@ const DashboardManager = () => {
               Invite New Team Member
             </h4>
             <div className="flex gap-2">
-              <Input
-                placeholder="Enter team member's email"
-                type="email"
-                value={memberEmail}
-                onChange={(e) => setMemberEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleInviteMember()}
-              />
-              <Button 
-                onClick={handleInviteMember}
-                disabled={isInviting}
-              >
+              <Input placeholder="Enter team member's email" type="email" value={memberEmail} onChange={e => setMemberEmail(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleInviteMember()} />
+              <Button onClick={handleInviteMember} disabled={isInviting}>
                 {isInviting ? 'Creating...' : 'Create Invite Link'}
               </Button>
             </div>
@@ -408,8 +354,7 @@ const DashboardManager = () => {
       </Card>
 
       {/* Selected Member Data */}
-      {selectedMemberData && (
-        <>
+      {selectedMemberData && <>
           {/* Member Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="shadow-soft">
@@ -456,8 +401,7 @@ const DashboardManager = () => {
           </div>
 
           {/* Member OCEAN Profile */}
-          {selectedMemberData.oceanProfile && (
-            <Card className="shadow-soft">
+          {selectedMemberData.oceanProfile && <Card className="shadow-soft">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-secondary" />
@@ -501,8 +445,7 @@ const DashboardManager = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          )}
+            </Card>}
 
           {/* Team Member Details & Insights */}
           <Card className="shadow-soft">
@@ -537,48 +480,35 @@ const DashboardManager = () => {
               </div>
 
               {/* Recent Insights */}
-              {selectedMemberData.insights.length > 0 ? (
-                <div className="space-y-4">
+              {selectedMemberData.insights.length > 0 ? <div className="space-y-4">
                   <h4 className="font-medium flex items-center gap-2">
                     <Lightbulb className="h-4 w-4 text-primary" />
                     Recent Shared Insights
                   </h4>
-                  {selectedMemberData.insights.slice(0, 3).map((insight: any, index: number) => (
-                    <div key={index} className="border rounded-lg p-4">
+                  {selectedMemberData.insights.slice(0, 3).map((insight: any, index: number) => <div key={index} className="border rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="secondary">
                           {new Date(insight.created_at).toLocaleDateString()}
                         </Badge>
                       </div>
-                      {insight.insights && insight.insights.length > 0 && (
-                        <ul className="space-y-1">
-                          {insight.insights.slice(0, 2).map((item: string, i: number) => (
-                            <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
+                      {insight.insights && insight.insights.length > 0 && <ul className="space-y-1">
+                          {insight.insights.slice(0, 2).map((item: string, i: number) => <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
                               <ChevronRight className="h-3 w-3 mt-1 text-primary flex-shrink-0" />
                               {item}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6">
+                            </li>)}
+                        </ul>}
+                    </div>)}
+                </div> : <div className="text-center py-6">
                   <Lightbulb className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-muted-foreground font-medium">No shared insights available</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     This team member hasn't shared any insights yet
                   </p>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
-        </>
-      )}
+        </>}
 
-    </div>
-  );
+    </div>;
 };
-
 export default DashboardManager;
