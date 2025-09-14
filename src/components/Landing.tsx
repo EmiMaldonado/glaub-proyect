@@ -26,7 +26,8 @@ const Landing = () => {
             
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight drop-shadow-lg">
               Build Stronger Teams,<br />
-              One Conversation at a Time
+              One Conversation<br />
+              at a Time
             </h1>
             
             <p className="text-l md:text-base text-white/90 max-w-2xl drop-shadow-md">
