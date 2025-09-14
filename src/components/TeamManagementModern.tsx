@@ -490,9 +490,9 @@ const TeamManagementModern: React.FC<TeamManagementModernProps> = ({ userProfile
       {invitations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Sent Invitations</CardTitle>
+            <CardTitle>Team Member Invitations</CardTitle>
             <CardDescription>
-              Status of invitations you have sent
+              Invitations sent to join your team as team members
             </CardDescription>
           </CardHeader>
           <CardContent>
