@@ -210,6 +210,52 @@ const DashboardManager = () => {
     }
   };
 
+  const handleRemoveTeamMember = async (memberId: string) => {
+    try {
+      // Remove member from team by setting manager_id to null
+      const { error } = await supabase
+        .from('profiles')
+        .update({ manager_id: null })
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Team Member Removed",
+        description: "Team member has been removed from your team",
+      });
+
+      // Reload manager data
+      await loadManagerData();
+
+      // If no team members left, demote to employee
+      if (teamMembers.length <= 1) {
+        const { error: roleError } = await supabase
+          .from('profiles')
+          .update({ role: 'employee' })
+          .eq('id', userProfile?.id);
+
+        if (!roleError) {
+          toast({
+            title: "Role Updated",
+            description: "You've been moved back to employee status as you have no team members",
+          });
+          
+          // Redirect to employee dashboard
+          window.location.href = '/dashboard';
+        }
+      }
+      
+    } catch (error: any) {
+      console.error('Error removing team member:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove team member",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -252,7 +298,7 @@ const DashboardManager = () => {
         </p>
       </div>
 
-      {/* Team Member Selection */}
+      {/* Team Overview */}
       <Card className="shadow-soft">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -260,7 +306,7 @@ const DashboardManager = () => {
             Team Overview
           </CardTitle>
           <CardDescription>
-            Select a team member to view their shared insights and progress
+            Manage your team members and view their shared insights
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -285,9 +331,22 @@ const DashboardManager = () => {
                 </Select>
               </div>
               
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <UserCheck className="h-4 w-4" />
-                {teamMembers.length} team member{teamMembers.length > 1 ? 's' : ''} under your management
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <UserCheck className="h-4 w-4" />
+                  {teamMembers.length} team member{teamMembers.length > 1 ? 's' : ''} under your management
+                </div>
+                
+                {selectedMemberId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveTeamMember(selectedMemberId)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Remove from Team
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -324,11 +383,6 @@ const DashboardManager = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Team Management Component */}
-      {userProfile && (
-        <TeamManagement userProfile={userProfile} />
-      )}
 
       {/* Selected Member Data */}
       {selectedMemberData && (
@@ -471,22 +525,60 @@ const DashboardManager = () => {
       <Card className="shadow-soft">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
+            <Settings className="h-5 w-5 text-secondary" />
             Quick Actions
           </CardTitle>
+          <CardDescription>
+            Common actions for managing your work and team
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" asChild>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
               <Link to="/dashboard">
-                <History className="mr-2 h-4 w-4" />
-                View Your Personal Dashboard
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Target className="h-6 w-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <div className="font-medium">Personal Dashboard</div>
+                  <div className="text-xs text-muted-foreground">View your own insights</div>
+                </div>
               </Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link to="/conversation">
-                <MessageCircle className="mr-2 h-4 w-4" />
-                Start Your Own Session
+            
+            <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
+              <Link to="/conversation-selector">
+                <div className="p-2 bg-secondary/10 rounded-lg">
+                  <MessageCircle className="h-6 w-6 text-secondary" />
+                </div>
+                <div className="text-center">
+                  <div className="font-medium">Start New Session</div>
+                  <div className="text-xs text-muted-foreground">Begin a conversation</div>
+                </div>
+              </Link>
+            </Button>
+            
+            <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
+              <Link to="/dashboard">
+                <div className="p-2 bg-accent/10 rounded-lg">
+                  <History className="h-6 w-6 text-accent" />
+                </div>
+                <div className="text-center">
+                  <div className="font-medium">Session History</div>
+                  <div className="text-xs text-muted-foreground">Review past sessions</div>
+                </div>
+              </Link>
+            </Button>
+            
+            <Button variant="outline" asChild className="h-auto p-6 flex-col items-center gap-3 hover:bg-primary/5 transition-colors">
+              <Link to="/dashboard">
+                <div className="p-2 bg-muted/50 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div className="text-center">
+                  <div className="font-medium">Analytics</div>
+                  <div className="text-xs text-muted-foreground">View trends & insights</div>
+                </div>
               </Link>
             </Button>
           </div>

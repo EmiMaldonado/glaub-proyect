@@ -174,11 +174,11 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="text-warning"><Clock className="w-3 h-3 mr-1" />Pendiente</Badge>;
+        return <Badge variant="outline" className="text-warning"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
       case 'accepted':
-        return <Badge variant="outline" className="text-success"><CheckCircle className="w-3 h-3 mr-1" />Aceptado</Badge>;
+        return <Badge variant="outline" className="text-success"><CheckCircle className="w-3 h-3 mr-1" />Accepted</Badge>;
       case 'revoked':
-        return <Badge variant="outline" className="text-destructive"><XCircle className="w-3 h-3 mr-1" />Revocado</Badge>;
+        return <Badge variant="outline" className="text-destructive"><XCircle className="w-3 h-3 mr-1" />Revoked</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -191,10 +191,10 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Construye tu Equipo
+            Build Your Team
           </CardTitle>
           <CardDescription>
-            Invita a miembros de tu equipo para desbloquear funciones de gestión
+            Invite team members to unlock management features
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -204,7 +204,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
               <Input
                 id="team-email"
                 type="email"
-                placeholder="ejemplo@empresa.com"
+                placeholder="example@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendInvitation()}
@@ -223,89 +223,16 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
     );
   }
 
-  // Manager view or employee with team
+  // Manager view or employee with team - but remove the team display since it's handled in main dashboard
   return (
     <div className="space-y-6">
-      {/* Team Members Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Mi Equipo ({teamMembers.length})
-          </CardTitle>
-          <CardDescription>
-            Miembros actuales de tu equipo
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {fetchingData ? (
-            <p className="text-muted-foreground">Cargando equipo...</p>
-          ) : teamMembers.length > 0 ? (
-            <div className="space-y-3">
-              {teamMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      {(member.display_name || member.full_name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-medium">{member.display_name || member.full_name || 'Usuario'}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Se unió el {new Date(member.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary">{member.role}</Badge>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground">No hay miembros en tu equipo aún.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Invite New Members Section */}
-      {isManager && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Invitar Nuevo Miembro
-            </CardTitle>
-            <CardDescription>
-              Envía una invitación para expandir tu equipo
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="invite-email">New member email</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="invite-email"
-                  type="email"
-                  placeholder="ejemplo@empresa.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendInvitation()}
-                />
-                <Button onClick={sendInvitation} disabled={loading}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {loading ? 'Creating...' : 'Create Invite Link'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Invitations Status */}
       {invitations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Invitaciones Enviadas</CardTitle>
+            <CardTitle>Sent Invitations</CardTitle>
             <CardDescription>
-              Estado de las invitaciones que has enviado
+              Status of invitations you have sent
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -317,9 +244,9 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
                     <div>
                       <p className="font-medium">{invitation.email}</p>
                       <p className="text-sm text-muted-foreground">
-                        Enviado el {new Date(invitation.invited_at).toLocaleDateString()}
+                        Sent on {new Date(invitation.invited_at).toLocaleDateString()}
                         {invitation.accepted_at && 
-                          ` • Aceptado el ${new Date(invitation.accepted_at).toLocaleDateString()}`
+                          ` • Accepted on ${new Date(invitation.accepted_at).toLocaleDateString()}`
                         }
                       </p>
                     </div>
