@@ -29,13 +29,6 @@ const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Your conversation progress will be saved and you can resume exactly where you left off from the dashboard.
-            </p>
-          </div>
-        </div>
 
         <DialogFooter className="gap-2">
           <Button variant="destructive" onClick={onDelete}>
