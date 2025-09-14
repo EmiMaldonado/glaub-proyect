@@ -210,12 +210,12 @@ const Dashboard = () => {
       const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
       
       // Copy to clipboard
-      await navigator.clipboard.writeText(invitationUrl);
-      
-      toast({
-        title: "Invitation Created!",
-        description: `Invitation link copied to clipboard. Share it with ${managerEmail}`,
-      });
+        await navigator.clipboard.writeText(invitationUrl);
+        
+        toast({
+          title: "Request Sent!",
+          description: `Your request to join the team has been sent to ${managerEmail}. They will see your request in their manager dashboard and can approve it.`,
+        });
       setManagerEmail(''); // Clear the input
       
     } catch (error: any) {
@@ -242,7 +242,8 @@ const Dashboard = () => {
         },
         body: JSON.stringify({
           token: invitation.token,
-          user_id: user?.id
+          user_id: user?.id,
+          action: 'accept'
         })
       });
 
@@ -268,24 +269,36 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeclineInvitation = async (invitationId: string) => {
+  const handleDeclineInvitation = async (invitation: any) => {
     try {
-      const { error } = await supabase
-        .from('invitations')
-        .update({ status: 'declined' })
-        .eq('id', invitationId);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Invitation Declined",
-        description: "You have declined the team invitation",
-      });
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Remove from pending invitations
-      setPendingInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+      const response = await fetch(`https://bmrifufykczudfxomenr.supabase.co/functions/v1/complete-invitation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          token: invitation.token,
+          user_id: user?.id,
+          action: 'decline'
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Invitation Declined",
+          description: "You have declined the team invitation",
+        });
+        
+        // Remove from pending invitations
+        setPendingInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
+      } else {
+        throw new Error(result.error || 'Failed to decline invitation');
+      }
     } catch (error: any) {
       console.error('Error declining invitation:', error);
       toast({
@@ -392,20 +405,14 @@ const Dashboard = () => {
 
       {/* Section 2: Your Last Meeting */}
       <Card className="shadow-soft">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              Your Last Meeting
-            </CardTitle>
-            <CardDescription>
-              {lastConversation ? `Completed on ${new Date(lastConversation.created_at).toLocaleDateString()}` : 'No conversation data available'}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch checked={sharingSettings.insights} onCheckedChange={() => handleSharingToggle('insights')} />
-            <span className="text-sm text-muted-foreground">Share with Manager</span>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5 text-primary" />
+            Your Last Meeting
+          </CardTitle>
+          <CardDescription>
+            {lastConversation ? `Completed on ${new Date(lastConversation.created_at).toLocaleDateString()}` : 'No conversation data available'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {lastConversation ? <div className="space-y-3">
@@ -441,20 +448,14 @@ const Dashboard = () => {
 
       {/* Section 3: Your OCEAN Profile */}
       <Card className="shadow-soft">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-secondary" />
-              Your OCEAN Profile
-            </CardTitle>
-            <CardDescription>
-              Personality dimensions based on your conversations
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch checked={sharingSettings.profile} onCheckedChange={() => handleSharingToggle('profile')} />
-            <span className="text-sm text-muted-foreground">Share with Manager</span>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-secondary" />
+            Your OCEAN Profile
+          </CardTitle>
+          <CardDescription>
+            Personality dimensions based on your conversations
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {oceanProfile ? <div className="space-y-6">
@@ -498,20 +499,14 @@ const Dashboard = () => {
       {/* Section 4: Strengths and Growth Opportunities */}
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-green-600" />
-                Strengths
-              </CardTitle>
-              <CardDescription>
-                Your main identified strengths
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={sharingSettings.strengths} onCheckedChange={() => handleSharingToggle('strengths')} />
-              <span className="text-sm text-muted-foreground">Share</span>
-            </div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-green-600" />
+              Strengths
+            </CardTitle>
+            <CardDescription>
+              Your main identified strengths
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {allInsights.length > 0 ? <ul className="space-y-2">
@@ -530,20 +525,14 @@ const Dashboard = () => {
         </Card>
 
         <Card className="shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-amber-600" />
-                Growth Opportunities
-              </CardTitle>
-              <CardDescription>
-                Areas for your professional development
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={sharingSettings.opportunities} onCheckedChange={() => handleSharingToggle('opportunities')} />
-              <span className="text-sm text-muted-foreground">Share</span>
-            </div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-amber-600" />
+              Growth Opportunities
+            </CardTitle>
+            <CardDescription>
+              Areas for your professional development
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {allInsights.length > 0 ? <ul className="space-y-2">
@@ -562,114 +551,82 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Section 5: Work with your Manager and Build your Team */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card className="shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-blue-600" />
-                Work with your Manager
-              </CardTitle>
-              <CardDescription>
-                Improve communication and collaboration
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={sharingSettings.manager} onCheckedChange={() => handleSharingToggle('manager')} />
-              <span className="text-sm text-muted-foreground">Share</span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Create a shareable invitation link for your manager. The link will be copied to your clipboard.
-            </p>
-            
-            <div className="space-y-2">
-              <Label htmlFor="manager-email">Manager's Email</Label>
-              <Input id="manager-email" type="email" placeholder="manager@company.com" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} disabled={isInvitingManager} />
-            </div>
-            
-            <Button variant="outline" size="sm" onClick={handleInviteManager} disabled={isInvitingManager || !managerEmail.trim()}>
-              <Share2 className="mr-1 h-3 w-3" />
-              {isInvitingManager ? "Creating..." : "Create Invitation Link"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* My Teams Section - Show user's team memberships */}
+      {/* Section 5: My Teams - Combined team status and memberships */}
+      <div className="space-y-6">
+        {/* My Teams */}
         <MyTeams userProfile={userProfile} />
 
-        <Card className="shadow-soft">
-          <CardHeader>
-            <div>
+        {/* Pending Team Invitations */}
+        {pendingInvitations.length > 0 && (
+          <Card className="shadow-soft border-primary/20">
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-purple-600" />
-                Team Status
+                <UserCheck className="h-5 w-5 text-primary" />
+                Pending Team Invitations ({pendingInvitations.length})
               </CardTitle>
               <CardDescription>
-                Your current team membership and invitations
+                You have been invited to join the following teams
               </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Current Manager */}
-            {currentManager ? (
-              <div className="p-3 border rounded-lg bg-muted/50">
-                <div className="flex items-center justify-between">
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pendingInvitations.map((invitation) => (
+                <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg bg-primary/5">
                   <div>
-                    <p className="font-medium text-sm">Current Manager</p>
-                    <p className="text-muted-foreground text-xs">
-                      {currentManager.display_name || currentManager.full_name || 'Manager'}
+                    <p className="font-medium">
+                      Invitation from {invitation.manager?.display_name || invitation.manager?.full_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Invited on {new Date(invitation.created_at).toLocaleDateString()} • 
+                      Expires on {new Date(invitation.expires_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <Badge variant="secondary">Active</Badge>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-3">
-                <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-muted-foreground text-sm">Not part of any team</p>
-              </div>
-            )}
-
-            {/* Pending Invitations */}
-            {pendingInvitations.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-medium text-sm">Pending Invitations</h4>
-                {pendingInvitations.map((invitation) => (
-                  <div key={invitation.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="font-medium text-sm">Team Invitation</p>
-                        <p className="text-muted-foreground text-xs">
-                          From {invitation.manager?.display_name || invitation.manager?.full_name || 'Manager'}
-                        </p>
-                      </div>
-                      <Badge variant="outline">Pending</Badge>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="default" 
-                        size="sm" 
-                        onClick={() => handleAcceptInvitation(invitation)}
-                        className="flex-1"
-                      >
-                        Accept
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleDeclineInvitation(invitation.id)}
-                        className="flex-1"
-                      >
-                        Decline
-                      </Button>
-                    </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={() => handleAcceptInvitation(invitation)}
+                    >
+                      Accept
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => handleDeclineInvitation(invitation)}
+                    >
+                      Decline
+                    </Button>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Request to Join Team */}
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-primary" />
+              Request to Join Team
+            </CardTitle>
+            <CardDescription>
+              Submit a request to join a manager's team
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="manager-email">Manager's Email Address</Label>
+              <Input
+                id="manager-email"
+                type="email"
+                placeholder="Enter your manager's email address"
+                value={managerEmail}
+                onChange={(e) => setManagerEmail(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleInviteManager()}
+              />
+            </div>
+            <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full">
+              {isInvitingManager ? 'Sending Request...' : 'Submit Approval Request'}
+            </Button>
           </CardContent>
         </Card>
       </div>

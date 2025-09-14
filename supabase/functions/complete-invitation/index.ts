@@ -5,6 +5,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 interface CompleteInvitationRequest {
   token: string;
   user_id: string;
+  action: 'accept' | 'decline';
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -17,13 +18,18 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { token, user_id }: CompleteInvitationRequest = await req.json();
+    const { token, user_id, action }: CompleteInvitationRequest = await req.json();
     
-    console.log("Complete invitation request received:", { token, user_id });
+    console.log("Complete invitation request received:", { token, user_id, action });
 
-    if (!token || !user_id) {
-      console.error("Missing required fields:", { token: !!token, user_id: !!user_id });
-      throw new Error("Token and user_id are required");
+    if (!token || !user_id || !action) {
+      console.error("Missing required fields:", { token: !!token, user_id: !!user_id, action: !!action });
+      throw new Error("Token, user_id, and action are required");
+    }
+
+    // Validate the action parameter
+    if (action !== 'accept' && action !== 'decline') {
+      throw new Error('Invalid action. Must be "accept" or "decline"');
     }
 
     // Create Supabase client with service role key
@@ -79,28 +85,59 @@ serve(async (req: Request) => {
 
     console.log("Found user profile:", { id: userProfile.id, user_id: userProfile.user_id });
 
-    // Update user profile with manager_id
-    const { error: updateProfileError } = await supabase
-      .from("profiles")
-      .update({ 
-        manager_id: invitation.manager_id 
-      })
-      .eq("id", userProfile.id);
+    if (action === 'accept') {
+      // Check if membership already exists
+      const { data: existingMembership } = await supabase
+        .from("team_memberships")
+        .select("id")
+        .eq("employee_id", userProfile.id)
+        .eq("manager_id", invitation.manager_id)
+        .single();
 
-    if (updateProfileError) {
-      console.error("Error updating user profile:", updateProfileError);
-      throw new Error("Failed to update user profile: " + updateProfileError.message);
+      if (existingMembership) {
+        throw new Error("User is already a team member");
+      }
+
+      // Create team membership
+      const { error: membershipError } = await supabase
+        .from("team_memberships")
+        .insert({
+          employee_id: userProfile.id,
+          manager_id: invitation.manager_id
+        });
+
+      if (membershipError) {
+        console.error("Error creating team membership:", membershipError);
+        throw new Error("Failed to create team membership: " + membershipError.message);
+      }
+
+      console.log("Created team membership for user:", userProfile.id);
+
+      // Promote manager if they're currently an employee
+      const { error: promoteManagerError } = await supabase
+        .from("profiles")
+        .update({ role: "manager" })
+        .eq("id", invitation.manager_id)
+        .eq("role", "employee");
+
+      if (promoteManagerError) {
+        console.error("Error promoting manager:", promoteManagerError);
+      } else {
+        console.log("Promoted manager to manager role");
+      }
     }
 
-    console.log("Updated user profile with manager_id:", invitation.manager_id);
-
     // Update invitation status
+    const newStatus = action === 'accept' ? 'accepted' : 'declined';
+    const updateData: any = { status: newStatus };
+    
+    if (action === 'accept') {
+      updateData.accepted_at = new Date().toISOString();
+    }
+
     const { error: updateInvitationError } = await supabase
       .from("invitations")
-      .update({ 
-        status: "accepted", 
-        accepted_at: new Date().toISOString() 
-      })
+      .update(updateData)
       .eq("id", invitation.id);
 
     if (updateInvitationError) {
@@ -108,19 +145,7 @@ serve(async (req: Request) => {
       throw new Error("Failed to update invitation status: " + updateInvitationError.message);
     }
 
-    console.log("Updated invitation status to accepted");
-
-    // Promote manager to manager role
-    const { error: promoteManagerError } = await supabase
-      .from("profiles")
-      .update({ role: "manager" })
-      .eq("id", invitation.manager_id);
-
-    if (promoteManagerError) {
-      console.error("Error promoting manager:", promoteManagerError);
-    } else {
-      console.log("Promoted manager to manager role");
-    }
+    console.log(`Updated invitation status to ${newStatus}`);
 
     console.log("Invitation completed successfully:", { 
       invitationId: invitation.id, 
@@ -128,10 +153,15 @@ serve(async (req: Request) => {
       managerId: invitation.manager_id 
     });
 
+    const responseMessage = action === 'accept' 
+      ? "Invitation accepted successfully" 
+      : "Invitation declined successfully";
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Invitation completed successfully",
+        message: responseMessage,
+        action: action,
         manager_name: invitation.manager?.display_name || invitation.manager?.full_name
       }),
       {
