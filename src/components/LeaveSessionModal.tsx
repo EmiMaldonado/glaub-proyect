@@ -7,7 +7,7 @@ interface LeaveSessionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  onDelete?: () => void;
+  onDelete: () => void;
 }
 
 const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({
@@ -39,20 +39,15 @@ const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({
         </div>
 
         <DialogFooter className="gap-2">
-          {onDelete && (
-            <Button variant="destructive" onClick={onDelete}>
-              Delete conversation
-            </Button>
-          )}
+          <Button variant="destructive" onClick={onDelete}>
+            Yes, exit and delete
+          </Button>
           <Button 
             variant="secondary" 
             onClick={onConfirm}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             Pause session & continue later
-          </Button>
-          <Button variant="outline" onClick={onClose}>
-            Continue session
           </Button>
         </DialogFooter>
       </DialogContent>

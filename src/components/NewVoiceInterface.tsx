@@ -72,6 +72,13 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
     onBack();
   };
 
+  const handleDeleteSession = () => {
+    // Exit without saving - just clean up and leave
+    cleanupRecording();
+    setShowLeaveModal(false);
+    onBack();
+  };
+
   // Comprehensive cleanup function that properly resets ALL states
   const cleanupRecording = useCallback(() => {
     console.log('🧹 Comprehensive cleanup started');
@@ -704,6 +711,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         isOpen={showLeaveModal}
         onClose={() => setShowLeaveModal(false)}
         onConfirm={handleConfirmLeave}
+        onDelete={handleDeleteSession}
       />
     </div>
   );
