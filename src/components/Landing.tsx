@@ -24,12 +24,12 @@ const Landing = () => {
               ⚠️ This is not a real company, this is Master's thesis project
             </Badge>
             
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight drop-shadow-lg">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight drop-shadow-lg">
               Build Stronger Teams,<br />
               One Conversation at a Time
             </h1>
             
-            <p className="text-sm md:text-base text-white/90 max-w-2xl drop-shadow-md">
+            <p className="text-l md:text-base text-white/90 max-w-2xl drop-shadow-md">
               Get personalized insights to help every individual thrive. It's not about evaluating, it's about understanding.
             </p>
             
