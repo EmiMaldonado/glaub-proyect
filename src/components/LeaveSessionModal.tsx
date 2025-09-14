@@ -7,12 +7,14 @@ interface LeaveSessionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  onDelete?: () => void;
 }
 
 const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({
   isOpen,
   onClose,
-  onConfirm
+  onConfirm,
+  onDelete
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -37,15 +39,20 @@ const LeaveSessionModal: React.FC<LeaveSessionModalProps> = ({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Continue Session
-          </Button>
+          {onDelete && (
+            <Button variant="destructive" onClick={onDelete}>
+              Delete conversation
+            </Button>
+          )}
           <Button 
             variant="secondary" 
             onClick={onConfirm}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             Pause session & continue later
+          </Button>
+          <Button variant="outline" onClick={onClose}>
+            Continue session
           </Button>
         </DialogFooter>
       </DialogContent>
