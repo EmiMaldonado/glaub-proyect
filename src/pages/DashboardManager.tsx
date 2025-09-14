@@ -280,7 +280,7 @@ const DashboardManager = () => {
             </p>
           </div>
           <Button variant="outline" asChild>
-            <Link to="/dashboard" className="-bottom-0 ">
+            <Link to="/dashboard" className="-bottom-0 bg-primary text-primary-foreground hover:bg-primary/90">
               <Target className="mr-2 h-4 w-4" />
               Go to Personal Dashboard
             </Link>
