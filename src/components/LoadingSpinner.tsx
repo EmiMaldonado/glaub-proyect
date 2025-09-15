@@ -14,7 +14,7 @@ const LoadingSpinner = ({ size = "md", className }: LoadingSpinnerProps) => {
 
   return (
     <div className={cn("relative", sizeClasses[size], className)}>
-      <style jsx>{`
+      <style>{`
         .loader {
           width: 64px;
           height: 48px;

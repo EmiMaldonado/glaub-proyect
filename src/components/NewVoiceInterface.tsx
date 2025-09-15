@@ -69,7 +69,12 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const handleConfirmLeave = () => {
     cleanupRecording();
     setShowLeaveModal(false);
-    onBack();
+    // Use onStopSession to properly pause the conversation
+    if (onStopSession) {
+      onStopSession();
+    } else {
+      onBack();
+    }
   };
 
   const handleDeleteSession = () => {

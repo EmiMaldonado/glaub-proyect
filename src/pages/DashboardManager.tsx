@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, ChevronRight } from "lucide-react";
+import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, ChevronRight, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
@@ -463,4 +463,23 @@ const DashboardManager = () => {
             </Card>
             
             <Card className="shadow-soft">
-             
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-bold text-primary">
+                      {Math.round(selectedMemberData.stats.averageSessionLength)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Avg Session (min)</p>
+                  </div>
+                  <Star className="h-8 w-8 text-primary/20" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default DashboardManager;
