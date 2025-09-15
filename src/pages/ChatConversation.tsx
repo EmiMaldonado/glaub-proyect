@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { usePausedConversations } from '@/hooks/usePausedConversations';
 
 interface Message {
   id: string;
@@ -29,6 +30,9 @@ interface Conversation {
 const ChatConversation: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const continueConversation = searchParams.get('continue');
+  const { pauseConversation, continuePausedConversation, clearPausedConversation } = usePausedConversations();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [textInput, setTextInput] = useState('');
@@ -198,8 +202,13 @@ const ChatConversation: React.FC = () => {
   // Initialize conversation on component mount
   useEffect(() => {
     if (!user) return;
-    createNewConversation();
-  }, [user]);
+    
+    if (continueConversation === 'true') {
+      handleContinuePausedConversation();
+    } else {
+      createNewConversation();
+    }
+  }, [user, continueConversation]);
 
   // Real-time message updates
   useEffect(() => {
@@ -232,25 +241,115 @@ const ChatConversation: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle pause session
-  const handlePauseSession = async () => {
-    if (!conversation) return;
+  // Handle continue paused conversation
+  const handleContinuePausedConversation = async () => {
+    if (!user) return;
 
     try {
-      await supabase
-        .from('conversations')
-        .update({ 
-          status: 'paused',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', conversation.id);
+      setIsInitializing(true);
+      resetConversationState();
 
+      // Get paused conversation messages
+      const pausedMessages = await continuePausedConversation(user.id);
+      
+      if (!pausedMessages || pausedMessages.length === 0) {
+        toast({
+          title: "No paused conversation found",
+          description: "Starting a new conversation instead",
+        });
+        await createNewConversation();
+        return;
+      }
+
+      // Create new active conversation for continuation
+      const { data: newConversation, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: `Continued Conversation ${new Date().toLocaleDateString()}`,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setConversation(newConversation as Conversation);
+
+      // Load the paused messages into current state
+      setMessages(pausedMessages);
+
+      // Generate AI welcome back message with summary
+      await sendAIWelcomeBackMessage(newConversation.id, pausedMessages);
+
+    } catch (error) {
+      console.error('Error continuing paused conversation:', error);
       toast({
-        title: "✅ Session Paused",
-        description: "Your conversation has been saved and you can continue later from the dashboard",
+        title: "Error",
+        description: "Could not continue paused conversation. Starting new one instead.",
+        variant: "destructive",
+      });
+      await createNewConversation();
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  // Send AI welcome back message with conversation summary
+  const sendAIWelcomeBackMessage = async (conversationId: string, previousMessages: Message[]) => {
+    try {
+      setIsLoading(true);
+
+      // Extract key topics from previous conversation for summary
+      const userMessages = previousMessages.filter(m => m.role === 'user').map(m => m.content);
+      const recentTopics = userMessages.slice(-3).join(', ');
+      
+      const welcomeMessage = `Welcome back! We were discussing ${recentTopics}. Generate a brief summary (1-2 sentences) of what we talked about and ask how I'd like to proceed today.`;
+
+      const response = await supabase.functions.invoke('ai-chat', {
+        body: {
+          message: welcomeMessage,
+          conversationId: conversationId,
+          userId: user?.id,
+          isFirstMessage: false
+        }
       });
 
-      navigate('/dashboard');
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+    } catch (error) {
+      console.error('Error sending welcome back message:', error);
+      toast({
+        title: "Error",
+        description: "Could not generate welcome message",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle pause session
+  const handlePauseSession = async () => {
+    if (!conversation || !user) return;
+
+    try {
+      // Use the new pause system - save only raw message history
+      const success = await pauseConversation(
+        user.id,
+        messages,
+        conversation.title || 'Paused Conversation'
+      );
+
+      if (success) {
+        // Delete the active conversation since it's now paused
+        await supabase
+          .from('conversations')
+          .delete()
+          .eq('id', conversation.id);
+
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Error pausing session:', error);
       toast({
@@ -290,8 +389,11 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle new conversation
-  const handleNewConversation = () => {
+  // Handle new conversation (clears any paused conversation)
+  const handleNewConversation = async () => {
+    if (user) {
+      await clearPausedConversation(user.id);
+    }
     createNewConversation();
   };
 

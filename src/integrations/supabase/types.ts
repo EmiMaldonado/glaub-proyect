@@ -245,6 +245,30 @@ export type Database = {
         }
         Relationships: []
       }
+      paused_conversations: {
+        Row: {
+          conversation_title: string | null
+          created_at: string
+          id: string
+          message_history: Json
+          user_id: string
+        }
+        Insert: {
+          conversation_title?: string | null
+          created_at?: string
+          id?: string
+          message_history?: Json
+          user_id: string
+        }
+        Update: {
+          conversation_title?: string | null
+          created_at?: string
+          id?: string
+          message_history?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

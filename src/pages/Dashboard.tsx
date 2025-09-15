@@ -11,14 +11,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
+import { usePausedConversations } from "@/hooks/usePausedConversations";
 // import MyTeams from "@/components/ui/MyTeams";
 const Dashboard = () => {
   const {
     user
   } = useAuth();
   const navigate = useNavigate();
+  const { getPausedConversation, clearPausedConversation } = usePausedConversations();
   const [lastConversation, setLastConversation] = useState<any>(null);
   const [pausedConversations, setPausedConversations] = useState<any[]>([]);
+  const [hasPausedConversation, setHasPausedConversation] = useState(false);
   const [oceanProfile, setOceanProfile] = useState<any>(null);
   const [allInsights, setAllInsights] = useState<any[]>([]);
   const [personalizedSummary, setPersonalizedSummary] = useState<string>('');
@@ -66,9 +69,13 @@ const Dashboard = () => {
         ascending: false
       });
 
-      // Check for paused conversations
+      // Check for paused conversations (old system - kept for backwards compatibility)
       const pausedConversations = conversations?.filter(c => c.status === 'paused') || [];
       setPausedConversations(pausedConversations);
+
+      // Check for new paused conversation system
+      const pausedConv = await getPausedConversation(user.id);
+      setHasPausedConversation(!!pausedConv);
 
       // Load all insights from all conversations
       const {
@@ -165,6 +172,15 @@ const Dashboard = () => {
       }
     }
   };
+
+  // Handle starting new conversation (clears paused conversation)
+  const handleStartNewConversation = async () => {
+    if (user && hasPausedConversation) {
+      await clearPausedConversation(user.id);
+      setHasPausedConversation(false);
+    }
+  };
+  
   const handleSharingToggle = (setting: string) => {
     setSharingSettings(prev => ({
       ...prev,
@@ -332,20 +348,20 @@ const Dashboard = () => {
             <div className="space-y-3">
               <h2 className="text-2xl font-bold">Speak with Glai</h2>
               <p className="text-primary-foreground/90">
-                Start a new conversation{pausedConversations.length > 0 ? ` or resume one of your ${pausedConversations.length} paused conversation${pausedConversations.length > 1 ? 's' : ''}` : ''}
+                Start a new conversation{hasPausedConversation ? ' or continue your previous session' : ''}
               </p>
               <div className="flex gap-3 mt-4">
                 <Button variant="secondary" size="lg" asChild>
-                  <Link to="/conversation">
+                  <Link to="/conversation" onClick={handleStartNewConversation}>
                     <Plus className="mr-2 h-5 w-5" />
                     Start New Session
                   </Link>
                 </Button>
-                {pausedConversations.length > 0 && (
+                {hasPausedConversation && (
                   <Button variant="default" size="lg" asChild>
-                    <Link to={`/conversation?resume=${pausedConversations[0].id}`}>
+                    <Link to="/conversation?continue=true">
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Continue Latest Session
+                      Continue Previous Conversation
                     </Link>
                   </Button>
                 )}
