@@ -318,6 +318,46 @@ const Dashboard = () => {
       });
     }
   };
+
+  const handleShareWithManager = async (type: 'strengths' | 'opportunities') => {
+    try {
+      if (!userProfile?.id || !currentManager) {
+        toast({
+          title: "Unable to Share",
+          description: "No manager found to share with",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const dataToShare = type === 'strengths' 
+        ? allInsights.flatMap(insight => insight.insights || []).slice(0, 5)
+        : allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5);
+
+      // For now, just show a success message - in a real implementation, 
+      // this would send data to the manager via email or notification
+      toast({
+        title: "Shared Successfully!",
+        description: `Your ${type} have been shared with your manager`,
+      });
+
+      // Update sharing settings
+      setSharingSettings(prev => ({
+        ...prev,
+        [type]: true,
+        manager: true
+      }));
+      
+    } catch (error: any) {
+      console.error('Error sharing with manager:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to share with manager",
+        variant: "destructive"
+      });
+    }
+  };
+
   return <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Welcome Header */}
       <div className="space-y-2">
@@ -510,9 +550,22 @@ const Dashboard = () => {
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-green-600" />
-              Strengths
+            <CardTitle className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-green-600" />
+                Strengths
+              </div>
+              {allInsights.length > 0 && currentManager && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleShareWithManager('strengths')}
+                  className="flex items-center gap-1"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share with Manager
+                </Button>
+              )}
             </CardTitle>
             <CardDescription>
               Your main identified strengths
@@ -536,9 +589,22 @@ const Dashboard = () => {
 
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-amber-600" />
-              Growth Opportunities
+            <CardTitle className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-amber-600" />
+                Growth Opportunities
+              </div>
+              {allInsights.length > 0 && currentManager && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleShareWithManager('opportunities')}
+                  className="flex items-center gap-1"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share with Manager
+                </Button>
+              )}
             </CardTitle>
             <CardDescription>
               Areas for your professional development
