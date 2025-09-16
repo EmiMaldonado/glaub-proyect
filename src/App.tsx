@@ -151,7 +151,7 @@ const App = () => (
                   </AuthGuard>
                 } />
                 <Route path="/onboarding" element={<OnboardingRoute />} />
-                <Route path="/session-recap" element={
+                <Route path="/session-recap/:conversationId" element={
                   <AuthGuard>
                     <SessionRecap />
                   </AuthGuard>
