@@ -69,8 +69,10 @@ export type Database = {
           email: string
           expires_at: string
           id: string
+          invitation_type: string | null
           invitation_url: string | null
           invited_at: string
+          invited_by_id: string | null
           manager_id: string
           status: string
           token: string
@@ -82,8 +84,10 @@ export type Database = {
           email: string
           expires_at?: string
           id?: string
+          invitation_type?: string | null
           invitation_url?: string | null
           invited_at?: string
+          invited_by_id?: string | null
           manager_id: string
           status?: string
           token: string
@@ -95,14 +99,23 @@ export type Database = {
           email?: string
           expires_at?: string
           id?: string
+          invitation_type?: string | null
           invitation_url?: string | null
           invited_at?: string
+          invited_by_id?: string | null
           manager_id?: string
           status?: string
           token?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "invitations_invited_by_id_fkey"
+            columns: ["invited_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invitations_manager_id_fkey"
             columns: ["manager_id"]
@@ -187,6 +200,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       OCEAN_phrases_traingdata: {
         Row: {
@@ -341,9 +390,11 @@ export type Database = {
           manager_id: string | null
           share_conversations: boolean
           share_insights: boolean
+          share_manager_recommendations: boolean | null
           share_ocean_profile: boolean
           share_profile: boolean
           share_progress: boolean
+          share_strengths: boolean | null
           updated_at: string
           user_id: string
         }
@@ -353,9 +404,11 @@ export type Database = {
           manager_id?: string | null
           share_conversations?: boolean
           share_insights?: boolean
+          share_manager_recommendations?: boolean | null
           share_ocean_profile?: boolean
           share_profile?: boolean
           share_progress?: boolean
+          share_strengths?: boolean | null
           updated_at?: string
           user_id: string
         }
@@ -365,9 +418,11 @@ export type Database = {
           manager_id?: string | null
           share_conversations?: boolean
           share_insights?: boolean
+          share_manager_recommendations?: boolean | null
           share_ocean_profile?: boolean
           share_profile?: boolean
           share_progress?: boolean
+          share_strengths?: boolean | null
           updated_at?: string
           user_id?: string
         }
@@ -587,6 +642,18 @@ export type Database = {
       get_user_manager_id: {
         Args: { user_profile_id: string }
         Returns: string
+      }
+      get_user_notifications: {
+        Args: { target_user_id?: string }
+        Returns: {
+          created_at: string
+          data: Json
+          id: string
+          message: string
+          read: boolean
+          title: string
+          type: string
+        }[]
       }
       get_user_onboarding_status: {
         Args: { target_user_id: string }

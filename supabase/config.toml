@@ -41,3 +41,9 @@ verify_jwt = false
 
 [edge_functions.test-invitation-flow]
 verify_jwt = false
+
+[edge_functions.employee-invite-manager]
+verify_jwt = true
+
+[edge_functions.accept-manager-invitation]
+verify_jwt = false
