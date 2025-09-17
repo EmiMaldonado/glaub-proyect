@@ -98,9 +98,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/dashboard`;
+      console.log('Attempting signup for:', email);
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -112,26 +112,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
+      console.log('Signup response:', { data: !!data, error });
+      
       if (error) {
-        toast({
-          title: "Registration error",
-          description: error.message,
-          variant: "destructive",
-        });
+        console.error('Signup error:', error);
+        
+        if (error.message.includes('User already registered')) {
+          toast({
+            title: "Account already exists",
+            description: "An account with this email already exists. Please sign in instead.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('Password should be at least')) {
+          toast({
+            title: "Password too weak",
+            description: "Password should be at least 6 characters long.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('Unable to validate email address')) {
+          toast({
+            title: "Invalid email",
+            description: "Please enter a valid email address.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Registration error",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
-        toast({
-          title: "Registration successful!",
-          description: "Please verify your email to complete registration",
-        });
+        console.log('Signup successful, user created:', data.user?.id);
+        
+        // Check if email confirmation is required
+        if (data.user && !data.user.email_confirmed_at) {
+          toast({
+            title: "Registration successful!",
+            description: "Please check your email and click the confirmation link to complete registration. Check your spam folder if you don't see the email.",
+            duration: 10000, // Show for 10 seconds
+          });
+        } else {
+          toast({
+            title: "Registration successful!",
+            description: "Welcome to Gläub! You can now start using the app.",
+          });
+        }
       }
       
       return { error };
-    } catch (error) {
-        toast({
-          title: "Unexpected error", 
-          description: "An unexpected error occurred",
-          variant: "destructive",
-        });
+    } catch (error: any) {
+      console.error('Unexpected signup error:', error);
+      toast({
+        title: "Unexpected error", 
+        description: "An unexpected error occurred during registration. Please try again.",
+        variant: "destructive",
+      });
       return { error };
     }
   };
@@ -204,7 +240,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resendConfirmation = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resend({
+      console.log('Attempting to resend confirmation for:', email);
+      
+      const { data, error } = await supabase.auth.resend({
         type: 'signup',
         email: email,
         options: {
@@ -212,24 +250,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
+      console.log('Resend confirmation response:', { data, error });
+      
       if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        console.error('Resend confirmation error:', error);
+        
+        if (error.message.includes('Email rate limit exceeded')) {
+          toast({
+            title: "Too many requests",
+            description: "Please wait a few minutes before requesting another confirmation email.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('User not found')) {
+          toast({
+            title: "Account not found",
+            description: "No account found with this email address. Please sign up first.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
-          title: "Email reenviado",
-          description: "Se ha enviado un nuevo email de confirmación. Revisa tu bandeja de entrada.",
+          title: "Confirmation email sent",
+          description: "A new confirmation email has been sent. Please check your inbox and spam folder.",
+          duration: 8000,
         });
       }
       
       return { error };
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Unexpected resend confirmation error:', error);
       toast({
-        title: "Error inesperado",
-        description: "No se pudo reenviar el email de confirmación",
+        title: "Unexpected error",
+        description: "Could not resend confirmation email. Please try again.",
         variant: "destructive",
       });
       return { error };

@@ -16,66 +16,96 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Obtener parámetros de la URL
+        // Get URL parameters
         const accessToken = searchParams.get('access_token');
         const refreshToken = searchParams.get('refresh_token');
         const type = searchParams.get('type');
         const error = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
 
-        // Si hay error en los parámetros
+        console.log('Auth callback triggered:', { 
+          accessToken: !!accessToken, 
+          refreshToken: !!refreshToken, 
+          type, 
+          error, 
+          errorDescription 
+        });
+
+        // Handle errors in URL parameters
         if (error) {
           console.error('Auth callback error:', error, errorDescription);
           setStatus('error');
           
           if (error === 'access_denied' && errorDescription?.includes('expired')) {
-            setMessage('El enlace ha expirado. Por favor solicita un nuevo enlace.');
+            setMessage('The confirmation link has expired. Please request a new one.');
+          } else if (error === 'invalid_request') {
+            setMessage('Invalid confirmation link. Please try requesting a new confirmation email.');
           } else {
-            setMessage(errorDescription || 'Error en la autenticación');
+            setMessage(errorDescription || 'Authentication error occurred');
           }
           return;
         }
 
-        // Si no hay tokens, verificar hash para confirmación de email
-        if (!accessToken && !refreshToken) {
-          const hashParams = new URLSearchParams(window.location.hash.substring(1));
-          const hashAccessToken = hashParams.get('access_token');
-          const hashType = hashParams.get('type');
+        // Handle hash-based tokens (email confirmation)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const hashAccessToken = hashParams.get('access_token');
+        const hashRefreshToken = hashParams.get('refresh_token');
+        const hashType = hashParams.get('type');
+        const hashError = hashParams.get('error');
 
-          if (hashAccessToken && hashType) {
-            // Manejar confirmación de email desde hash
-            const { data, error: sessionError } = await supabase.auth.setSession({
-              access_token: hashAccessToken,
-              refresh_token: hashParams.get('refresh_token') || '',
+        console.log('Hash parameters:', { 
+          hashAccessToken: !!hashAccessToken, 
+          hashRefreshToken: !!hashRefreshToken, 
+          hashType, 
+          hashError 
+        });
+
+        // Handle hash errors
+        if (hashError) {
+          console.error('Hash auth error:', hashError);
+          setStatus('error');
+          setMessage('Authentication link error. The link may be invalid or expired.');
+          return;
+        }
+
+        // Process email confirmation from hash
+        if (hashAccessToken && hashType === 'signup') {
+          console.log('Processing email confirmation...');
+          
+          const { data, error: sessionError } = await supabase.auth.setSession({
+            access_token: hashAccessToken,
+            refresh_token: hashRefreshToken || '',
+          });
+
+          if (sessionError) {
+            console.error('Session error during confirmation:', sessionError);
+            setStatus('error');
+            setMessage('Failed to confirm email. The link may have expired.');
+            return;
+          }
+
+          if (data.user) {
+            console.log('Email confirmation successful for user:', data.user.id);
+            setStatus('success');
+            setMessage('Email confirmed successfully! Welcome to Gläub.');
+            
+            toast({
+              title: "Email confirmed",
+              description: "Your account has been verified successfully",
             });
 
-            if (sessionError) {
-              console.error('Session error:', sessionError);
-              setStatus('error');
-              setMessage('Error al confirmar el email. El enlace puede haber expirado.');
-              return;
-            }
-
-            if (data.user) {
-              setStatus('success');
-              setMessage('¡Email confirmado exitosamente! Bienvenido a Gläub.');
-              
-              toast({
-                title: "Email confirmado",
-                description: "Tu cuenta ha sido verificada exitosamente",
-              });
-
-              // Redirigir al dashboard después de 2 segundos
-              setTimeout(() => {
-                navigate('/dashboard', { replace: true });
-              }, 2000);
-              return;
-            }
+            // Redirect to dashboard after 2 seconds
+            setTimeout(() => {
+              navigate('/dashboard', { replace: true });
+            }, 2000);
+            return;
           }
         }
 
-        // Manejar tokens de reset de password
+        // Process query parameter tokens (password recovery)
         if (accessToken && type === 'recovery') {
+          console.log('Processing password recovery...');
+          
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || '',
@@ -84,28 +114,29 @@ const AuthCallback = () => {
           if (sessionError) {
             console.error('Recovery session error:', sessionError);
             setStatus('error');
-            setMessage('Error al procesar el enlace de recuperación. El enlace puede haber expirado.');
+            setMessage('Password recovery link error. The link may have expired.');
             return;
           }
 
           setStatus('success');
-          setMessage('Enlace de recuperación válido. Redirigiendo...');
+          setMessage('Recovery link valid. Redirecting to password reset...');
           
-          // Redirigir a reset password
+          // Redirect to reset password
           setTimeout(() => {
             navigate('/reset-password', { replace: true });
           }, 1000);
           return;
         }
 
-        // Si llegamos aquí sin procesar nada, mostrar error
+        // If we get here without processing anything, show error
+        console.log('No valid auth tokens found');
         setStatus('error');
-        setMessage('Enlace de autenticación inválido o expirado.');
+        setMessage('Invalid or expired authentication link.');
 
       } catch (error) {
         console.error('Unexpected callback error:', error);
         setStatus('error');
-        setMessage('Error inesperado durante la autenticación.');
+        setMessage('Unexpected error during authentication.');
       }
     };
 

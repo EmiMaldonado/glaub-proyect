@@ -11,6 +11,7 @@ const corsHeaders = {
 interface AuthEmailData {
   user: {
     email: string;
+    id?: string;
   };
   email_data: {
     token: string;
@@ -29,14 +30,22 @@ serve(async (req: Request) => {
   try {
     const emailData: AuthEmailData = await req.json();
     const { user, email_data } = emailData;
-    const { email_action_type, token, redirect_to, site_url } = email_data;
+    const { email_action_type, token, token_hash, redirect_to, site_url } = email_data;
+
+    console.log('Auth email triggered:', { 
+      email_action_type, 
+      user_email: user.email,
+      redirect_to,
+      site_url 
+    });
 
     let subject = "";
     let html = "";
 
     if (email_action_type === "signup") {
       subject = "Welcome to Gläub - Confirm your email";
-      const confirmUrl = `${site_url}/auth/v1/verify?token=${token}&type=signup&redirect_to=${redirect_to}`;
+      // Use token_hash for the verification URL as it's more secure
+      const confirmUrl = `${site_url}/auth/v1/verify?token=${token_hash}&type=signup&redirect_to=${redirect_to}`;
       
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
@@ -60,6 +69,10 @@ serve(async (req: Request) => {
             
             <p style="color: #999; font-size: 12px; margin-top: 30px;">
               If you didn't create an account with us, please ignore this email.
+            </p>
+            
+            <p style="color: #999; font-size: 12px; margin-top: 10px;">
+              This link will expire in 24 hours for security reasons.
             </p>
           </div>
         </div>
@@ -93,11 +106,17 @@ serve(async (req: Request) => {
             </p>
             
             <p style="color: #999; font-size: 12px; margin-top: 10px;">
-              This link will expire in 60 minutes for security reasons.
+              This link will expire in 24 hours for security reasons.
             </p>
           </div>
         </div>
       `;
+    } else {
+      console.log('Unknown email action type:', email_action_type);
+      return new Response(JSON.stringify({ error: 'Unknown email action type' }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const emailResponse = await resend.emails.send({
@@ -107,16 +126,33 @@ serve(async (req: Request) => {
       html: html,
     });
 
-    console.log("Auth email sent successfully:", emailResponse);
+    console.log("Auth email sent successfully:", { 
+      id: emailResponse.data?.id,
+      to: user.email,
+      subject,
+      action_type: email_action_type 
+    });
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      email_id: emailResponse.data?.id,
+      message: 'Email sent successfully' 
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error("Error sending auth email:", error);
+    console.error("Error sending auth email:", { 
+      error: error.message,
+      user_email: user?.email,
+      action_type: email_data?.email_action_type 
+    });
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'Failed to send authentication email'
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
