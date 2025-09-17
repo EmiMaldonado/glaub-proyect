@@ -154,12 +154,12 @@ Make recommendations specific to the topics they discussed and their apparent pe
       // Fallback analysis
       analysisData = {
         ocean_profile: {
-          openness: 60,
-          conscientiousness: 65,
-          extraversion: 55,
-          agreeableness: 70,
-          neuroticism: 40,
-          summary: "Analysis based on conversation patterns shows a thoughtful individual with good communication skills."
+          openness: 0,
+          conscientiousness: 0,
+          extraversion: 0,
+          agreeableness: 0,
+          neuroticism: 0,
+          summary: "Error analysis. Please contact mariaemiliamaldonadopaez@gmail.com"
         },
         key_insights: [
           "Shows strong self-awareness and desire for growth",
