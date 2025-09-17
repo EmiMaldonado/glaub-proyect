@@ -70,15 +70,15 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AuthProvider>
-            <OnboardingGuard>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter
-                future={{
-                  v7_startTransition: true,
-                  v7_relativeSplatPath: true,
-                }}
-              >
+            <Toaster />
+            <Sonner />
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <OnboardingGuard>
                 <div className="min-h-screen bg-gradient-subtle">
                   <Routes>
                     {/* Public routes */}
@@ -173,8 +173,8 @@ const App = () => {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </div>
-              </BrowserRouter>
-            </OnboardingGuard>
+              </OnboardingGuard>
+            </BrowserRouter>
           </AuthProvider>
         </TooltipProvider>
       </QueryClientProvider>
