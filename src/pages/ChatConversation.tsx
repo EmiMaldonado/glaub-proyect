@@ -115,19 +115,20 @@ const ChatConversation: React.FC = () => {
 
       let isFirstSessionEver = !previousCompletedConversations || previousCompletedConversations.length === 0;
       
-      let initialMessage;
+      // Send a proper conversation starter instead of system prompts
+      let conversationStarter;
       
       if (isFirstSessionEver) {
-        // First session ever - use the standard Glai introduction
-        initialMessage = "Start the first conversation with this user using the standard Glai introduction and personality discovery protocol.";
+        // First session ever - send a simple greeting that will trigger the personality discovery
+        conversationStarter = "Hello";
       } else {
-        // Returning user - recall previous conversations and ask about new topics  
-        initialMessage = "This is a returning user. Greet them warmly, recall what you discussed in previous sessions, and ask if there are other topics they'd like to explore today.";
+        // Returning user - send a simple greeting that will trigger recall of previous sessions
+        conversationStarter = "Hi, I'm back for another session";
       }
       
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: initialMessage,
+          message: conversationStarter,
           conversationId: conversationId,
           userId: user?.id,
           isFirstMessage: isFirstSessionEver
@@ -135,13 +136,19 @@ const ChatConversation: React.FC = () => {
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error('AI chat error:', response.error);
+        throw new Error(response.error.message || 'Failed to get AI response');
+      }
+
+      if (response.data?.error) {
+        console.error('AI chat function error:', response.data.error);
+        throw new Error(response.data.error);
       }
     } catch (error) {
       console.error('Error sending AI first message:', error);
       toast({
         title: "Error",
-        description: "Could not initialize conversation with AI",
+        description: "Could not initialize conversation with AI. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -176,12 +183,18 @@ const ChatConversation: React.FC = () => {
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error('Supabase function error:', response.error);
+        throw new Error(response.error.message || 'Failed to send message');
+      }
+
+      if (response.data?.error) {
+        console.error('AI chat function error:', response.data.error);
+        throw new Error(response.data.error);
       }
 
       // The AI response will be added automatically via real-time subscription
       // when it's saved to the database by the edge function
-      console.log('✅ Message sent successfully');
+      console.log('✅ Message sent successfully', response.data?.debug);
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -191,7 +204,7 @@ const ChatConversation: React.FC = () => {
       
       toast({
         title: "Error",
-        description: "Could not send message. Please try again.",
+        description: error instanceof Error ? error.message : "Could not send message. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -299,11 +312,8 @@ const ChatConversation: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Extract key topics from previous conversation for summary
-      const userMessages = previousMessages.filter(m => m.role === 'user').map(m => m.content);
-      const recentTopics = userMessages.slice(-3).join(', ');
-      
-      const welcomeMessage = `Welcome back! We were discussing ${recentTopics}. Generate a brief summary (1-2 sentences) of what we talked about and ask how I'd like to proceed today.`;
+      // Send a simple message to continue the conversation
+      const welcomeMessage = "I'm continuing our previous conversation";
 
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
@@ -315,13 +325,19 @@ const ChatConversation: React.FC = () => {
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error('Supabase function error:', response.error);
+        throw new Error(response.error.message || 'Failed to continue conversation');
+      }
+
+      if (response.data?.error) {
+        console.error('AI chat function error:', response.data.error);
+        throw new Error(response.data.error);
       }
     } catch (error) {
       console.error('Error sending welcome back message:', error);
       toast({
         title: "Error",
-        description: "Could not generate welcome message",
+        description: "Could not continue conversation. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -435,6 +451,12 @@ const ChatConversation: React.FC = () => {
           <div className="max-w-4xl mx-auto h-full flex flex-col">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+              {messages.length === 0 && !isLoading && (
+                <div className="text-center text-muted-foreground py-8">
+                  <p>Your conversation will appear here...</p>
+                </div>
+              )}
+              
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -448,6 +470,9 @@ const ChatConversation: React.FC = () => {
                     }`}
                   >
                     <p className="text-sm leading-relaxed">{message.content}</p>
+                    <p className="text-xs opacity-70 mt-1">
+                      {new Date(message.created_at).toLocaleTimeString()}
+                    </p>
                   </div>
                 </div>
               ))}

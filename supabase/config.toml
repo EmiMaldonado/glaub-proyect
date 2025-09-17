@@ -35,3 +35,6 @@ verify_jwt = true
 
 [edge_functions.auth-emails]
 verify_jwt = false
+
+[edge_functions.test-chat]
+verify_jwt = false

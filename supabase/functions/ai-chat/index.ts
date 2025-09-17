@@ -496,9 +496,19 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
 
     // Prepare messages for OpenAI with personalized system prompt
     const systemPrompt = getSystemPrompt(isFirstConversation, previousInsights);
+    
+    // Filter out system-like messages that shouldn't be treated as user messages
+    const filteredMessages = messages.filter(m => {
+      const content = m.content.toLowerCase();
+      return !content.includes('start the first conversation') && 
+             !content.includes('this is a returning user') &&
+             !content.includes('greet them warmly') &&
+             !content.includes('continuing our previous conversation');
+    });
+    
     const chatMessages = [
       { role: 'system', content: systemPrompt },
-      ...messages.map(m => ({ role: m.role, content: m.content })),
+      ...filteredMessages.map(m => ({ role: m.role, content: m.content })),
       { role: 'user', content: message }
     ];
 
@@ -617,9 +627,16 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     debugInfo.timing.total_processing_ms = Date.now() - startTime;
     debugInfo.processing_steps.push('Processing completed successfully');
 
+    console.log('✅ AI Chat processing completed successfully:', {
+      conversation_id: conversationId,
+      processing_time_ms: debugInfo.timing.total_processing_ms,
+      assistant_message_length: assistantMessage.length,
+      tokens_used: tokensUsed
+    });
 
     // 6. Return debugging information in response
     return new Response(JSON.stringify({ 
+      success: true,
       message: assistantMessage,
       tokensUsed,
       insights,
