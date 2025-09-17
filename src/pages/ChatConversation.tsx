@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Pause } from 'lucide-react';
+import { ArrowLeft, Pause, Play } from 'lucide-react';
 import { useSessionManager } from '@/hooks/useSessionManager';
 
 interface Message {
@@ -36,10 +36,12 @@ const ChatConversation: React.FC = () => {
     conversation,
     messages,
     hasActiveSession,
+    isPaused,
     startNewSession,
     resumeSession,
     addMessageToSession,
     pauseSession,
+    resumePausedSession,
     endSession,
     updateActivity,
     loadSessionFromLocal
@@ -157,7 +159,7 @@ const ChatConversation: React.FC = () => {
 
   // Handle sending user messages
   const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim() || !conversation || isLoading) return;
+    if (!messageText.trim() || !conversation || isLoading || isPaused) return;
 
     setIsLoading(true);
     updateActivity(); // Update last activity
@@ -380,10 +382,14 @@ const ChatConversation: React.FC = () => {
   const handlePauseSession = async () => {
     if (!conversation || !user) return;
 
-    const success = await pauseSession();
-    if (success) {
-      navigate('/dashboard');
-    }
+    await pauseSession();
+  };
+
+  // Handle resume session
+  const handleResumeSession = () => {
+    if (!conversation || !user) return;
+
+    resumePausedSession();
   };
 
   // Handle end session
@@ -435,8 +441,11 @@ const ChatConversation: React.FC = () => {
             <h1 className="text-lg font-medium">Therapeutic Chat</h1>
           </div>
           <div className="flex items-center space-x-2">
-            {hasActiveSession && (
+            {hasActiveSession && !isPaused && (
               <span className="text-sm text-green-600 font-medium">● Active Session</span>
+            )}
+            {isPaused && (
+              <span className="text-sm text-amber-600 font-medium">⏸ Paused Session</span>
             )}
           </div>
         </div>
@@ -448,6 +457,19 @@ const ChatConversation: React.FC = () => {
           <div className="max-w-4xl mx-auto h-full flex flex-col">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+              {/* Paused State Banner */}
+              {isPaused && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                  <div className="flex items-center justify-center space-x-2 text-amber-700">
+                    <Pause className="h-5 w-5" />
+                    <span className="font-medium">Session Paused</span>
+                  </div>
+                  <p className="text-sm text-amber-600 mt-1">
+                    Click Resume to continue your conversation
+                  </p>
+                </div>
+              )}
+
               {messages.length === 0 && !isLoading && (
                 <div className="text-center text-muted-foreground py-8">
                   <p>Your conversation will appear here...</p>
@@ -496,17 +518,17 @@ const ChatConversation: React.FC = () => {
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !isLoading) {
+                    if (e.key === 'Enter' && !isLoading && !isPaused) {
                       handleSendMessage(textInput);
                     }
                   }}
-                  placeholder="Write your message..."
+                  placeholder={isPaused ? "Session is paused..." : "Write your message..."}
                   className="flex-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                  disabled={isLoading}
+                  disabled={isLoading || isPaused}
                 />
                 <Button
                   onClick={() => handleSendMessage(textInput)}
-                  disabled={!textInput.trim() || isLoading}
+                  disabled={!textInput.trim() || isLoading || isPaused}
                 >
                   Send
                 </Button>
@@ -514,15 +536,28 @@ const ChatConversation: React.FC = () => {
               
               {/* Session Controls */}
               <div className="flex items-center justify-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePauseSession}
-                  disabled={!conversation || messages.length === 0}
-                >
-                  <Pause className="h-4 w-4 mr-2" />
-                  Pause
-                </Button>
+                {!isPaused ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePauseSession}
+                    disabled={!conversation || messages.length === 0}
+                  >
+                    <Pause className="h-4 w-4 mr-2" />
+                    Pause
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResumeSession}
+                    disabled={!conversation}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    Resume
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

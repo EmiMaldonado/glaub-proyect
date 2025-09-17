@@ -28,6 +28,7 @@ interface SessionState {
   lastActivity: string;
   sessionStartTime: string;
   autoSaveEnabled: boolean;
+  isPaused: boolean;
 }
 
 const SESSION_STORAGE_KEY = 'chat_session_state';
@@ -41,7 +42,8 @@ export const useSessionManager = () => {
     messages: [],
     lastActivity: new Date().toISOString(),
     sessionStartTime: new Date().toISOString(),
-    autoSaveEnabled: true
+    autoSaveEnabled: true,
+    isPaused: false
   });
   
   const autoSaveTimerRef = useRef<NodeJS.Timeout>();
@@ -99,7 +101,8 @@ export const useSessionManager = () => {
         messages: parsed.messages || [],
         lastActivity: parsed.lastActivity,
         sessionStartTime: parsed.sessionStartTime,
-        autoSaveEnabled: parsed.autoSaveEnabled ?? true
+        autoSaveEnabled: parsed.autoSaveEnabled ?? true,
+        isPaused: parsed.isPaused ?? false
       };
     } catch (error) {
       console.error('Error loading session from localStorage:', error);
@@ -166,11 +169,12 @@ export const useSessionManager = () => {
       });
     }
     
-    setSessionState(prev => ({
-      ...prev,
-      conversation: null,
-      messages: []
-    }));
+      setSessionState(prev => ({
+        ...prev,
+        conversation: null,
+        messages: [],
+        isPaused: false
+      }));
     clearLocalSession();
   }, [sessionState, saveSessionToDatabase, clearLocalSession]);
 
@@ -181,7 +185,8 @@ export const useSessionManager = () => {
       messages: [],
       lastActivity: new Date().toISOString(),
       sessionStartTime: new Date().toISOString(),
-      autoSaveEnabled: true
+      autoSaveEnabled: true,
+      isPaused: false
     };
     
     setSessionState(newState);
@@ -198,7 +203,8 @@ export const useSessionManager = () => {
       messages,
       lastActivity: new Date().toISOString(),
       sessionStartTime: new Date().toISOString(),
-      autoSaveEnabled: true
+      autoSaveEnabled: true,
+      isPaused: false
     };
     
     setSessionState(newState);
@@ -231,22 +237,40 @@ export const useSessionManager = () => {
       
       toast({
         title: "Session Paused",
-        description: "Your conversation has been saved and can be resumed later",
+        description: "Your conversation is now paused. You can resume anytime.",
       });
       
       setSessionState(prev => ({
         ...prev,
-        conversation: null,
-        messages: []
+        isPaused: true,
+        lastActivity: new Date().toISOString()
       }));
-      clearLocalSession();
       
       return true;
     } catch (error) {
       console.error('Error pausing session:', error);
       return false;
     }
-  }, [sessionState, saveSessionToDatabase, clearLocalSession]);
+  }, [sessionState, saveSessionToDatabase]);
+
+  // Resume current session
+  const resumePausedSession = useCallback(() => {
+    if (!sessionState.isPaused) return false;
+
+    toast({
+      title: "Session Resumed",
+      description: "Welcome back! Your conversation continues.",
+    });
+
+    setSessionState(prev => ({
+      ...prev,
+      isPaused: false,
+      lastActivity: new Date().toISOString()
+    }));
+
+    updateActivity();
+    return true;
+  }, [sessionState.isPaused, updateActivity]);
 
   // End session
   const endSession = useCallback(async () => {
@@ -276,7 +300,8 @@ export const useSessionManager = () => {
       setSessionState(prev => ({
         ...prev,
         conversation: null,
-        messages: []
+        messages: [],
+        isPaused: false
       }));
 
       toast({
@@ -368,7 +393,8 @@ export const useSessionManager = () => {
     // State
     conversation: sessionState.conversation,
     messages: sessionState.messages,
-    hasActiveSession: !!sessionState.conversation,
+    hasActiveSession: !!sessionState.conversation && !sessionState.isPaused,
+    isPaused: sessionState.isPaused,
     sessionStartTime: sessionState.sessionStartTime,
     lastActivity: sessionState.lastActivity,
     
@@ -377,6 +403,7 @@ export const useSessionManager = () => {
     resumeSession,
     addMessageToSession,
     pauseSession,
+    resumePausedSession,
     endSession,
     updateActivity,
     clearLocalSession,
