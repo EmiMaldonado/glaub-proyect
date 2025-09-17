@@ -54,9 +54,11 @@ const ChatConversation: React.FC = () => {
 
   // Create new conversation and get AI first message
   const createNewConversation = async () => {
-    if (!user) return;
+    if (!user || isLoading) return;
 
     try {
+      setIsLoading(true);
+      
       // Count existing conversations to get the next number
       const { count } = await supabase
         .from('conversations')
@@ -81,15 +83,8 @@ const ChatConversation: React.FC = () => {
       // Start new session
       startNewSession(newConversation as Conversation);
 
-      // Get user's profile for personalization
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, display_name')
-        .eq('user_id', user.id)
-        .single();
-
       // Get AI first message with context
-      await sendAIFirstMessage(newConversation.id, profile?.display_name || profile?.full_name || 'User');
+      await sendAIFirstMessage(newConversation.id);
 
     } catch (error) {
       console.error('Error creating conversation:', error);
@@ -98,14 +93,14 @@ const ChatConversation: React.FC = () => {
         description: "Could not create new conversation",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Send AI first message with context and check if truly first session
-  const sendAIFirstMessage = async (conversationId: string, userName: string) => {
+  const sendAIFirstMessage = async (conversationId: string) => {
     try {
-      setIsLoading(true);
-      
       // Check if user has any previous completed conversations to determine if this is their first session ever
       const { data: previousCompletedConversations } = await supabase
         .from('conversations')
@@ -116,16 +111,10 @@ const ChatConversation: React.FC = () => {
 
       let isFirstSessionEver = !previousCompletedConversations || previousCompletedConversations.length === 0;
       
-      // Send a proper conversation starter instead of system prompts
-      let conversationStarter;
-      
-      if (isFirstSessionEver) {
-        // First session ever - send a simple greeting that will trigger the personality discovery
-        conversationStarter = "Hello";
-      } else {
-        // Returning user - send a simple greeting that will trigger recall of previous sessions
-        conversationStarter = "Hi, I'm back for another session";
-      }
+      // Send a simple greeting to start the conversation
+      const conversationStarter = isFirstSessionEver 
+        ? "Start the first conversation with a warm greeting and begin personality discovery"
+        : "Start this conversation by welcoming back the returning user";
       
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
@@ -152,8 +141,6 @@ const ChatConversation: React.FC = () => {
         description: "Could not initialize conversation with AI. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 

@@ -404,38 +404,47 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
 
     debugInfo.processing_steps.push(`Retrieved ${messages?.length || 0} historical messages`);
 
-    // Save user message
-    debugInfo.processing_steps.push('Saving user message to database');
-    const saveUserStartTime = Date.now();
+    // Save user message only if it's not a system instruction
+    const isSystemInstruction = message.toLowerCase().includes('start the first conversation') ||
+                                message.toLowerCase().includes('start this conversation by welcoming') ||
+                                message.toLowerCase().includes('begin personality discovery') ||
+                                message.toLowerCase().includes('this is a returning user');
     
-    const { error: saveUserError } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        role: 'user',
-        content: message,
-        metadata: { 
-          timestamp: new Date().toISOString(),
-          debug_info: {
-            request_id: crypto.randomUUID(),
-            message_length: message.length
+    if (!isSystemInstruction) {
+      debugInfo.processing_steps.push('Saving user message to database');
+      const saveUserStartTime = Date.now();
+      
+      const { error: saveUserError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          role: 'user',
+          content: message,
+          metadata: { 
+            timestamp: new Date().toISOString(),
+            debug_info: {
+              request_id: crypto.randomUUID(),
+              message_length: message.length
+            }
           }
-        }
-      });
+        });
 
-    debugInfo.timing.user_message_save_ms = Date.now() - saveUserStartTime;
+      debugInfo.timing.user_message_save_ms = Date.now() - saveUserStartTime;
 
-    if (saveUserError) {
-      console.error('❌ Error saving user message:', {
-        error: saveUserError,
-        conversationId,
-        details: saveUserError.message
-      });
-      debugInfo.processing_steps.push(`User message save error: ${saveUserError.message}`);
-      throw new Error(`Failed to save user message: ${saveUserError.message}`);
+      if (saveUserError) {
+        console.error('❌ Error saving user message:', {
+          error: saveUserError,
+          conversationId,
+          details: saveUserError.message
+        });
+        debugInfo.processing_steps.push(`User message save error: ${saveUserError.message}`);
+        throw new Error(`Failed to save user message: ${saveUserError.message}`);
+      }
+
+      debugInfo.processing_steps.push('User message saved successfully');
+    } else {
+      debugInfo.processing_steps.push('Skipping user message save for system instruction');
     }
-
-    debugInfo.processing_steps.push('User message saved successfully');
 
     // Check if this is first conversation ever (user has never completed a session) and get previous insights
     let previousInsights = null;
@@ -503,7 +512,9 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
       return !content.includes('start the first conversation') && 
              !content.includes('this is a returning user') &&
              !content.includes('greet them warmly') &&
-             !content.includes('continuing our previous conversation');
+             !content.includes('continuing our previous conversation') &&
+             !content.includes('start this conversation by welcoming') &&
+             !content.includes('begin personality discovery');
     });
     
     const chatMessages = [
