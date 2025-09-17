@@ -368,7 +368,7 @@ const Dashboard = () => {
             <Button variant="default" asChild>
               <Link to="/dashboard/manager">
                 <Users className="mr-2 h-4 w-4" />
-                Go to Manager Dashboard
+                Manager Dashboard
               </Link>
             </Button>
           )}
