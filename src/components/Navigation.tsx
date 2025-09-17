@@ -54,10 +54,10 @@ const Navigation = () => {
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      
+                      <Link to="/settings">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer" onClick={handleSignOut}>
