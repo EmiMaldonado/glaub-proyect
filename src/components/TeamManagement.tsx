@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { Users, Mail, Clock, CheckCircle, XCircle, Plus } from 'lucide-react';
+import { Users, Mail, Clock, CheckCircle, XCircle, Plus, UserMinus, Shield } from 'lucide-react';
 
 interface Invitation {
   id: string;
@@ -131,6 +131,33 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
     }
   };
 
+  const removeTeamMember = async (memberId: string, memberName: string) => {
+    if (!isManager) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ manager_id: null })
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Team Member Removed",
+        description: `${memberName} has been removed from your team`,
+      });
+
+      fetchTeamMembers(); // Refresh team members list
+    } catch (error: any) {
+      console.error('Error removing team member:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove team member",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -144,7 +171,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
     }
   };
 
-  // Show team building section for employees
+  // Show team building section for non-managers with no team
   if (!isManager && teamMembers.length === 0 && invitations.length === 0) {
     return (
       <Card>
@@ -183,41 +210,122 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
     );
   }
 
-  // Manager view or employee with team - but remove the team display since it's handled in main dashboard
+  // Unified team management view
   return (
     <div className="space-y-6">
-      {/* Invitations Status */}
-      {invitations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Sent Invitations</CardTitle>
-            <CardDescription>
-              Status of invitations you have sent
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {invitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{invitation.email}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Sent on {new Date(invitation.invited_at).toLocaleDateString()}
-                        {invitation.accepted_at && 
-                          ` • Accepted on ${new Date(invitation.accepted_at).toLocaleDateString()}`
-                        }
-                      </p>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Team Management
+          </CardTitle>
+          <CardDescription>
+            Manage your team members and invitations
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Current Team Members */}
+          {teamMembers.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                <h3 className="text-lg font-semibold">Team Members ({teamMembers.length})</h3>
+              </div>
+              <div className="space-y-3">
+                {teamMembers.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Users className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{member.display_name || member.full_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {member.role} • Joined {new Date(member.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
+                    {isManager && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeTeamMember(member.id, member.display_name || member.full_name)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <UserMinus className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    )}
                   </div>
-                  {getStatusBadge(invitation.status)}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+
+          {/* Separator if both sections exist */}
+          {teamMembers.length > 0 && invitations.length > 0 && <Separator />}
+
+          {/* Pending Invitations */}
+          {invitations.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-primary" />
+                <h3 className="text-lg font-semibold">Pending Invitations ({invitations.filter(i => i.status === 'pending').length})</h3>
+              </div>
+              <div className="space-y-3">
+                {invitations.map((invitation) => (
+                  <div key={invitation.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{invitation.email}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Sent on {new Date(invitation.invited_at).toLocaleDateString()}
+                          {invitation.accepted_at && 
+                            ` • Accepted on ${new Date(invitation.accepted_at).toLocaleDateString()}`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    {getStatusBadge(invitation.status)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Separator before invite section */}
+          {(teamMembers.length > 0 || invitations.length > 0) && <Separator />}
+
+          {/* Invite New Member Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              <h3 className="text-lg font-semibold">Invite New Member</h3>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-member-email">Email address</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="new-member-email"
+                  type="email"
+                  placeholder="example@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendInvitation()}
+                />
+                <Button onClick={sendInvitation} disabled={loading}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {loading ? 'Sending...' : 'Send Invitation'}
+                </Button>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              An invitation email will be sent with instructions to join your team.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
