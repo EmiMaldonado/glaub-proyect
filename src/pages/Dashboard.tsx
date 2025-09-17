@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield } from "lucide-react";
+import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield, BarChart3 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
@@ -358,10 +358,10 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}! 👋
+              Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
             </h1>
             <p className="text-lg text-muted-foreground">
-              {personalizedSummary || "Your personal space for self-discovery and professional development."}
+              {personalizedSummary || `You've completed ${stats.completedConversations} sessions with ${allInsights.length} insights generated.`}
             </p>
           </div>
           {userProfile?.role === 'manager' && (
@@ -375,354 +375,415 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Section 1: New Conversation - Always show start new conversation */}
+      {/* Main CTA Card */}
       <Card className="bg-gradient-primary text-primary-foreground shadow-elegant">
         <CardContent className="p-8">
           <div className="flex items-center justify-between">
             <div className="space-y-3">
               <h2 className="text-2xl font-bold">Speak with Glai</h2>
               <p className="text-primary-foreground/90">
-                Start a new conversation{hasPausedConversation ? ' or continue your previous session' : ''}
+                Start a new conversation
               </p>
               <div className="flex gap-3 mt-4">
                 <Button variant="secondary" size="lg" asChild>
                   <Link to="/conversation" onClick={handleStartNewConversation}>
                     <Plus className="mr-2 h-5 w-5" />
-                    Start New Session
+                    Start new session
                   </Link>
                 </Button>
                 {hasPausedConversation && (
-                  <Button variant="default" size="lg" asChild>
+                  <Button variant="outline" size="lg" asChild>
                     <Link to="/conversation?continue=true">
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Continue Previous Conversation
+                      Continue Previous
                     </Link>
                   </Button>
                 )}
               </div>
             </div>
             <div className="hidden md:block">
-              <MessageCircle className="h-16 w-16 text-primary-foreground/20" />
+              <div className="w-16 h-16 bg-primary-foreground/10 rounded-full flex items-center justify-center">
+                <MessageCircle className="h-8 w-8 text-primary-foreground/60" />
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Section: Paused Conversations (if any) */}
-      {pausedConversations.length > 1 && (
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-primary" />
-              Your Paused Conversations
-            </CardTitle>
-            <CardDescription>
-              You have {pausedConversations.length} paused conversations that you can continue
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {pausedConversations.slice(0, 3).map((conversation, index) => (
-                <div key={conversation.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{conversation.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Paused on {new Date(conversation.updated_at).toLocaleDateString()}
+      {/* Two Column Layout */}
+      <div className="grid lg:grid-cols-10 gap-8">
+        {/* Left Column - 70% */}
+        <div className="lg:col-span-7 space-y-8">
+          {/* Variables Profile Section */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-secondary" />
+                    Your Variables Profile
+                  </CardTitle>
+                  <CardDescription>
+                    Personality dimensions based on your conversations
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="share-profile" className="text-sm font-medium">
+                    Share with manager
+                  </Label>
+                  <Switch
+                    id="share-profile"
+                    checked={sharingPreferences.share_ocean_profile}
+                    disabled={!currentManager}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {oceanProfile ? (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Openness</span>
+                      <span className="text-sm font-bold">{oceanProfile.openness || 0}%</span>
+                    </div>
+                    <Progress value={oceanProfile.openness || 0} className="h-2" />
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Conscientiousness</span>
+                      <span className="text-sm font-bold">{oceanProfile.conscientiousness || 0}%</span>
+                    </div>
+                    <Progress value={oceanProfile.conscientiousness || 0} className="h-2" />
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Extraversion</span>
+                      <span className="text-sm font-bold">{oceanProfile.extraversion || 0}%</span>
+                    </div>
+                    <Progress value={oceanProfile.extraversion || 0} className="h-2" />
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Agreeableness</span>
+                      <span className="text-sm font-bold">{oceanProfile.agreeableness || 0}%</span>
+                    </div>
+                    <Progress value={oceanProfile.agreeableness || 0} className="h-2" />
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Stability</span>
+                      <span className="text-sm font-bold">{100 - (oceanProfile.neuroticism || 0)}%</span>
+                    </div>
+                    <Progress value={100 - (oceanProfile.neuroticism || 0)} className="h-2" />
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4 mt-6">
+                    <p className="text-sm text-foreground/80 leading-relaxed">
+                      {oceanProfile.summary || "Your personality profile reveals unique patterns based on conversational analysis. These dimensions work together to create your distinctive approach to challenges and relationships."}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/conversation?resume=${conversation.id}`}>
-                      Continue
-                    </Link>
-                  </Button>
                 </div>
-              ))}
-              {pausedConversations.length > 3 && (
-                <p className="text-sm text-muted-foreground text-center pt-2">
-                  And {pausedConversations.length - 3} more paused conversation{pausedConversations.length - 3 > 1 ? 's' : ''}
-                </p>
+              ) : (
+                <div className="text-center py-8">
+                  <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">No personality data available</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Complete a conversation to generate your personalized profile
+                  </p>
+                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
 
-      {/* Section 2: Your Last Meeting */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5 text-primary" />
-                Your Last Meeting
-              </CardTitle>
-              <CardDescription>
-                {lastConversation ? `Completed on ${new Date(lastConversation.created_at).toLocaleDateString()}` : 'No conversation data available'}
-              </CardDescription>
-            </div>
-            <SharedDataIndicator 
-              isShared={sharingPreferences.share_conversations}
-              variant="subtle"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {lastConversation ? <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Duration:</span>
-                  <p className="font-medium">{lastConversation.duration_minutes || 15} min</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Type:</span>
-                  <p className="font-medium">Complete Conversation</p>
-                </div>
-                 <div>
-                   <span className="text-muted-foreground">Insights:</span>
-                   <p className="font-medium">{lastConversation.key_insights?.insights?.length || 0} generated</p>
-                 </div>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/history">
-                  <History className="mr-1 h-3 w-3" />
-                  View Complete History
-                </Link>
-              </Button>
-            </div> : <div className="text-center py-8">
-              <History className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">No conversation data available</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Complete your first conversation to see a summary here
-              </p>
-            </div>}
-        </CardContent>
-      </Card>
-
-      {/* Section 3: Your OCEAN Profile */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-secondary" />
-                Your OCEAN Profile
-              </CardTitle>
-              <CardDescription>
-                Personality dimensions based on your conversations
-              </CardDescription>
-            </div>
-            <SharedDataIndicator 
-              isShared={sharingPreferences.share_ocean_profile}
-              variant="default"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {oceanProfile ? <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Openness</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Conscientiousness</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Extraversion</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Agreeableness</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
-                  <div className="text-xs text-muted-foreground">Stability</div>
-                </div>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm text-foreground/80 leading-relaxed">
-                  Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your energy from social interactions, and agreeableness shows your cooperative and trusting tendencies. Finally, emotional stability (inverse of neuroticism) represents your resilience under stress. These dimensions work together to create your distinctive professional and personal approach to challenges and relationships.
-                </p>
-              </div>
-            </div> : <div className="text-center py-8">
-              <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">No personality data available</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Complete a conversation to generate your personalized OCEAN profile
-              </p>
-            </div>}
-        </CardContent>
-      </Card>
-
-      {/* Section 4: Strengths and Growth Opportunities */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 justify-between">
-              <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-green-600" />
-                Strengths
-                <SharedDataIndicator 
-                  isShared={sharingPreferences.share_insights}
-                  variant="subtle"
-                />
-              </div>
-              {allInsights.length > 0 && currentManager && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareWithManager('strengths')}
-                  className="flex items-center gap-1"
-                >
-                  <Share2 className="h-4 w-4" />
-                  Share with Manager
-                </Button>
-              )}
-            </CardTitle>
-            <CardDescription>
-              Your main identified strengths
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {allInsights.length > 0 ? <ul className="space-y-2">
-                {allInsights.flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => <li key={index} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-600 mt-2 flex-shrink-0" />
-                    <span className="text-sm">{insight}</span>
-                  </li>)}
-              </ul> : <div className="text-center py-6">
-                <Target className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-muted-foreground text-sm font-medium">No strengths data available</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Complete a conversation to identify your strengths
-                </p>
-              </div>}
-          </CardContent>
-        </Card>
-
-        {/* Section 6: Your Personal Recommendations */}
-        <PersonalRecommendations 
-          recommendations={{
-            development: allInsights.flatMap(insight => insight.next_steps || []).slice(0, 3),
-            wellness: [
-              "Take regular breaks during work to maintain mental clarity",
-              "Practice mindfulness techniques when feeling overwhelmed", 
-              "Establish boundaries to protect your energy"
-            ],
-            skills: [
-              "Focus on active listening in your next conversations",
-              "Practice emotional regulation during challenging situations",
-              "Develop your communication skills with open-ended questions"
-            ],
-            goals: [
-              "Set specific, measurable objectives for personal growth",
-              "Create accountability systems for your development plan",
-              "Track progress weekly to maintain momentum"
-            ]
-          }}
-          oceanProfile={oceanProfile}
-          className="shadow-soft"
-        />
-      </div>
-
-      {/* Section 6: Data Sharing Preferences */}
-      <SharingPreferences
-        userProfile={userProfile}
-        managerId={currentManager?.id}
-        onPreferencesChange={handleSharingPreferencesChange}
-      />
-
-      {/* Section 7: My Teams - Combined team status and memberships */}
-      <div className="space-y-6">
-        {/* My Teams */}
-        {/* <MyTeams userProfile={userProfile} /> */}
-        <Card className="shadow-soft border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Team Management (Coming Soon)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Team management features will be available soon.</p>
-          </CardContent>
-        </Card>
-
-        {/* Pending Team Invitations */}
-        {pendingInvitations.length > 0 && (
-          <Card className="shadow-soft border-primary/20">
+          {/* Your Results Section */}
+          <Card className="shadow-soft">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-primary" />
-                Pending Team Invitations ({pendingInvitations.length})
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Your results
               </CardTitle>
-              <CardDescription>
-                You have been invited to join the following teams
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Tab Navigation */}
+                <div className="flex gap-4 border-b">
+                  <button className="pb-2 px-1 border-b-2 border-primary text-primary font-medium">
+                    Last session
+                  </button>
+                  <button className="pb-2 px-1 text-muted-foreground hover:text-foreground">
+                    Historical
+                  </button>
+                </div>
+                
+                {/* Your Last Meeting Subsection */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4 text-primary" />
+                      <h3 className="font-semibold">Your Last Meeting</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="share-meeting" className="text-sm font-medium">
+                        Share with manager
+                      </Label>
+                      <Switch
+                        id="share-meeting"
+                        checked={sharingPreferences.share_conversations}
+                        disabled={!currentManager}
+                      />
+                    </div>
+                  </div>
+                  
+                  {lastConversation ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Completed on {new Date(lastConversation.created_at).toLocaleDateString()}
+                      </p>
+                      <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                        <div>
+                          <span className="text-sm text-muted-foreground">Duration:</span>
+                          <p className="font-medium">{lastConversation.duration_minutes || 15} min</p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Type:</span>
+                          <p className="font-medium">Complete</p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Insights:</span>
+                          <p className="font-medium">{lastConversation.key_insights?.insights?.length || 0} generated</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-muted/30 rounded-lg">
+                      <History className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-muted-foreground text-sm">No meeting data available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - 30% */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Request to Join Team Widget */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle className="text-lg">Request to Join Team</CardTitle>
+              <CardDescription className="text-sm">
+                Send join team conversation
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {pendingInvitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg bg-primary/5">
-                  <div>
-                    <p className="font-medium">
-                      Invitation from {invitation.manager?.display_name || invitation.manager?.full_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Invited on {new Date(invitation.created_at).toLocaleDateString()} • 
-                      Expires on {new Date(invitation.expires_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleAcceptInvitation(invitation)}
-                    >
-                      Accept
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleDeclineInvitation(invitation)}
-                    >
-                      Decline
-                    </Button>
-                  </div>
-                </div>
-              ))}
+              <div className="space-y-2">
+                <Input
+                  type="email"
+                  placeholder="Manager's email"
+                  value={managerEmail}
+                  onChange={(e) => setManagerEmail(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleInviteManager()}
+                />
+              </div>
+              <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full" size="sm">
+                {isInvitingManager ? 'Sending...' : 'Send a team Request'}
+              </Button>
             </CardContent>
           </Card>
-        )}
 
-        {/* Request to Join Team */}
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
-              Request to Join Team
-            </CardTitle>
-            <CardDescription>
-              Submit a request to join a manager's team
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="manager-email">Manager's Email Address</Label>
-              <Input
-                id="manager-email"
-                type="email"
-                placeholder="Enter your manager's email address"
-                value={managerEmail}
-                onChange={(e) => setManagerEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleInviteManager()}
-              />
-            </div>
-            <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full">
-              {isInvitingManager ? 'Sending Request...' : 'Submit Approval Request'}
-            </Button>
-          </CardContent>
-        </Card>
+          {/* Your Teams Widget */}
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle className="text-lg">Your teams</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {currentManager ? (
+                <div className="space-y-2">
+                  <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                    <p className="font-medium text-sm">
+                      {`${currentManager.full_name || currentManager.display_name}'s team`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {currentManager.full_name || currentManager.display_name}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="p-3 bg-muted/30 rounded-lg">
+                    <p>Emilia team - Emilia Maldonado</p>
+                  </div>
+                  <div className="p-3 bg-muted/30 rounded-lg">
+                    <p>Juan team - Juan Maldonado</p>
+                  </div>
+                  <div className="p-3 bg-muted/30 rounded-lg">
+                    <p>Equipo ventas - Estela Paez</p>
+                  </div>
+                  <p className="text-xs text-center pt-2">Example teams - join one above</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pending Invitations */}
+          {pendingInvitations.length > 0 && (
+            <Card className="shadow-soft border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <UserCheck className="h-4 w-4 text-primary" />
+                  Pending Invitations
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {pendingInvitations.map((invitation) => (
+                  <div key={invitation.id} className="p-3 border rounded-lg bg-primary/5 space-y-3">
+                    <div>
+                      <p className="font-medium text-sm">
+                        From {invitation.manager?.display_name || invitation.manager?.full_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Expires {new Date(invitation.expires_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleAcceptInvitation(invitation)}
+                        className="flex-1"
+                      >
+                        Accept
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDeclineInvitation(invitation)}
+                        className="flex-1"
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
-    </div>;
+
+      {/* Full-Width Sections */}
+      {/* Strengths Section */}
+      <Card className="shadow-soft">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-success" />
+                Strengths
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline" className="text-xs">
+                  <Shield className="mr-1 h-3 w-3" />
+                  Private
+                </Badge>
+                <div className="flex items-center gap-2 ml-2">
+                  <Label htmlFor="share-strengths" className="text-sm font-medium">
+                    Share with manager
+                  </Label>
+                  <Switch
+                    id="share-strengths"
+                    checked={sharingPreferences.share_insights}
+                    disabled={!currentManager}
+                  />
+                </div>
+              </div>
+              <CardDescription className="mt-2">
+                Your main identified strengths
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {allInsights.length > 0 ? (
+            <ul className="space-y-3">
+              {allInsights.flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => (
+                <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
+                  <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
+                  <span className="text-sm leading-relaxed">{insight}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-8">
+              <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No strengths data available</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Complete a conversation to identify your strengths
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Personal Recommendations Section */}
+      <Card className="shadow-soft">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-warning" />
+                Your Personal Recommendations
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="share-recommendations" className="text-sm font-medium">
+                    Share with manager
+                  </Label>
+                  <Switch
+                    id="share-recommendations"
+                    checked={sharingPreferences.share_progress}
+                    disabled={!currentManager}
+                  />
+                </div>
+              </div>
+              <CardDescription className="mt-2">
+                Tailored suggestions based on your conversation patterns and personal growth areas
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <PersonalRecommendations 
+            recommendations={{
+              development: allInsights.flatMap(insight => insight.next_steps || []).slice(0, 3),
+              wellness: [
+                "Take regular breaks during work to maintain mental clarity",
+                "Practice mindfulness techniques when feeling overwhelmed", 
+                "Establish boundaries to protect your energy"
+              ],
+              skills: [
+                "Focus on active listening in your next conversations",
+                "Practice emotional regulation during challenging situations",
+                "Develop your communication skills with open-ended questions"
+              ],
+              goals: [
+                "Set specific, measurable objectives for personal growth",
+                "Create accountability systems for your development plan",
+                "Track progress weekly to maintain momentum"
+              ]
+            }}
+            oceanProfile={oceanProfile}
+            className="border-0 shadow-none p-0"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Data Sharing Preferences - Hidden section for backend functionality */}
+      <div className="hidden">
+        <SharingPreferences
+          userProfile={userProfile}
+          managerId={currentManager?.id}
+          onPreferencesChange={handleSharingPreferencesChange}
+        />
+      </div>
+    </div>
+  );
 };
+
 export default Dashboard;
