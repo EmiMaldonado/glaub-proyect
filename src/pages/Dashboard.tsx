@@ -15,11 +15,9 @@ import { usePausedConversations } from "@/hooks/usePausedConversations";
 import SharingPreferences from "@/components/SharingPreferences";
 import SharedDataIndicator from "@/components/SharedDataIndicator";
 import PersonalRecommendations from "@/components/PersonalRecommendations";
-// import MyTeams from "@/components/ui/MyTeams";
+
 const Dashboard = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { getPausedConversation, clearPausedConversation } = usePausedConversations();
   const [lastConversation, setLastConversation] = useState<any>(null);
@@ -46,6 +44,7 @@ const Dashboard = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [currentManager, setCurrentManager] = useState<any>(null);
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  
   useEffect(() => {
     if (user) {
       loadDashboardData();
@@ -186,6 +185,7 @@ const Dashboard = () => {
   const handleSharingPreferencesChange = (preferences: any) => {
     setSharingPreferences(preferences);
   };
+  
   const handleInviteManager = async () => {
     if (!managerEmail.trim()) {
       toast({
@@ -352,7 +352,8 @@ const Dashboard = () => {
     }
   };
 
-  return <div className="container mx-auto px-4 py-8 space-y-8">
+  return (
+    <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Welcome Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
