@@ -52,7 +52,7 @@ const ChatConversation: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Create new conversation and get AI first message
+  // Create new conversation without automatic AI message
   const createNewConversation = async () => {
     if (!user || isLoading) return;
 
@@ -80,11 +80,8 @@ const ChatConversation: React.FC = () => {
 
       if (error) throw error;
       
-      // Start new session
+      // Start new session - user can now type the first message
       startNewSession(newConversation as Conversation);
-
-      // Get AI first message with context
-      await sendAIFirstMessage(newConversation.id);
 
     } catch (error) {
       console.error('Error creating conversation:', error);
@@ -98,59 +95,16 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Send AI first message with context and check if truly first session
-  const sendAIFirstMessage = async (conversationId: string) => {
-    try {
-      // Check if user has any previous completed conversations to determine if this is their first session ever
-      const { data: previousCompletedConversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('user_id', user?.id)
-        .eq('status', 'completed')
-        .limit(1);
-
-      let isFirstSessionEver = !previousCompletedConversations || previousCompletedConversations.length === 0;
-      
-      // Send a simple greeting to start the conversation
-      const conversationStarter = isFirstSessionEver 
-        ? "Start the first conversation with a warm greeting and begin personality discovery"
-        : "Start this conversation by welcoming back the returning user";
-      
-      const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message: conversationStarter,
-          conversationId: conversationId,
-          userId: user?.id,
-          isFirstMessage: isFirstSessionEver
-        }
-      });
-
-      if (response.error) {
-        console.error('AI chat error:', response.error);
-        throw new Error(response.error.message || 'Failed to get AI response');
-      }
-
-      if (response.data?.error) {
-        console.error('AI chat function error:', response.data.error);
-        throw new Error(response.data.error);
-      }
-    } catch (error) {
-      console.error('Error sending AI first message:', error);
-      toast({
-        title: "Error",
-        description: "Could not initialize conversation with AI. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle sending user messages
+  // Handle sending user messages - includes logic for first message
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim() || !conversation || isLoading || isPaused) return;
 
     setIsLoading(true);
     updateActivity(); // Update last activity
 
+    // Check if this is the first message in the conversation
+    const isFirstMessage = messages.length === 0;
+    
     // Add user message immediately for instant feedback
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -167,7 +121,8 @@ const ChatConversation: React.FC = () => {
         body: {
           message: messageText.trim(),
           conversationId: conversation.id,
-          userId: user?.id
+          userId: user?.id,
+          isFirstMessage: isFirstMessage
         }
       });
 
@@ -214,6 +169,7 @@ const ChatConversation: React.FC = () => {
             console.log('📂 Restored existing session');
             updateActivity();
           } else {
+            // Just create conversation, don't send AI message
             await createNewConversation();
           }
         }
@@ -263,7 +219,7 @@ const ChatConversation: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle continue paused conversation
+  // Handle continue paused conversation - also doesn't send AI message automatically
   const handleContinuePausedConversation = async () => {
     if (!user) return;
 
@@ -313,9 +269,6 @@ const ChatConversation: React.FC = () => {
         .delete()
         .eq('id', pausedConv.id);
 
-      // Generate AI welcome back message
-      await sendAIWelcomeBackMessage(newConversation.id, previousMessages);
-
     } catch (error) {
       console.error('Error continuing paused conversation:', error);
       toast({
@@ -324,44 +277,6 @@ const ChatConversation: React.FC = () => {
         variant: "destructive",
       });
       await createNewConversation();
-    }
-  };
-
-  // Send AI welcome back message with conversation summary
-  const sendAIWelcomeBackMessage = async (conversationId: string, previousMessages: Message[]) => {
-    try {
-      setIsLoading(true);
-
-      // Send a simple message to continue the conversation
-      const welcomeMessage = "I'm continuing our previous conversation";
-
-      const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message: welcomeMessage,
-          conversationId: conversationId,
-          userId: user?.id,
-          isFirstMessage: false
-        }
-      });
-
-      if (response.error) {
-        console.error('Supabase function error:', response.error);
-        throw new Error(response.error.message || 'Failed to continue conversation');
-      }
-
-      if (response.data?.error) {
-        console.error('AI chat function error:', response.data.error);
-        throw new Error(response.data.error);
-      }
-    } catch (error) {
-      console.error('Error sending welcome back message:', error);
-      toast({
-        title: "Error",
-        description: "Could not continue conversation. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -459,7 +374,16 @@ const ChatConversation: React.FC = () => {
 
               {messages.length === 0 && !isLoading && (
                 <div className="text-center text-muted-foreground py-8">
-                  <p>Your conversation will appear here...</p>
+                  <div className="max-w-md mx-auto space-y-4">
+                    <h3 className="text-lg font-medium text-foreground">Welcome to Therapeutic Chat</h3>
+                    <p className="text-sm">
+                      Start by typing a message below. Your AI therapeutic assistant is ready to listen 
+                      and support you through our conversation.
+                    </p>
+                    <p className="text-xs opacity-75">
+                      All conversations are private and secure.
+                    </p>
+                  </div>
                 </div>
               )}
               

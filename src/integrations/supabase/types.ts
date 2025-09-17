@@ -564,6 +564,10 @@ export type Database = {
         Args: { invitation_manager_id: string }
         Returns: boolean
       }
+      can_user_view_shared_profile: {
+        Args: { profile_user_id: string }
+        Returns: boolean
+      }
       clear_conversation_messages: {
         Args: { conversation_uuid: string }
         Returns: undefined
@@ -584,12 +588,29 @@ export type Database = {
         Args: { user_profile_id: string }
         Returns: string
       }
+      get_user_onboarding_status: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
+      get_user_profile_by_user_id: {
+        Args: { target_user_id: string }
+        Returns: {
+          id: string
+          manager_id: string
+          role: string
+          user_id: string
+        }[]
+      }
       is_invitation_manager: {
         Args: { invitation_manager_id: string }
         Returns: boolean
       }
       is_invitation_manager_secure: {
         Args: { invitation_manager_id: string }
+        Returns: boolean
+      }
+      is_user_manager_of_profile: {
+        Args: { profile_user_id: string }
         Returns: boolean
       }
       manager_has_team_members: {

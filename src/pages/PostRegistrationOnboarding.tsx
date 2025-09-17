@@ -60,11 +60,10 @@ const PostRegistrationOnboarding = () => {
       }
 
       try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // Use the safe function to check onboarding status
+        const { data, error } = await supabase.rpc('get_user_onboarding_status', {
+          target_user_id: user.id
+        });
 
         if (error) {
           console.error('Error checking onboarding status:', error);
@@ -76,7 +75,7 @@ const PostRegistrationOnboarding = () => {
           return;
         }
 
-        if (profile?.onboarding_completed) {
+        if (data) {
           // User has already completed onboarding, redirect to dashboard
           navigate('/dashboard');
           return;

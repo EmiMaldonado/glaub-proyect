@@ -30,11 +30,10 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
       }
 
       try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // Use the safe function to check onboarding status
+        const { data, error } = await supabase.rpc('get_user_onboarding_status', {
+          target_user_id: user.id
+        });
 
         if (error) {
           console.error('Error checking onboarding status:', error);
@@ -42,15 +41,7 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
           return;
         }
 
-        if (!profile) {
-          // Profile doesn't exist yet, wait a moment and try again
-          setTimeout(() => {
-            checkOnboardingStatus();
-          }, 1000);
-          return;
-        }
-
-        const completed = profile.onboarding_completed || false;
+        const completed = data || false;
         setOnboardingCompleted(completed);
 
         // If onboarding not completed and user is trying to access protected routes
