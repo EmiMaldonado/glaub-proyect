@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import TeamManagementInterface from './TeamManagementInterface';
 import ManagerInsightsDashboard from './ManagerInsightsDashboard';
+import MeetingHistoryTabs from '@/components/MeetingHistoryTabs';
+import NotificationSystem from '@/components/NotificationSystem';
 
 interface TeamMember {
   id: string;
@@ -282,11 +284,27 @@ const ModernManagerDashboard: React.FC = () => {
 
         {/* Team Management Tab */}
         <TabsContent value="management" className="space-y-6">
-          <TeamManagementInterface 
-            managerProfile={managerProfile}
-            teamMembers={teamMembers}
-            onTeamUpdate={handleTeamUpdate}
-          />
+          <div className="space-y-6">
+            {/* Notifications for Manager */}
+            <NotificationSystem maxDisplayed={3} />
+            
+            {/* Team Management Interface */}
+            <TeamManagementInterface 
+              managerProfile={managerProfile}
+              teamMembers={teamMembers}
+              onTeamUpdate={handleTeamUpdate}
+            />
+            
+            {/* Meeting History for Manager */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Meeting History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MeetingHistoryTabs />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
