@@ -322,6 +322,53 @@ export type Database = {
           },
         ]
       }
+      sharing_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          manager_id: string | null
+          share_conversations: boolean
+          share_insights: boolean
+          share_ocean_profile: boolean
+          share_profile: boolean
+          share_progress: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manager_id?: string | null
+          share_conversations?: boolean
+          share_insights?: boolean
+          share_ocean_profile?: boolean
+          share_profile?: boolean
+          share_progress?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manager_id?: string | null
+          share_conversations?: boolean
+          share_insights?: boolean
+          share_ocean_profile?: boolean
+          share_profile?: boolean
+          share_progress?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sharing_preferences_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_memberships: {
         Row: {
           created_at: string
@@ -519,6 +566,10 @@ export type Database = {
       }
       get_current_user_profile_id: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_user_manager_id: {
+        Args: { user_profile_id: string }
         Returns: string
       }
       is_invitation_manager: {

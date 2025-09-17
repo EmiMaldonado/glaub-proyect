@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck } from "lucide-react";
+import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { usePausedConversations } from "@/hooks/usePausedConversations";
+import SharingPreferences from "@/components/SharingPreferences";
+import SharedDataIndicator from "@/components/SharedDataIndicator";
 // import MyTeams from "@/components/ui/MyTeams";
 const Dashboard = () => {
   const {
@@ -27,13 +29,12 @@ const Dashboard = () => {
   const [personalizedSummary, setPersonalizedSummary] = useState<string>('');
   const [managerEmail, setManagerEmail] = useState('');
   const [isInvitingManager, setIsInvitingManager] = useState(false);
-  const [sharingSettings, setSharingSettings] = useState({
-    profile: false,
-    insights: false,
-    strengths: false,
-    opportunities: false,
-    manager: false,
-    team: false
+  const [sharingPreferences, setSharingPreferences] = useState({
+    share_profile: false,
+    share_insights: false,
+    share_conversations: false,
+    share_ocean_profile: false,
+    share_progress: false
   });
   const [stats, setStats] = useState({
     totalConversations: 0,
@@ -181,11 +182,8 @@ const Dashboard = () => {
     }
   };
   
-  const handleSharingToggle = (setting: string) => {
-    setSharingSettings(prev => ({
-      ...prev,
-      [setting]: !prev[setting as keyof typeof prev]
-    }));
+  const handleSharingPreferencesChange = (preferences: any) => {
+    setSharingPreferences(preferences);
   };
   const handleInviteManager = async () => {
     if (!managerEmail.trim()) {
@@ -341,12 +339,7 @@ const Dashboard = () => {
         description: `Your ${type} have been shared with your manager`,
       });
 
-      // Update sharing settings
-      setSharingSettings(prev => ({
-        ...prev,
-        [type]: true,
-        manager: true
-      }));
+      // Update sharing preferences would be handled by the SharingPreferences component
       
     } catch (error: any) {
       console.error('Error sharing with manager:', error);
@@ -456,13 +449,21 @@ const Dashboard = () => {
       {/* Section 2: Your Last Meeting */}
       <Card className="shadow-soft">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5 text-primary" />
-            Your Last Meeting
-          </CardTitle>
-          <CardDescription>
-            {lastConversation ? `Completed on ${new Date(lastConversation.created_at).toLocaleDateString()}` : 'No conversation data available'}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-primary" />
+                Your Last Meeting
+              </CardTitle>
+              <CardDescription>
+                {lastConversation ? `Completed on ${new Date(lastConversation.created_at).toLocaleDateString()}` : 'No conversation data available'}
+              </CardDescription>
+            </div>
+            <SharedDataIndicator 
+              isShared={sharingPreferences.share_conversations}
+              variant="subtle"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {lastConversation ? <div className="space-y-3">
@@ -499,13 +500,21 @@ const Dashboard = () => {
       {/* Section 3: Your OCEAN Profile */}
       <Card className="shadow-soft">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-secondary" />
-            Your OCEAN Profile
-          </CardTitle>
-          <CardDescription>
-            Personality dimensions based on your conversations
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-secondary" />
+                Your OCEAN Profile
+              </CardTitle>
+              <CardDescription>
+                Personality dimensions based on your conversations
+              </CardDescription>
+            </div>
+            <SharedDataIndicator 
+              isShared={sharingPreferences.share_ocean_profile}
+              variant="default"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {oceanProfile ? <div className="space-y-6">
@@ -554,6 +563,10 @@ const Dashboard = () => {
               <div className="flex items-center gap-2">
                 <Target className="h-5 w-5 text-green-600" />
                 Strengths
+                <SharedDataIndicator 
+                  isShared={sharingPreferences.share_insights}
+                  variant="subtle"
+                />
               </div>
               {allInsights.length > 0 && currentManager && (
                 <Button
@@ -593,6 +606,10 @@ const Dashboard = () => {
               <div className="flex items-center gap-2">
                 <Lightbulb className="h-5 w-5 text-amber-600" />
                 Growth Opportunities
+                <SharedDataIndicator 
+                  isShared={sharingPreferences.share_insights}
+                  variant="subtle"
+                />
               </div>
               {allInsights.length > 0 && currentManager && (
                 <Button
@@ -627,7 +644,14 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Section 5: My Teams - Combined team status and memberships */}
+      {/* Section 6: Data Sharing Preferences */}
+      <SharingPreferences
+        userProfile={userProfile}
+        managerId={currentManager?.id}
+        onPreferencesChange={handleSharingPreferencesChange}
+      />
+
+      {/* Section 7: My Teams - Combined team status and memberships */}
       <div className="space-y-6">
         {/* My Teams */}
         {/* <MyTeams userProfile={userProfile} /> */}

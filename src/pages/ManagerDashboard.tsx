@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Plus, User, Trash2, Mail } from "lucide-react";
+import { Plus, User, Trash2, Mail, BarChart3 } from "lucide-react";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
+import TeamMemberSharedData from "@/components/TeamMemberSharedData";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -243,11 +244,19 @@ const ManagerDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchTeamData();
+  // Get active team members for insights display
+  const getActiveTeamMembers = () => {
+    if (!teamData) return [];
+    
+    const members = [];
+    for (let i = 1; i <= 10; i++) {
+      const employee = teamData[`employee_${i}` as keyof TeamMembership];
+      if (employee) {
+        members.push(employee);
+      }
     }
-  }, [user]);
+    return members;
+  };
 
   const EmployeeCard = ({ slotNumber, employee }: { slotNumber: number; employee?: EmployeeProfile }) => {
     if (employee) {
@@ -372,6 +381,14 @@ const ManagerDashboard = () => {
               </div>
             </CardHeader>
           </Card>
+        </div>
+
+        {/* Team Insights Section */}
+        <div className="mb-8">
+          <TeamMemberSharedData 
+            teamMembers={getActiveTeamMembers()} 
+            managerId={managerProfile?.id || ''} 
+          />
         </div>
 
         {/* Team Grid */}
