@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '@/utils/errorMessages';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useTherapeuticAnalysis } from '@/hooks/useTherapeuticAnalysis';
@@ -106,8 +107,8 @@ const Conversation: React.FC = () => {
     setAutoTTS(!autoTTS);
     console.log('TTS toggled:', !autoTTS);
     toast({
-      title: autoTTS ? "🔇 Síntesis de voz desactivada" : "🔊 Síntesis de voz activada",
-      description: autoTTS ? "Los mensajes no se reproducirán automáticamente" : "Los mensajes se reproducirán automáticamente",
+      title: autoTTS ? "🔇 Voice synthesis disabled" : "🔊 Voice synthesis enabled",
+      description: autoTTS ? "Messages will not play automatically" : "Messages will play automatically",
     });
   };
 
@@ -230,7 +231,7 @@ const Conversation: React.FC = () => {
         console.error('Error initializing conversation:', error);
         toast({
           title: "Error",
-          description: "No se pudo inicializar la conversación",
+          description: "Could not initialize the conversation",
           variant: "destructive",
         });
       }
@@ -363,8 +364,8 @@ const Conversation: React.FC = () => {
 
       // Show success toast
       toast({
-        title: "✅ Mensaje enviado",
-        description: "El mensaje ha sido procesado correctamente",
+        title: "✅ Message Sent",
+        description: "The message has been processed correctly",
       });
 
       // Message will be added via real-time subscription
@@ -373,7 +374,7 @@ const Conversation: React.FC = () => {
       setIsTyping(false);
       toast({
         title: "Error",
-        description: "No se pudo enviar el mensaje",
+        description: "Could not send the message",
         variant: "destructive",
       });
     } finally {
@@ -458,16 +459,15 @@ const Conversation: React.FC = () => {
       setShowDeleteConfirmation(false);
       
       toast({
-        title: "🗑️ Conversación eliminada",
-        description: "Se ha eliminado toda la información de la conversación",
+        title: "🗑️ Conversation Deleted",
+        ...SUCCESS_MESSAGES.CONVERSATION.CONVERSATION_DELETED,
       });
       
       console.log('Conversation deleted');
     } catch (error) {
       console.error('Error deleting conversation:', error);
       toast({
-        title: "Error",
-        description: "No se pudo eliminar la conversación",
+        ...ERROR_MESSAGES.CONVERSATION.DELETE_ERROR,
         variant: "destructive",
       });
     }
@@ -479,18 +479,18 @@ const Conversation: React.FC = () => {
     const userMessages = messages.filter(m => m.role === 'user').length;
     const aiMessages = messages.filter(m => m.role === 'assistant').length;
     
-    return `## Resumen de la Sesión
+    return `## Session Summary
 
-**Duración:** ${formatTime(sessionTime)}
-**Intercambios:** ${Math.min(userMessages, aiMessages)} mensajes
+**Duration:** ${formatTime(sessionTime)}
+**Exchanges:** ${Math.min(userMessages, aiMessages)} messages
 
-### Puntos Importantes:
-- Se exploraron temas relacionados con el bienestar emocional
-- La conversación fluyó de manera natural y constructiva
-- Se identificaron patrones de pensamiento y comportamiento
+### Important Points:
+- Topics related to emotional well-being were explored
+- The conversation flowed naturally and constructively
+- Patterns of thought and behavior were identified
 
 ### Insights:
-- Mayor autoconciencia desarrollada durante la sesión  
+- Greater self-awareness developed during the session
 - Identificación de fortalezas personales
 - Áreas de crecimiento potencial reconocidas
 

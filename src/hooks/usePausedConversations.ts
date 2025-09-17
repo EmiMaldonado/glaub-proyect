@@ -57,7 +57,7 @@ export const usePausedConversations = () => {
       console.error('Error pausing conversation:', error);
       toast({
         title: "Error",
-        description: "No se pudo pausar la conversación",
+        description: "Could not pause the conversation",
         variant: "destructive",
       });
       return false;
@@ -110,7 +110,7 @@ export const usePausedConversations = () => {
       console.error('Error continuing paused conversation:', error);
       toast({
         title: "Error",
-        description: "No se pudo continuar la conversación pausada",
+        description: "Could not continue the paused conversation",
         variant: "destructive",
       });
       return null;

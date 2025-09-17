@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/utils/errorMessages';
 
 interface AuthContextType {
   user: User | null;
@@ -58,40 +59,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) {
-        // Mejor manejo de errores específicos
+        // Better handling of specific errors
         if (error.message.includes('Email not confirmed')) {
           toast({
-            title: "Email no confirmado",
-            description: "Por favor confirma tu email. Revisa tu bandeja de entrada y carpeta de spam.",
+            ...ERROR_MESSAGES.AUTH.EMAIL_CONFIRMATION_ERROR,
+            description: "Please confirm your email. Check your inbox and spam folder.",
             variant: "destructive",
           });
         } else if (error.message.includes('Invalid login credentials')) {
           toast({
-            title: "Credenciales incorrectas",
-            description: "Email o contraseña incorrectos. Verifica tus datos.",
+            ...ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS,
             variant: "destructive",
           });
         } else {
           toast({
-            title: "Error de login",
+            ...ERROR_MESSAGES.AUTH.LOGIN_ERROR,
             description: error.message,
             variant: "destructive",
           });
         }
       } else {
-        toast({
-          title: "¡Bienvenido!",
-          description: "You have successfully signed in",
-        });
+        toast(SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS);
       }
       
       return { error };
     } catch (error) {
-      toast({
-        title: "Unexpected error",
-        description: "An unexpected error has occurred",
-        variant: "destructive",
-      });
+      toast(ERROR_MESSAGES.GENERAL.UNEXPECTED_ERROR);
       return { error };
     }
   };
@@ -136,11 +129,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             variant: "destructive",
           });
         } else {
-          toast({
-            title: "Registration error",
-            description: error.message,
-            variant: "destructive",
-          });
+        toast({
+          ...ERROR_MESSAGES.AUTH.REGISTRATION_ERROR,
+          description: error.message,
+          variant: "destructive",
+        });
         }
       } else {
         console.log('Signup successful, user created:', data.user?.id);
@@ -164,8 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error('Unexpected signup error:', error);
       toast({
-        title: "Unexpected error", 
-        description: "An unexpected error occurred during registration. Please try again.",
+        ...ERROR_MESSAGES.GENERAL.UNEXPECTED_ERROR, 
         variant: "destructive",
       });
       return { error };

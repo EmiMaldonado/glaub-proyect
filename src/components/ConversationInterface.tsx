@@ -307,7 +307,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
                     value={textInput}
                     onChange={(e) => onTextInputChange(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Escribe tu mensaje aquí..."
+                    placeholder="Write your message here..."
                     className="min-h-[48px] max-h-32 resize-none"
                     disabled={isLoading}
                   />

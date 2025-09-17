@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from './use-toast';
+import { ERROR_MESSAGES } from '@/utils/errorMessages';
 
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -56,8 +57,7 @@ export const useTextToSpeech = () => {
         URL.revokeObjectURL(audioUrl);
         audioRef.current = null;
         toast({
-          title: "Error de reproducción",
-          description: "No se pudo reproducir el audio",
+          ...ERROR_MESSAGES.AUDIO.PLAYBACK_ERROR,
           variant: "destructive",
         });
       };
@@ -69,8 +69,7 @@ export const useTextToSpeech = () => {
       console.error('TTS error:', error);
       setIsSpeaking(false);
       toast({
-        title: "Voice synthesis error",
-        description: "Could not convert text to speech",
+        ...ERROR_MESSAGES.AUDIO.VOICE_SYNTHESIS_ERROR,
         variant: "destructive",
       });
     } finally {

@@ -155,9 +155,9 @@ const AuthCallback = () => {
             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Loader2 className="h-6 w-6 text-primary animate-spin" />
             </div>
-            <CardTitle>Procesando autenticación</CardTitle>
+            <CardTitle>Processing Authentication</CardTitle>
             <CardDescription>
-              Por favor espera mientras procesamos tu solicitud...
+              Please wait while we process your request...
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -184,7 +184,7 @@ const AuthCallback = () => {
             )}
           </div>
           <CardTitle>
-            {status === 'success' ? '¡Éxito!' : 'Error de autenticación'}
+            {status === 'success' ? 'Success!' : 'Authentication Error'}
           </CardTitle>
           <CardDescription>
             {message}

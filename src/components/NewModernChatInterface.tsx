@@ -125,7 +125,7 @@ const NewModernChatInterface: React.FC<ModernChatInterfaceProps> = ({
                       handleSendMessage();
                     }
                   }}
-                  placeholder="Escribe tu mensaje..."
+                  placeholder="Write your message..."
                   className="flex-1 min-h-[60px] resize-none"
                   rows={2}
                 />

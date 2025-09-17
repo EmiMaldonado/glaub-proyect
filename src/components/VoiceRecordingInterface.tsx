@@ -143,7 +143,7 @@ const VoiceRecordingInterface: React.FC<VoiceRecordingInterfaceProps> = ({
       {isLoading && (
         <div className="flex items-center justify-center gap-3 text-muted-foreground">
           <LoadingSpinner />
-          <span className="text-sm">Procesando tu mensaje...</span>
+          <span className="text-sm">Processing your message...</span>
         </div>
       )}
 

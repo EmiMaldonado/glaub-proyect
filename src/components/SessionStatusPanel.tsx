@@ -129,13 +129,13 @@ const SessionStatusPanel: React.FC<SessionStatusPanelProps> = ({
               <Progress value={sessionQuality.audioQuality * 100} className="h-1" />
             </div>
             
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Conexión</span>
-                <span className="font-medium">{Math.round(sessionQuality.connectionStability * 100)}%</span>
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Connection</span>
+                  <span className="font-medium">{Math.round(sessionQuality.connectionStability * 100)}%</span>
+                </div>
+                <Progress value={sessionQuality.connectionStability * 100} className="h-1" />
               </div>
-              <Progress value={sessionQuality.connectionStability * 100} className="h-1" />
-            </div>
           </div>
         </Card>
       </div>

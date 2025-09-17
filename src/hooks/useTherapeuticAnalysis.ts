@@ -210,14 +210,14 @@ export const useTherapeuticAnalysis = () => {
     );
 
     // Cognitive insight indicators
-    const insightKeywords = ['conexión', 'patrón', 'relación', 'causa', 'consecuencia', 'porque'];
+    const insightKeywords = ['connection', 'pattern', 'relationship', 'cause', 'consequence', 'because'];
     const cognitiveInsight = Math.min(
       (insightKeywords.filter(k => content.includes(k)).length * 0.2) + (messageCount * 0.03),
       1
     );
 
     // Behavioral change indicators
-    const changeKeywords = ['cambiar', 'hacer diferente', 'intentar', 'practicar', 'aplicar'];
+    const changeKeywords = ['change', 'do differently', 'try', 'practice', 'apply'];
     const behavioralChange = Math.min(
       (changeKeywords.filter(k => content.includes(k)).length * 0.3) + (minutes * 0.01),
       1
@@ -241,23 +241,23 @@ export const useTherapeuticAnalysis = () => {
     const content = userMessages.map(m => m.content.toLowerCase()).join(' ');
 
     // Pattern recognition insights
-    if (content.includes('siempre') || content.includes('nunca')) {
-      insights.push('Patrones de pensamiento absoluto identificados');
+    if (content.includes('always') || content.includes('never')) {
+      insights.push('Absolute thinking patterns identified');
     }
 
     // Emotional awareness insights
-    if (content.match(/me siento|siento que|estoy/)) {
-      insights.push('Expresión emocional activa');
+    if (content.match(/i feel|feeling|i am/)) {
+      insights.push('Active emotional expression');
     }
 
     // Relationship insights
-    if (content.match(/familia|pareja|amigos|trabajo/)) {
-      insights.push('Contexto relacional relevante');
+    if (content.match(/family|partner|friends|work/)) {
+      insights.push('Relevant relational context');
     }
 
     // Change motivation
-    if (content.match(/cambiar|mejorar|diferente/)) {
-      insights.push('Motivación para el cambio presente');
+    if (content.match(/change|improve|different/)) {
+      insights.push('Motivation for change present');
     }
 
     return insights.slice(0, 4); // Limit to top 4 insights
