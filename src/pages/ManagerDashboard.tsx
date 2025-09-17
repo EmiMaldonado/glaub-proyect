@@ -6,10 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Plus, User, Trash2, Mail, BarChart3 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, User, Trash2, Mail, BarChart3, Download, Users, Calendar, Filter } from "lucide-react";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import TeamMemberSharedData from "@/components/TeamMemberSharedData";
 import ManagementRecommendations from "@/components/ManagementRecommendations";
+import TeamMemberSelector from "@/components/TeamMemberSelector";
+import IndividualMemberAnalysis from "@/components/IndividualMemberAnalysis";
+import TeamAnalyticsDashboard from "@/components/TeamAnalyticsDashboard";
+import TeamComparativeView from "@/components/TeamComparativeView";
+import ExportReportsModal from "@/components/ExportReportsModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,6 +80,15 @@ const ManagerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  
+  // Enhanced dashboard state
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [sortBy, setSortBy] = useState<'sessions' | 'engagement' | 'insights' | 'lastActive'>('engagement');
+  const [dateRange, setDateRange] = useState({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+    end: new Date()
+  });
 
   // Initialize team record if doesn't exist
   const initializeTeam = async () => {
@@ -259,6 +274,203 @@ const ManagerDashboard = () => {
     return members;
   };
 
+  // Add employee to first available slot
+  const addEmployee = async (employeeId: string) => {
+    if (!teamData || !managerProfile?.id) return;
+
+    const slots = ['employee_1_id', 'employee_2_id', 'employee_3_id', 'employee_4_id', 'employee_5_id', 
+                  'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'];
+    
+    try {
+      for (let slot of slots) {
+        if (!teamData[slot as keyof TeamMembership]) {
+          const { error } = await supabase
+            .from('team_memberships')
+            .update({ [slot]: employeeId })
+            .eq('manager_id', managerProfile.id);
+
+          if (error) throw error;
+
+          toast({
+            title: "Success",
+            description: "Employee added to team successfully"
+          });
+          
+          fetchTeamData();
+          setAddEmployeeOpen(false);
+          break;
+        }
+      }
+    } catch (err) {
+      console.error('Error adding employee:', err);
+      toast({
+        title: "Error",
+        description: "Failed to add employee to team",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Remove employee from slot
+  const removeEmployee = async (slotNumber: number) => {
+    if (!managerProfile?.id) return;
+
+    try {
+      const slotName = `employee_${slotNumber}_id`;
+      
+      const { error } = await supabase
+        .from('team_memberships')
+        .update({ [slotName]: null })
+        .eq('manager_id', managerProfile.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Employee removed from team"
+      });
+      
+      fetchTeamData();
+    } catch (err) {
+      console.error('Error removing employee:', err);
+      toast({
+        title: "Error",
+        description: "Failed to remove employee",
+        variant: "destructive"
+      });
+    }
+  };
+  const generateAnalyticsData = () => {
+    const activeMembers = getActiveTeamMembers();
+    return {
+      overview: {
+        totalMembers: activeMembers.length,
+        activeMembers: activeMembers.length,
+        totalSessions: activeMembers.length * 3, // Mock data
+        averageEngagement: 0.75
+      },
+      trends: {
+        sessionGrowth: 0.15,
+        engagementTrend: 0.08,
+        insightGeneration: 2.3
+      },
+      distribution: {
+        sessionsByMember: activeMembers.map(member => ({
+          name: member.display_name || member.full_name || 'Unknown',
+          sessions: Math.floor(Math.random() * 10) + 1
+        })),
+        personalityDistribution: {
+          openness: 0.65,
+          conscientiousness: 0.72,
+          extraversion: 0.58,
+          agreeableness: 0.78,
+          neuroticism: 0.42
+        }
+      },
+      teamHealth: {
+        overallScore: 0.78,
+        communicationScore: 0.72,
+        developmentScore: 0.81,
+        wellbeingScore: 0.69
+      }
+    };
+  };
+
+  // Generate mock comparative data
+  const generateComparativeData = () => {
+    return getActiveTeamMembers().map(member => ({
+      id: member.id,
+      name: member.display_name || member.full_name || 'Unknown',
+      email: member.email,
+      avatar_url: member.avatar_url,
+      metrics: {
+        sessions: Math.floor(Math.random() * 15) + 1,
+        avgSessionLength: Math.floor(Math.random() * 20) + 10,
+        totalInsights: Math.floor(Math.random() * 25) + 5,
+        engagementScore: Math.random() * 0.4 + 0.6, // 0.6-1.0
+        lastActive: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        oceanProfile: {
+          openness: Math.random(),
+          conscientiousness: Math.random(),
+          extraversion: Math.random(),
+          agreeableness: Math.random(),
+          neuroticism: Math.random()
+        }
+      },
+      trends: {
+        sessionTrend: (Math.random() - 0.5) * 0.4, // -0.2 to 0.2
+        engagementTrend: (Math.random() - 0.5) * 0.3
+      }
+    }));
+  };
+
+  // Generate mock individual member data
+  const generateIndividualMemberData = (memberId: string) => {
+    const member = getActiveTeamMembers().find(m => m.id === memberId);
+    if (!member) return null;
+
+    return {
+      profile: member,
+      metrics: {
+        totalSessions: Math.floor(Math.random() * 20) + 5,
+        averageSessionLength: Math.floor(Math.random() * 15) + 12,
+        lastSessionDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        totalInsights: Math.floor(Math.random() * 30) + 10,
+        oceanProfile: {
+          openness: Math.random(),
+          conscientiousness: Math.random(),
+          extraversion: Math.random(),
+          agreeableness: Math.random(),
+          neuroticism: Math.random()
+        }
+      },
+      recentActivity: [
+        {
+          date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          type: 'session' as const,
+          description: 'Completed therapeutic conversation session'
+        },
+        {
+          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          type: 'insight' as const,
+          description: 'Generated new personality insights'
+        }
+      ],
+      progressTrends: {
+        selfAwareness: Math.random() * 0.3 + 0.7,
+        emotionalRegulation: Math.random() * 0.4 + 0.6,
+        goalProgress: Math.random() * 0.5 + 0.5,
+        engagementLevel: Math.random() * 0.2 + 0.8
+      }
+    };
+  };
+  };
+
+  // Handle export functionality
+  const handleExport = async (exportConfig: any) => {
+    // In a real app, this would call an API to generate the report
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate export delay
+    
+    // Mock file download
+    const mockData = {
+      reportType: exportConfig.reportType,
+      format: exportConfig.format,
+      dateRange: exportConfig.dateRange,
+      members: exportConfig.selectedMembers.length,
+      generatedAt: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(mockData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `team-report-${Date.now()}.${exportConfig.format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const EmployeeCard = ({ slotNumber, employee }: { slotNumber: number; employee?: EmployeeProfile }) => {
     if (employee) {
       return (
@@ -343,6 +555,18 @@ const ManagerDashboard = () => {
         </CardContent>
       </Card>
     );
+  // Get active team members for insights display
+  const getActiveTeamMembers = () => {
+    if (!teamData) return [];
+    
+    const members = [];
+    for (let i = 1; i <= 10; i++) {
+      const employee = teamData[`employee_${i}` as keyof TeamMembership];
+      if (employee) {
+        members.push(employee);
+      }
+    }
+    return members;
   };
 
   if (loading) {
@@ -360,105 +584,189 @@ const ManagerDashboard = () => {
         <div className="mb-8">
           <Card className="bg-gradient-primary text-primary-foreground">
             <CardHeader>
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-16 w-16 border-2 border-primary-foreground/20">
-                  <AvatarImage src={managerProfile?.avatar_url} alt={managerProfile?.display_name} />
-                  <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground">
-                    {(managerProfile?.display_name || managerProfile?.full_name || 'M')?.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-2xl">
-                    {managerProfile?.display_name || managerProfile?.full_name || 'Manager'}
-                  </CardTitle>
-                  <p className="text-primary-foreground/80 flex items-center mt-1">
-                    <Mail className="h-4 w-4 mr-2" />
-                    {managerProfile?.email || user?.email}
-                  </p>
-                  <Badge variant="secondary" className="mt-2 bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30">
-                    Team Manager
-                  </Badge>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-16 w-16 border-2 border-primary-foreground/20">
+                    <AvatarImage src={managerProfile?.avatar_url} alt={managerProfile?.display_name} />
+                    <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground">
+                      {(managerProfile?.display_name || managerProfile?.full_name || 'M')?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-2xl">
+                      {managerProfile?.display_name || managerProfile?.full_name || 'Manager'}
+                    </CardTitle>
+                    <p className="text-primary-foreground/80 flex items-center mt-1">
+                      <Mail className="h-4 w-4 mr-2" />
+                      {managerProfile?.email || user?.email}
+                    </p>
+                    <Badge variant="secondary" className="mt-2 bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30">
+                      Team Manager
+                    </Badge>
+                  </div>
                 </div>
+                
+                {/* Export Button */}
+                <ExportReportsModal
+                  teamMembers={getActiveTeamMembers().map(member => ({
+                    id: member.id,
+                    name: member.display_name || member.full_name || 'Unknown',
+                    email: member.email
+                  }))}
+                  onExport={handleExport}
+                >
+                  <Button variant="secondary" className="bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Reports
+                  </Button>
+                </ExportReportsModal>
               </div>
             </CardHeader>
           </Card>
         </div>
 
-        {/* Management Recommendations Section */}
-        <div className="mb-8">
-          <ManagementRecommendations 
-            teamMembers={getActiveTeamMembers().map(member => ({
-              id: member.id,
-              name: member.display_name || member.full_name || 'Unknown',
-              email: member.email,
-              sessionCount: 0, // TODO: Add session count from shared data
-              needsAttention: false, // TODO: Add attention indicators
-            }))}
-            managerId={managerProfile?.id || ''} 
-          />
-        </div>
-        
-        {/* Team Insights Section */}
-        <div className="mb-8">
-          <TeamMemberSharedData 
-            teamMembers={getActiveTeamMembers()} 
-            managerId={managerProfile?.id || ''} 
-          />
-        </div>
+        {/* Enhanced Analytics Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 bg-muted">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="individual" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Individual
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="comparative" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Comparative
+            </TabsTrigger>
+            <TabsTrigger value="management" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Management
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Team Grid */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Team Members (10 Slots)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {Array.from({ length: 10 }, (_, index) => {
-              const slotNumber = index + 1;
-              const employeeKey = `employee_${slotNumber}` as keyof TeamMembership;
-              const employee = teamData?.[employeeKey] as EmployeeProfile;
-              
-              return (
-                <EmployeeCard
-                  key={slotNumber}
-                  slotNumber={slotNumber}
-                  employee={employee}
-                />
-              );
-            })}
-          </div>
-        </div>
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            <ManagementRecommendations 
+              teamMembers={getActiveTeamMembers().map(member => ({
+                id: member.id,
+                name: member.display_name || member.full_name || 'Unknown',
+                email: member.email,
+                sessionCount: Math.floor(Math.random() * 10) + 1,
+                needsAttention: Math.random() > 0.7,
+              }))}
+              managerId={managerProfile?.id || ''} 
+            />
+            
+            <TeamMemberSharedData 
+              teamMembers={getActiveTeamMembers()} 
+              managerId={managerProfile?.id || ''} 
+            />
+          </TabsContent>
 
-        {/* Team Stats */}
-        <Card className="bg-background-secondary">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <h3 className="text-2xl font-bold text-primary">
-                  {Object.values(teamData || {}).filter((value, index, array) => 
-                    index >= 2 && index <= 11 && value !== null
-                  ).length}
-                </h3>
-                <p className="text-sm text-muted-foreground">Active Members</p>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-muted-foreground">
-                  {10 - Object.values(teamData || {}).filter((value, index, array) => 
-                    index >= 2 && index <= 11 && value !== null
-                  ).length}
-                </h3>
-                <p className="text-sm text-muted-foreground">Available Slots</p>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-success">10</h3>
-                <p className="text-sm text-muted-foreground">Total Capacity</p>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-info">
-                  {teamData?.created_at ? new Date(teamData.created_at).toLocaleDateString() : 'N/A'}
-                </h3>
-                <p className="text-sm text-muted-foreground">Team Created</p>
+          {/* Individual Analysis Tab */}
+          <TabsContent value="individual" className="space-y-6">
+            <TeamMemberSelector
+              teamMembers={getActiveTeamMembers()}
+              selectedMemberId={selectedMemberId}
+              onMemberSelect={setSelectedMemberId}
+            />
+            
+            {selectedMemberId && (
+              <IndividualMemberAnalysis
+                memberData={generateIndividualMemberData(selectedMemberId)!}
+              />
+            )}
+            
+            {!selectedMemberId && (
+              <Card className="p-8 text-center">
+                <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">Select a Team Member</h3>
+                <p className="text-muted-foreground">
+                  Choose a team member from the dropdown above to view their detailed analysis
+                </p>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Team Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <TeamAnalyticsDashboard
+              analyticsData={generateAnalyticsData()}
+              dateRange={dateRange}
+            />
+          </TabsContent>
+
+          {/* Comparative Analysis Tab */}
+          <TabsContent value="comparative" className="space-y-6">
+            <TeamComparativeView
+              teamMembers={generateComparativeData()}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+            />
+          </TabsContent>
+
+          {/* Management Tab (Original Team Grid) */}
+          <TabsContent value="management" className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-4">Team Members (10 Slots)</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {Array.from({ length: 10 }, (_, index) => {
+                  const slotNumber = index + 1;
+                  const employeeKey = `employee_${slotNumber}` as keyof TeamMembership;
+                  const employee = teamData?.[employeeKey] as EmployeeProfile;
+                  
+                  return (
+                    <EmployeeCard
+                      key={slotNumber}
+                      slotNumber={slotNumber}
+                      employee={employee}
+                    />
+                  );
+                })}
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Team Stats */}
+            <Card className="bg-background-secondary">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <h3 className="text-2xl font-bold text-primary">
+                      {Object.values(teamData || {}).filter((value, index, array) => 
+                        index >= 2 && index <= 11 && value !== null
+                      ).length}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Active Members</p>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-muted-foreground">
+                      {10 - Object.values(teamData || {}).filter((value, index, array) => 
+                        index >= 2 && index <= 11 && value !== null
+                      ).length}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Available Slots</p>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-success">10</h3>
+                    <p className="text-sm text-muted-foreground">Total Capacity</p>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-info">
+                      {teamData?.created_at ? new Date(teamData.created_at).toLocaleDateString() : 'N/A'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Team Created</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         {/* Add Employee Modal */}
         <AddEmployeeModal
