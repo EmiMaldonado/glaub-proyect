@@ -5,8 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import { usePausedConversations } from '@/hooks/usePausedConversations';
+import { ArrowLeft, Pause } from 'lucide-react';
+import { useSessionManager } from '@/hooks/useSessionManager';
 
 interface Message {
   id: string;
@@ -32,30 +32,29 @@ const ChatConversation: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const continueConversation = searchParams.get('continue');
-  const { pauseConversation, continuePausedConversation, clearPausedConversation } = usePausedConversations();
-  const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const {
+    conversation,
+    messages,
+    hasActiveSession,
+    startNewSession,
+    resumeSession,
+    addMessageToSession,
+    pauseSession,
+    endSession,
+    updateActivity,
+    loadSessionFromLocal
+  } = useSessionManager();
+  
   const [textInput, setTextInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Reset all state for new conversation
-  const resetConversationState = () => {
-    setMessages([]);
-    setTextInput('');
-    setIsLoading(false);
-    setConversation(null);
-  };
 
   // Create new conversation and get AI first message
   const createNewConversation = async () => {
     if (!user) return;
 
     try {
-      setIsInitializing(true);
-      resetConversationState();
-
       // Count existing conversations to get the next number
       const { count } = await supabase
         .from('conversations')
@@ -76,7 +75,9 @@ const ChatConversation: React.FC = () => {
         .single();
 
       if (error) throw error;
-      setConversation(newConversation as Conversation);
+      
+      // Start new session
+      startNewSession(newConversation as Conversation);
 
       // Get user's profile for personalization
       const { data: profile } = await supabase
@@ -95,8 +96,6 @@ const ChatConversation: React.FC = () => {
         description: "Could not create new conversation",
         variant: "destructive",
       });
-    } finally {
-      setIsInitializing(false);
     }
   };
 
@@ -161,6 +160,7 @@ const ChatConversation: React.FC = () => {
     if (!messageText.trim() || !conversation || isLoading) return;
 
     setIsLoading(true);
+    updateActivity(); // Update last activity
 
     // Add user message immediately for instant feedback
     const userMessage: Message = {
@@ -170,7 +170,7 @@ const ChatConversation: React.FC = () => {
       created_at: new Date().toISOString(),
     };
     
-    setMessages(prev => [...prev, userMessage]);
+    addMessageToSession(userMessage);
     setTextInput(''); // Clear input immediately
 
     try {
@@ -193,14 +193,10 @@ const ChatConversation: React.FC = () => {
       }
 
       // The AI response will be added automatically via real-time subscription
-      // when it's saved to the database by the edge function
       console.log('✅ Message sent successfully', response.data?.debug);
 
     } catch (error) {
       console.error('Error sending message:', error);
-      
-      // Remove the user message that was added optimistically on error
-      setMessages(prev => prev.filter(msg => msg.id !== userMessage.id));
       
       toast({
         title: "Error",
@@ -212,15 +208,39 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Initialize conversation on component mount
+  // Initialize conversation on mount
   useEffect(() => {
     if (!user) return;
     
-    if (continueConversation === 'true') {
-      handleContinuePausedConversation();
-    } else {
-      createNewConversation();
-    }
+    const initializeConversation = async () => {
+      setIsInitializing(true);
+      
+      try {
+        if (continueConversation === 'true') {
+          await handleContinuePausedConversation();
+        } else {
+          // Check for existing session first
+          const existingSession = loadSessionFromLocal();
+          if (existingSession && existingSession.conversation) {
+            console.log('📂 Restored existing session');
+            updateActivity();
+          } else {
+            await createNewConversation();
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing conversation:', error);
+        toast({
+          title: "Error",
+          description: "Could not initialize conversation",
+          variant: "destructive",
+        });
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initializeConversation();
   }, [user, continueConversation]);
 
   // Real-time message updates
@@ -239,7 +259,7 @@ const ChatConversation: React.FC = () => {
         },
         (payload) => {
           const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
+          addMessageToSession(newMessage);
         }
       )
       .subscribe();
@@ -247,7 +267,7 @@ const ChatConversation: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversation]);
+  }, [conversation, addMessageToSession]);
 
   // Scroll to bottom when messages update
   useEffect(() => {
@@ -259,13 +279,16 @@ const ChatConversation: React.FC = () => {
     if (!user) return;
 
     try {
-      setIsInitializing(true);
-      resetConversationState();
-
       // Get paused conversation messages
-      const pausedMessages = await continuePausedConversation(user.id);
+      const { data: pausedConv } = await supabase
+        .from('paused_conversations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       
-      if (!pausedMessages || pausedMessages.length === 0) {
+      if (!pausedConv) {
         toast({
           title: "No paused conversation found",
           description: "Starting a new conversation instead",
@@ -274,25 +297,35 @@ const ChatConversation: React.FC = () => {
         return;
       }
 
+      // Parse messages
+      const previousMessages = typeof pausedConv.message_history === 'string' 
+        ? JSON.parse(pausedConv.message_history)
+        : pausedConv.message_history;
+
       // Create new active conversation for continuation
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          title: `Continued Conversation ${new Date().toLocaleDateString()}`,
+          title: `Continued ${pausedConv.conversation_title}`,
           status: 'active'
         })
         .select()
         .single();
 
       if (error) throw error;
-      setConversation(newConversation as Conversation);
 
-      // Load the paused messages into current state
-      setMessages(pausedMessages);
+      // Resume session with previous messages
+      resumeSession(newConversation as Conversation, previousMessages);
 
-      // Generate AI welcome back message with summary
-      await sendAIWelcomeBackMessage(newConversation.id, pausedMessages);
+      // Delete the paused conversation since we're continuing it
+      await supabase
+        .from('paused_conversations')
+        .delete()
+        .eq('id', pausedConv.id);
+
+      // Generate AI welcome back message
+      await sendAIWelcomeBackMessage(newConversation.id, previousMessages);
 
     } catch (error) {
       console.error('Error continuing paused conversation:', error);
@@ -302,8 +335,6 @@ const ChatConversation: React.FC = () => {
         variant: "destructive",
       });
       await createNewConversation();
-    } finally {
-      setIsInitializing(false);
     }
   };
 
@@ -349,30 +380,9 @@ const ChatConversation: React.FC = () => {
   const handlePauseSession = async () => {
     if (!conversation || !user) return;
 
-    try {
-      // Use the new pause system - save only raw message history
-      const success = await pauseConversation(
-        user.id,
-        messages,
-        conversation.title || 'Paused Conversation'
-      );
-
-      if (success) {
-        // Delete the active conversation since it's now paused
-        await supabase
-          .from('conversations')
-          .delete()
-          .eq('id', conversation.id);
-
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      console.error('Error pausing session:', error);
-      toast({
-        title: "Error",
-        description: "Could not pause the session",
-        variant: "destructive",
-      });
+    const success = await pauseSession();
+    if (success) {
+      navigate('/dashboard');
     }
   };
 
@@ -380,35 +390,20 @@ const ChatConversation: React.FC = () => {
   const handleEndSession = async () => {
     if (!conversation) return;
 
-    try {
-      await supabase
-        .from('conversations')
-        .update({ 
-          status: 'completed',
-          ended_at: new Date().toISOString()
-        })
-        .eq('id', conversation.id);
-
-      toast({
-        title: "✅ Session Completed",
-        description: "The conversation has been saved",
-      });
-
+    const success = await endSession();
+    if (success) {
       navigate(`/session-summary?conversation_id=${conversation.id}`);
-    } catch (error) {
-      console.error('Error ending session:', error);
-      toast({
-        title: "Error",
-        description: "Could not end the session",
-        variant: "destructive",
-      });
     }
   };
 
-  // Handle new conversation (clears any paused conversation)
+  // Handle new conversation (clears any session)
   const handleNewConversation = async () => {
+    // Clear any existing paused session
     if (user) {
-      await clearPausedConversation(user.id);
+      await supabase
+        .from('paused_conversations')
+        .delete()
+        .eq('user_id', user.id);
     }
     createNewConversation();
   };
@@ -418,7 +413,7 @@ const ChatConversation: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
           <LoadingSpinner />
-          <p className="text-muted-foreground">Starting new conversation...</p>
+          <p className="text-muted-foreground">Starting conversation...</p>
         </div>
       </div>
     );
@@ -440,7 +435,9 @@ const ChatConversation: React.FC = () => {
             <h1 className="text-lg font-medium">Therapeutic Chat</h1>
           </div>
           <div className="flex items-center space-x-2">
-            {/* Session controls moved below input */}
+            {hasActiveSession && (
+              <span className="text-sm text-green-600 font-medium">● Active Session</span>
+            )}
           </div>
         </div>
       </header>
@@ -501,7 +498,6 @@ const ChatConversation: React.FC = () => {
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !isLoading) {
                       handleSendMessage(textInput);
-                      // Don't clear textInput here - handleSendMessage does it
                     }
                   }}
                   placeholder="Write your message..."
@@ -509,10 +505,7 @@ const ChatConversation: React.FC = () => {
                   disabled={isLoading}
                 />
                 <Button
-                  onClick={() => {
-                    handleSendMessage(textInput);
-                    setTextInput('');
-                  }}
+                  onClick={() => handleSendMessage(textInput)}
                   disabled={!textInput.trim() || isLoading}
                 >
                   Send
@@ -525,15 +518,23 @@ const ChatConversation: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={handlePauseSession}
-                  disabled={isLoading}
+                  disabled={!conversation || messages.length === 0}
                 >
-                  Pause Session & Continue Later
+                  <Pause className="h-4 w-4 mr-2" />
+                  Pause
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={handleNewConversation}
+                >
+                  New Chat
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={handleEndSession}
-                  disabled={!conversation}
+                  disabled={!conversation || messages.length === 0}
                 >
                   End Session
                 </Button>
