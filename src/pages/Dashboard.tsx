@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck } from "lucide-react";
+import { MessageCircle, TrendingUp, Calendar, Plus, History, Settings, Target, Lightbulb, Share2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
@@ -25,8 +25,6 @@ const Dashboard = () => {
   const [oceanProfile, setOceanProfile] = useState<any>(null);
   const [allInsights, setAllInsights] = useState<any[]>([]);
   const [personalizedSummary, setPersonalizedSummary] = useState<string>('');
-  const [managerEmail, setManagerEmail] = useState('');
-  const [isInvitingManager, setIsInvitingManager] = useState(false);
   const [sharingSettings, setSharingSettings] = useState({
     profile: false,
     insights: false,
@@ -43,7 +41,6 @@ const Dashboard = () => {
   });
   const [userProfile, setUserProfile] = useState<any>(null);
   const [currentManager, setCurrentManager] = useState<any>(null);
-  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   useEffect(() => {
     if (user) {
       loadDashboardData();
@@ -140,19 +137,6 @@ const Dashboard = () => {
         setCurrentManager(manager);
       }
 
-      // Load pending invitations for this user's email
-      const { data: invitations } = await supabase
-        .from('invitations')
-        .select(`
-          *,
-          manager:profiles!invitations_manager_id_fkey(full_name, display_name)
-        `)
-        .eq('email', user.email)
-        .eq('status', 'pending')
-        .gt('expires_at', new Date().toISOString());
-      
-      setPendingInvitations(invitations || []);
-
       setStats({
         totalConversations: conversations?.length || 0,
         completedConversations: conversations?.filter(c => c.status === 'completed').length || 0,
@@ -186,137 +170,6 @@ const Dashboard = () => {
       ...prev,
       [setting]: !prev[setting as keyof typeof prev]
     }));
-  };
-  const handleInviteManager = async () => {
-    if (!managerEmail.trim()) {
-      toast({
-        title: "Email Required",
-        description: "Please enter your manager's email address",
-        variant: "destructive"
-      });
-      return;
-    }
-    if (!managerEmail.includes('@')) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive"
-      });
-      return;
-    }
-    setIsInvitingManager(true);
-    try {
-      // Create invitation directly in database
-      const { data: invitation, error } = await supabase
-        .from('invitations')
-        .insert({
-          email: managerEmail.trim(),
-          token: crypto.randomUUID(),
-          manager_id: userProfile?.id,
-          status: 'pending'
-        })
-        .select('token')
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      // Generate invitation URL
-      const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
-      
-      // Copy to clipboard
-        await navigator.clipboard.writeText(invitationUrl);
-        
-        toast({
-          title: "Request Sent!",
-          description: `Your request to join the team has been sent to ${managerEmail}. They will see your request in their manager dashboard and can approve it.`,
-        });
-      setManagerEmail(''); // Clear the input
-      
-    } catch (error: any) {
-      console.error('Error creating invitation:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create manager invitation",
-        variant: "destructive"
-      });
-    } finally {
-      setIsInvitingManager(false);
-    }
-  };
-
-  const handleAcceptInvitation = async (invitation: any) => {
-    try {
-      if (!userProfile?.id) {
-        throw new Error('User profile not found');
-      }
-
-      const { data, error } = await supabase.functions.invoke('complete-invitation', {
-        body: {
-          token: invitation.token,
-          user_id: userProfile.id, // Use profile ID instead of auth user ID
-          action: 'accept'
-        }
-      });
-
-      if (error) throw error;
-      
-      if (data?.success) {
-        toast({
-          title: "Invitation Accepted!",
-          description: `You are now part of ${data.manager_name}'s team`,
-        });
-        // Reload dashboard data to reflect changes
-        loadDashboardData();
-      } else {
-        throw new Error(data?.error || 'Failed to accept invitation');
-      }
-    } catch (error: any) {
-      console.error('Error accepting invitation:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to accept invitation",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDeclineInvitation = async (invitation: any) => {
-    try {
-      if (!userProfile?.id) {
-        throw new Error('User profile not found');
-      }
-
-      const { data, error } = await supabase.functions.invoke('complete-invitation', {
-        body: {
-          token: invitation.token,
-          user_id: userProfile.id, // Use profile ID instead of auth user ID
-          action: 'decline'
-        }
-      });
-
-      if (error) throw error;
-      
-      if (data?.success) {
-        toast({
-          title: "Invitation Declined",
-          description: "You have declined the team invitation",
-        });
-        
-        // Remove from pending invitations
-        setPendingInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
-      } else {
-        throw new Error(data?.error || 'Failed to decline invitation');
-      }
-    } catch (error: any) {
-      console.error('Error declining invitation:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to decline invitation",
-        variant: "destructive"
-      });
-    }
   };
 
   const handleShareWithManager = async (type: 'strengths' | 'opportunities') => {
@@ -370,14 +223,6 @@ const Dashboard = () => {
               {personalizedSummary || "Your personal space for self-discovery and professional development."}
             </p>
           </div>
-          {userProfile?.role === 'manager' && (
-            <Button variant="default" asChild>
-              <Link to="/dashboard/manager">
-                <Users className="mr-2 h-4 w-4" />
-                Go to Manager Dashboard
-              </Link>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -627,96 +472,6 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Section 5: My Teams - Combined team status and memberships */}
-      <div className="space-y-6">
-        {/* My Teams */}
-        {/* <MyTeams userProfile={userProfile} /> */}
-        <Card className="shadow-soft border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Team Management (Coming Soon)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Team management features will be available soon.</p>
-          </CardContent>
-        </Card>
-
-        {/* Pending Team Invitations */}
-        {pendingInvitations.length > 0 && (
-          <Card className="shadow-soft border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-primary" />
-                Pending Team Invitations ({pendingInvitations.length})
-              </CardTitle>
-              <CardDescription>
-                You have been invited to join the following teams
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {pendingInvitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg bg-primary/5">
-                  <div>
-                    <p className="font-medium">
-                      Invitation from {invitation.manager?.display_name || invitation.manager?.full_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Invited on {new Date(invitation.created_at).toLocaleDateString()} • 
-                      Expires on {new Date(invitation.expires_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleAcceptInvitation(invitation)}
-                    >
-                      Accept
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleDeclineInvitation(invitation)}
-                    >
-                      Decline
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Request to Join Team */}
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
-              Request to Join Team
-            </CardTitle>
-            <CardDescription>
-              Submit a request to join a manager's team
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="manager-email">Manager's Email Address</Label>
-              <Input
-                id="manager-email"
-                type="email"
-                placeholder="Enter your manager's email address"
-                value={managerEmail}
-                onChange={(e) => setManagerEmail(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleInviteManager()}
-              />
-            </div>
-            <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full">
-              {isInvitingManager ? 'Sending Request...' : 'Submit Approval Request'}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>;
 };
 export default Dashboard;
