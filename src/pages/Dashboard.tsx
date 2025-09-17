@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { usePausedConversations } from "@/hooks/usePausedConversations";
 import SharingPreferences from "@/components/SharingPreferences";
 import SharedDataIndicator from "@/components/SharedDataIndicator";
+import PersonalRecommendations from "@/components/PersonalRecommendations";
 // import MyTeams from "@/components/ui/MyTeams";
 const Dashboard = () => {
   const {
@@ -600,48 +601,29 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 justify-between">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-amber-600" />
-                Growth Opportunities
-                <SharedDataIndicator 
-                  isShared={sharingPreferences.share_insights}
-                  variant="subtle"
-                />
-              </div>
-              {allInsights.length > 0 && currentManager && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareWithManager('opportunities')}
-                  className="flex items-center gap-1"
-                >
-                  <Share2 className="h-4 w-4" />
-                  Share with Manager
-                </Button>
-              )}
-            </CardTitle>
-            <CardDescription>
-              Areas for your professional development
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {allInsights.length > 0 ? <ul className="space-y-2">
-                {allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5).map((step: string, index: number) => <li key={index} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-2 flex-shrink-0" />
-                    <span className="text-sm">{step}</span>
-                  </li>)}
-              </ul> : <div className="text-center py-6">
-                <Lightbulb className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-muted-foreground text-sm font-medium">No growth opportunities available</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recommended steps will appear after your first conversation
-                </p>
-              </div>}
-          </CardContent>
-        </Card>
+        {/* Section 6: Your Personal Recommendations */}
+        <PersonalRecommendations 
+          recommendations={{
+            development: allInsights.flatMap(insight => insight.next_steps || []).slice(0, 3),
+            wellness: [
+              "Take regular breaks during work to maintain mental clarity",
+              "Practice mindfulness techniques when feeling overwhelmed", 
+              "Establish boundaries to protect your energy"
+            ],
+            skills: [
+              "Focus on active listening in your next conversations",
+              "Practice emotional regulation during challenging situations",
+              "Develop your communication skills with open-ended questions"
+            ],
+            goals: [
+              "Set specific, measurable objectives for personal growth",
+              "Create accountability systems for your development plan",
+              "Track progress weekly to maintain momentum"
+            ]
+          }}
+          oceanProfile={oceanProfile}
+          className="shadow-soft"
+        />
       </div>
 
       {/* Section 6: Data Sharing Preferences */}

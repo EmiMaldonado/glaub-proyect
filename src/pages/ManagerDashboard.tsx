@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, User, Trash2, Mail, BarChart3 } from "lucide-react";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import TeamMemberSharedData from "@/components/TeamMemberSharedData";
+import ManagementRecommendations from "@/components/ManagementRecommendations";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -383,6 +384,20 @@ const ManagerDashboard = () => {
           </Card>
         </div>
 
+        {/* Management Recommendations Section */}
+        <div className="mb-8">
+          <ManagementRecommendations 
+            teamMembers={getActiveTeamMembers().map(member => ({
+              id: member.id,
+              name: member.display_name || member.full_name || 'Unknown',
+              email: member.email,
+              sessionCount: 0, // TODO: Add session count from shared data
+              needsAttention: false, // TODO: Add attention indicators
+            }))}
+            managerId={managerProfile?.id || ''} 
+          />
+        </div>
+        
         {/* Team Insights Section */}
         <div className="mb-8">
           <TeamMemberSharedData 
