@@ -13,7 +13,7 @@ import { User, Briefcase, Calendar, Users, ArrowRight, SkipForward } from 'lucid
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface OnboardingData {
-  age: number | null;
+  age: string;
   gender: string;
   job_position: string;
 }
@@ -30,7 +30,7 @@ const PostRegistrationOnboarding = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<OnboardingData>({
-    age: null,
+    age: '',
     gender: '',
     job_position: ''
   });
@@ -43,6 +43,15 @@ const PostRegistrationOnboarding = () => {
     'Operations Manager', 'Business Analyst', 'Project Manager', 'DevOps Engineer',
     'Quality Assurance', 'Content Writer', 'Social Media Manager', 'Consultant',
     'Teacher', 'Nurse', 'Doctor', 'Lawyer', 'Accountant', 'Student', 'Other'
+  ];
+
+  // Age ranges for selection
+  const ageRanges = [
+    { value: '18-28', label: '18 - 28 years old' },
+    { value: '29-44', label: '29 - 44 years old' },
+    { value: '45-60', label: '45 - 60 years old' },
+    { value: '61-79', label: '61 - 79 years old' },
+    { value: '80-99', label: '80 - 99 years old' }
   ];
 
   const [jobSuggestionFilter, setJobSuggestionFilter] = useState('');
@@ -100,8 +109,8 @@ const PostRegistrationOnboarding = () => {
     }
 
     // Age validation (optional but if provided, must be valid)
-    if (formData.age !== null && (formData.age < 16 || formData.age > 100)) {
-      newErrors.age = 'Age must be between 16 and 100';
+    if (formData.age && !ageRanges.some(range => range.value === formData.age)) {
+      newErrors.age = 'Please select a valid age range';
     }
 
     setErrors(newErrors);
@@ -130,7 +139,7 @@ const PostRegistrationOnboarding = () => {
       const { error } = await supabase
         .from('profiles')
         .update({
-          age: formData.age,
+          age: formData.age ? parseInt(formData.age.split('-')[0]) : null, // Store the lower bound of the range as integer for backwards compatibility
           gender: formData.gender || null,
           job_position: formData.job_position,
           onboarding_completed: true,
@@ -284,23 +293,23 @@ const PostRegistrationOnboarding = () => {
             <div className="space-y-2">
               <Label htmlFor="age" className="flex items-center gap-2 text-sm font-medium">
                 <Calendar className="h-4 w-4 text-primary" />
-                Age (Optional)
+                Age Range (Optional)
               </Label>
               <Select
-                value={formData.age?.toString() || 'not-specified'}
+                value={formData.age || 'not-specified'}
                 onValueChange={(value) => setFormData(prev => ({ 
                   ...prev, 
-                  age: value === 'not-specified' ? null : parseInt(value) 
+                  age: value === 'not-specified' ? '' : value 
                 }))}
               >
                 <SelectTrigger className={errors.age ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select your age" />
+                  <SelectValue placeholder="Select your age range" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border shadow-lg z-50">
                   <SelectItem value="not-specified">Prefer not to say</SelectItem>
-                  {Array.from({ length: 68 }, (_, i) => i + 16).map((age) => (
-                    <SelectItem key={age} value={age.toString()}>
-                      {age} years old
+                  {ageRanges.map((range) => (
+                    <SelectItem key={range.value} value={range.value}>
+                      {range.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
