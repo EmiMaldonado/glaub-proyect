@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, User, Trash2, Mail, BarChart3, Download, Users, Calendar, Filter } from "lucide-react";
+import { Plus, User, Trash2, Mail, BarChart3, Download, Users, Calendar } from "lucide-react";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import TeamMemberSharedData from "@/components/TeamMemberSharedData";
 import ManagementRecommendations from "@/components/ManagementRecommendations";
@@ -90,30 +90,6 @@ const ManagerDashboard = () => {
     end: new Date()
   });
 
-  // Initialize team record if doesn't exist
-  const initializeTeam = async () => {
-    if (!user?.id || !managerProfile?.id) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('team_memberships')
-        .select('id')
-        .eq('manager_id', managerProfile.id)
-        .maybeSingle();
-        
-      if (!data && !error) {
-        await supabase
-          .from('team_memberships')
-          .insert({ manager_id: managerProfile.id });
-      }
-    } catch (err) {
-      console.log("Initializing team record...");
-      await supabase
-        .from('team_memberships')
-        .insert({ manager_id: managerProfile.id });
-    }
-  };
-
   // Fetch team data with all employee relationships
   const fetchTeamData = async () => {
     if (!user?.id) return;
@@ -190,73 +166,6 @@ const ManagerDashboard = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Add employee to first available slot
-  const addEmployee = async (employeeId: string) => {
-    if (!teamData || !managerProfile?.id) return;
-
-    const slots = ['employee_1_id', 'employee_2_id', 'employee_3_id', 'employee_4_id', 'employee_5_id', 
-                  'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'];
-    
-    try {
-      for (let slot of slots) {
-        if (!teamData[slot as keyof TeamMembership]) {
-          const { error } = await supabase
-            .from('team_memberships')
-            .update({ [slot]: employeeId })
-            .eq('manager_id', managerProfile.id);
-
-          if (error) throw error;
-
-          toast({
-            title: "Success",
-            description: "Employee added to team successfully"
-          });
-          
-          fetchTeamData();
-          setAddEmployeeOpen(false);
-          break;
-        }
-      }
-    } catch (err) {
-      console.error('Error adding employee:', err);
-      toast({
-        title: "Error",
-        description: "Failed to add employee to team",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Remove employee from slot
-  const removeEmployee = async (slotNumber: number) => {
-    if (!managerProfile?.id) return;
-
-    try {
-      const slotName = `employee_${slotNumber}_id`;
-      
-      const { error } = await supabase
-        .from('team_memberships')
-        .update({ [slotName]: null })
-        .eq('manager_id', managerProfile.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Employee removed from team"
-      });
-      
-      fetchTeamData();
-    } catch (err) {
-      console.error('Error removing employee:', err);
-      toast({
-        title: "Error",
-        description: "Failed to remove employee",
-        variant: "destructive"
-      });
     }
   };
 
@@ -340,6 +249,8 @@ const ManagerDashboard = () => {
       });
     }
   };
+
+  // Generate mock analytics data (in real app, this would come from API)
   const generateAnalyticsData = () => {
     const activeMembers = getActiveTeamMembers();
     return {
@@ -444,7 +355,6 @@ const ManagerDashboard = () => {
       }
     };
   };
-  };
 
   // Handle export functionality
   const handleExport = async (exportConfig: any) => {
@@ -470,6 +380,12 @@ const ManagerDashboard = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchTeamData();
+    }
+  }, [user]);
 
   const EmployeeCard = ({ slotNumber, employee }: { slotNumber: number; employee?: EmployeeProfile }) => {
     if (employee) {
@@ -555,18 +471,6 @@ const ManagerDashboard = () => {
         </CardContent>
       </Card>
     );
-  // Get active team members for insights display
-  const getActiveTeamMembers = () => {
-    if (!teamData) return [];
-    
-    const members = [];
-    for (let i = 1; i <= 10; i++) {
-      const employee = teamData[`employee_${i}` as keyof TeamMembership];
-      if (employee) {
-        members.push(employee);
-      }
-    }
-    return members;
   };
 
   if (loading) {
