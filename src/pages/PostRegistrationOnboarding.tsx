@@ -287,17 +287,17 @@ const PostRegistrationOnboarding = () => {
                 Age (Optional)
               </Label>
               <Select
-                value={formData.age?.toString() || ''}
+                value={formData.age?.toString() || 'not-specified'}
                 onValueChange={(value) => setFormData(prev => ({ 
                   ...prev, 
-                  age: value ? parseInt(value) : null 
+                  age: value === 'not-specified' ? null : parseInt(value) 
                 }))}
               >
                 <SelectTrigger className={errors.age ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Select your age" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border shadow-lg z-50">
-                  <SelectItem value="">Prefer not to say</SelectItem>
+                  <SelectItem value="not-specified">Prefer not to say</SelectItem>
                   {Array.from({ length: 68 }, (_, i) => i + 16).map((age) => (
                     <SelectItem key={age} value={age.toString()}>
                       {age} years old
@@ -317,18 +317,21 @@ const PostRegistrationOnboarding = () => {
                 Gender (Optional)
               </Label>
               <Select
-                value={formData.gender}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
+                value={formData.gender || 'not-specified'}
+                onValueChange={(value) => setFormData(prev => ({ 
+                  ...prev, 
+                  gender: value === 'not-specified' ? '' : value 
+                }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border shadow-lg z-50">
-                  <SelectItem value="">Prefer not to say</SelectItem>
+                  <SelectItem value="not-specified">Prefer not to say</SelectItem>
                   <SelectItem value="Male">Male</SelectItem>
                   <SelectItem value="Female">Female</SelectItem>
                   <SelectItem value="Non-binary">Non-binary</SelectItem>
-                  <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                 </SelectContent>
               </Select>
             </div>
