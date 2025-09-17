@@ -188,11 +188,11 @@ const ConversationSummaryPanel: React.FC<ConversationSummaryPanelProps> = ({
               <Card className="p-4 border-primary/20 bg-primary/5">
                 <div className="text-center space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    ¿Deseas enviar este resumen a tu terapeuta o manager?
+                    Would you like to send this summary to your therapist or manager?
                   </p>
                   <Button onClick={onSendSummary} className="w-full gap-2">
                     <Send className="h-4 w-4" />
-                    Enviar Resumen
+                    Send Summary
                   </Button>
                 </div>
               </Card>

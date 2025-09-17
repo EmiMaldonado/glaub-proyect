@@ -98,14 +98,14 @@ const Auth = () => {
               if (invitationError) {
                 console.error('Error completing invitation:', invitationError);
                 toast({
-                  title: "Cuenta creada",
-                  description: "Tu cuenta se creó exitosamente, pero hubo un problema al procesar la invitación. Contacta a tu manager.",
+                  title: "Account created",
+                  description: "Your account was created successfully, but there was an issue processing the invitation. Please contact your manager.",
                   variant: "destructive",
                 });
               } else {
                 toast({
-                  title: "¡Bienvenido al equipo!",
-                  description: `Te has unido exitosamente al equipo de ${data.manager_name || 'tu manager'}.`,
+                  title: "Welcome to the team!",
+                  description: `You have successfully joined ${data.manager_name || 'your manager'}'s team.`,
                 });
                 navigate('/dashboard');
               }
@@ -279,7 +279,7 @@ const Auth = () => {
                             Por favor confirma tu email
                           </h3>
                           <p className="text-sm text-yellow-700 mb-3">
-                            Revisa tu bandeja de entrada y carpeta de spam. ¿No recibiste el email?
+                            Check your inbox and spam folder. Didn't receive the email?
                           </p>
                           <Button
                             variant="outline"
@@ -293,7 +293,7 @@ const Auth = () => {
                             ) : (
                               <Mail className="h-4 w-4 mr-2" />
                             )}
-                            Reenviar email de confirmación
+                            Resend confirmation email
                           </Button>
                         </div>
                       </div>

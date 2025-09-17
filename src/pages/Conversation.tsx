@@ -529,8 +529,8 @@ const Conversation: React.FC = () => {
     console.log('Summary confirmation data:', data);
     
     toast({
-      title: "📧 Resumen enviado",
-      description: `Resumen enviado exitosamente a ${data.recipient === 'user' ? 'tu correo' : 'tu terapeuta'}`,
+      title: "📧 Summary sent",
+      description: `Summary sent successfully to ${data.recipient === 'user' ? 'your email' : 'your therapist'}`,
     });
     
     // Here you would implement the actual sending logic

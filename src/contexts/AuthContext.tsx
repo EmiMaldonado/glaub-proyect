@@ -88,8 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     } catch (error) {
       toast({
-        title: "Error inesperado",
-        description: "Ha ocurrido un error inesperado",
+        title: "Unexpected error",
+        description: "An unexpected error has occurred",
         variant: "destructive",
       });
       return { error };

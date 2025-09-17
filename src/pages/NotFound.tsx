@@ -21,24 +21,24 @@ const NotFound = () => {
           </div>
           <CardTitle className="text-4xl font-bold">404</CardTitle>
           <CardDescription className="text-lg">
-            ¡Oops! Esta página no existe
+            Oops! This page doesn't exist
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-sm text-muted-foreground">
-            <p>La página que buscas no pudo ser encontrada.</p>
-            <p className="text-xs mt-2">Ruta: {location.pathname}</p>
+            <p>The page you're looking for could not be found.</p>
+            <p className="text-xs mt-2">Route: {location.pathname}</p>
           </div>
           <div className="flex flex-col gap-2">
             <Button asChild className="w-full">
               <Link to="/">
                 <Home className="mr-2 h-4 w-4" />
-                Volver al Inicio
+                Go to Home
               </Link>
             </Button>
             <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Página Anterior
+              Previous Page
             </Button>
           </div>
         </CardContent>

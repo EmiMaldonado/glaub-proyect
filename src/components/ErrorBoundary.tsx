@@ -61,9 +61,9 @@ class ErrorBoundary extends React.Component<
               <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
                 <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
-              <CardTitle className="text-xl">¡Oops! Algo salió mal</CardTitle>
+              <CardTitle className="text-xl">Oops! Something went wrong</CardTitle>
               <CardDescription>
-                Ha ocurrido un error inesperado. Nuestro equipo ha sido notificado.
+                An unexpected error has occurred. Our team has been notified.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -81,14 +81,14 @@ class ErrorBoundary extends React.Component<
                   variant="default"
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Recargar Página
+                  Reload Page
                 </Button>
                 <Button 
                   onClick={() => window.location.href = '/'} 
                   variant="outline"
                   className="w-full"
                 >
-                  Ir al Inicio
+                  Go to Home
                 </Button>
               </div>
             </CardContent>

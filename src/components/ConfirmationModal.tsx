@@ -37,32 +37,32 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const categories = [
     {
       id: 'insights',
-      label: 'Insights Terapéuticos',
-      description: 'Descubrimientos y revelaciones de la sesión',
+      label: 'Therapeutic Insights',
+      description: 'Discoveries and revelations from the session',
       icon: User,
       count: categorizedSummary?.insights?.length || 0,
       color: 'text-blue-600 bg-blue-50 border-blue-200'
     },
     {
       id: 'summary',
-      label: 'Resumen de Conversación',
-      description: 'Puntos principales discutidos',
+      label: 'Conversation Summary',
+      description: 'Main points discussed',
       icon: FileText,
       count: categorizedSummary?.summary?.length || 0,
       color: 'text-green-600 bg-green-50 border-green-200'
     },
     {
       id: 'strengths',
-      label: 'Puntos Fuertes',
-      description: 'Fortalezas identificadas del paciente',
+      label: 'Strengths',
+      description: 'Patient\'s identified strengths',
       icon: CheckCircle,
       count: categorizedSummary?.strengths?.length || 0,
       color: 'text-purple-600 bg-purple-50 border-purple-200'
     },
     {
       id: 'followUp',
-      label: 'Plan de Seguimiento',
-      description: 'Recomendaciones y próximos pasos',
+      label: 'Follow-up Plan',
+      description: 'Recommendations and next steps',
       icon: Target,
       count: categorizedSummary?.followUp?.length || 0,
       color: 'text-orange-600 bg-orange-50 border-orange-200'
@@ -93,30 +93,30 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-5 w-5 text-primary" />
-            Enviar Resumen de Sesión
+            Send Session Summary
           </DialogTitle>
           <DialogDescription>
-            Configura cómo deseas enviar el resumen de tu sesión terapéutica.
+            Configure how you want to send your therapy session summary.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Recipient Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">¿A quién deseas enviar el resumen?</Label>
+            <Label className="text-sm font-medium">Who would you like to send the summary to?</Label>
             <RadioGroup value={recipient} onValueChange={(value) => setRecipient(value as 'user' | 'manager')}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="user" id="user" />
                 <Label htmlFor="user" className="flex items-center gap-2 cursor-pointer">
                   <User className="h-4 w-4" />
-                  Solo para mí (copia personal)
+                  Just for me (personal copy)
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="manager" id="manager" />
                 <Label htmlFor="manager" className="flex items-center gap-2 cursor-pointer">
                   <UserCheck className="h-4 w-4" />
-                  A mi terapeuta/manager
+                  To my therapist/manager
                 </Label>
               </div>
             </RadioGroup>
@@ -124,7 +124,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
           {/* Category Selection */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">¿Qué secciones deseas incluir?</Label>
+            <Label className="text-sm font-medium">Which sections would you like to include?</Label>
             <div className="grid grid-cols-1 gap-3">
               {categories.map((category) => {
                 const Icon = category.icon;
@@ -149,7 +149,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                           <Icon className="h-4 w-4" />
                           <span className="text-sm font-medium">{category.label}</span>
                           <span className="text-xs text-muted-foreground">
-                            ({category.count} elementos)
+                            ({category.count} items)
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -166,13 +166,13 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           {/* Additional Notes */}
           <div className="space-y-3">
             <Label htmlFor="notes" className="text-sm font-medium">
-              Notas adicionales (opcional)
+              Additional notes (optional)
             </Label>
             <Textarea
               id="notes"
               value={additionalNotes}
               onChange={(e) => setAdditionalNotes(e.target.value)}
-              placeholder="Añade cualquier contexto adicional o comentarios que consideres importantes..."
+              placeholder="Add any additional context or comments you consider important..."
               className="min-h-[80px]"
             />
           </div>
@@ -180,15 +180,15 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           {/* Summary Preview */}
           <Card className="p-4 bg-muted/30">
             <div className="text-xs text-muted-foreground">
-              <strong>Vista previa del envío:</strong>
+              <strong>Send preview:</strong>
               <br />
-              Destinatario: {recipient === 'user' ? 'Solo para ti' : 'Terapeuta/Manager'}
+              Recipient: {recipient === 'user' ? 'Just for you' : 'Therapist/Manager'}
               <br />
-              Secciones: {selectedCategories.length} de {categories.length} seleccionadas
+              Sections: {selectedCategories.length} of {categories.length} selected
               {additionalNotes && (
                 <>
                   <br />
-                  Notas adicionales: Incluidas
+                  Additional notes: Included
                 </>
               )}
             </div>
@@ -197,7 +197,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancelar
+            Cancel
           </Button>
           <Button 
             onClick={handleConfirm}
@@ -205,7 +205,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             className="gap-2"
           >
             <Send className="h-4 w-4" />
-            Enviar Resumen
+            Send Summary
           </Button>
         </DialogFooter>
       </DialogContent>
