@@ -86,44 +86,111 @@ serve(async (req: Request) => {
     console.log("Found user profile:", { id: userProfile.id, user_id: userProfile.user_id });
 
     if (action === 'accept') {
-      // Check if membership already exists
-      const { data: existingMembership } = await supabase
+      console.log("Processing invitation acceptance");
+      
+      // Get or create team membership record
+      let { data: teamMembership, error: membershipFetchError } = await supabase
         .from("team_memberships")
-        .select("id")
-        .eq("employee_id", userProfile.id)
+        .select("*")
         .eq("manager_id", invitation.manager_id)
+        .maybeSingle();
+
+      if (membershipFetchError && membershipFetchError.code !== 'PGRST116') {
+        console.error("Error fetching team membership:", membershipFetchError);
+        throw new Error("Failed to fetch team membership: " + membershipFetchError.message);
+      }
+
+      if (!teamMembership) {
+        // Create new team membership record
+        console.log("Creating new team membership record");
+        const { data: newMembership, error: createError } = await supabase
+          .from("team_memberships")
+          .insert({
+            manager_id: invitation.manager_id,
+            employee_1_id: userProfile.id
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating team membership:", createError);
+          throw new Error("Failed to create team membership: " + createError.message);
+        }
+        
+        console.log("Created new team membership with first employee");
+      } else {
+        // Find next available employee slot
+        console.log("Adding to existing team membership");
+        const employeeSlots = [
+          'employee_1_id', 'employee_2_id', 'employee_3_id', 'employee_4_id', 'employee_5_id',
+          'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'
+        ];
+        
+        // Check if user is already in the team
+        const isAlreadyMember = employeeSlots.some(slot => teamMembership[slot] === userProfile.id);
+        if (isAlreadyMember) {
+          console.log("User is already a member of this team");
+        } else {
+          // Find first available slot
+          const availableSlot = employeeSlots.find(slot => !teamMembership[slot]);
+          
+          if (!availableSlot) {
+            throw new Error("Team is full (maximum 10 members)");
+          }
+          
+          console.log("Adding user to slot:", availableSlot);
+          const { error: updateError } = await supabase
+            .from("team_memberships")
+            .update({ [availableSlot]: userProfile.id })
+            .eq("id", teamMembership.id);
+
+          if (updateError) {
+            console.error("Error updating team membership:", updateError);
+            throw new Error("Failed to add user to team: " + updateError.message);
+          }
+        }
+      }
+
+      // Update user role to employee if not already a manager
+      if (userProfile.role !== 'manager') {
+        const { error: updateRoleError } = await supabase
+          .from("profiles")
+          .update({ role: 'employee' })
+          .eq("id", userProfile.id);
+
+        if (updateRoleError) {
+          console.error("Error updating user role:", updateRoleError);
+        } else {
+          console.log("Updated user role to employee");
+        }
+      }
+
+      // Promote manager if they're currently an employee and set team name
+      const { data: managerProfile, error: managerFetchError } = await supabase
+        .from("profiles")
+        .select("role, team_name, display_name, full_name")
+        .eq("id", invitation.manager_id)
         .single();
 
-      if (existingMembership) {
-        throw new Error("User is already a team member");
-      }
+      if (managerFetchError) {
+        console.error("Error fetching manager profile:", managerFetchError);
+      } else if (managerProfile?.role === "employee") {
+        console.log("Promoting manager from employee to manager role");
+        const teamName = managerProfile.team_name || `${managerProfile.display_name || managerProfile.full_name || 'Team'}'s Team`;
+        
+        const { error: promoteManagerError } = await supabase
+          .from("profiles")
+          .update({ 
+            role: "manager",
+            team_name: teamName
+          })
+          .eq("id", invitation.manager_id);
 
-      // Create team membership
-      const { error: membershipError } = await supabase
-        .from("team_memberships")
-        .insert({
-          employee_id: userProfile.id,
-          manager_id: invitation.manager_id
-        });
-
-      if (membershipError) {
-        console.error("Error creating team membership:", membershipError);
-        throw new Error("Failed to create team membership: " + membershipError.message);
-      }
-
-      console.log("Created team membership for user:", userProfile.id);
-
-      // Promote manager if they're currently an employee
-      const { error: promoteManagerError } = await supabase
-        .from("profiles")
-        .update({ role: "manager" })
-        .eq("id", invitation.manager_id)
-        .eq("role", "employee");
-
-      if (promoteManagerError) {
-        console.error("Error promoting manager:", promoteManagerError);
-      } else {
-        console.log("Promoted manager to manager role");
+        if (promoteManagerError) {
+          console.error("Error promoting manager:", promoteManagerError);
+        } else {
+          console.log("Promoted manager to manager role with team name:", teamName);
+        }
       }
     }
 

@@ -182,21 +182,70 @@ serve(async (req: Request) => {
         }
       }
 
-      // Add team membership (this will handle multi-team support)
-      const { error: membershipError } = await supabase
+      // Add team membership - find next available slot
+      console.log("Finding existing team membership for manager:", invitation.manager_id);
+      
+      // Get or create team membership record
+      let { data: teamMembership, error: membershipFetchError } = await supabase
         .from("team_memberships")
-        .insert({
-          employee_id: userProfile.id,
-          manager_id: invitation.manager_id
-        });
+        .select("*")
+        .eq("manager_id", invitation.manager_id)
+        .maybeSingle();
 
-      if (membershipError) {
-        // If it's a unique constraint violation, the user is already on this team
-        if (membershipError.code === '23505') {
+      if (membershipFetchError && membershipFetchError.code !== 'PGRST116') {
+        console.error("Error fetching team membership:", membershipFetchError);
+        throw new Error(`Failed to fetch team membership: ${membershipFetchError.message}`);
+      }
+
+      if (!teamMembership) {
+        // Create new team membership record
+        console.log("Creating new team membership record");
+        const { data: newMembership, error: createError } = await supabase
+          .from("team_memberships")
+          .insert({
+            manager_id: invitation.manager_id,
+            employee_1_id: userProfile.id
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating team membership:", createError);
+          throw new Error(`Failed to create team membership: ${createError.message}`);
+        }
+        
+        teamMembership = newMembership;
+        console.log("Created new team membership with first employee");
+      } else {
+        // Find next available employee slot
+        console.log("Adding to existing team membership");
+        const employeeSlots = [
+          'employee_1_id', 'employee_2_id', 'employee_3_id', 'employee_4_id', 'employee_5_id',
+          'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'
+        ];
+        
+        // Check if user is already in the team
+        const isAlreadyMember = employeeSlots.some(slot => teamMembership[slot] === userProfile.id);
+        if (isAlreadyMember) {
           console.log("User is already a member of this team");
         } else {
-          console.error("Error creating team membership:", membershipError);
-          throw new Error(`Failed to add user to team: ${membershipError.message}`);
+          // Find first available slot
+          const availableSlot = employeeSlots.find(slot => !teamMembership[slot]);
+          
+          if (!availableSlot) {
+            throw new Error("Team is full (maximum 10 members)");
+          }
+          
+          console.log("Adding user to slot:", availableSlot);
+          const { error: updateError } = await supabase
+            .from("team_memberships")
+            .update({ [availableSlot]: userProfile.id })
+            .eq("id", teamMembership.id);
+
+          if (updateError) {
+            console.error("Error updating team membership:", updateError);
+            throw new Error(`Failed to add user to team: ${updateError.message}`);
+          }
         }
       }
 
