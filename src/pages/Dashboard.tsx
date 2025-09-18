@@ -443,40 +443,34 @@ const Dashboard = () => {
             <CardContent>
               {oceanProfile ? (
                 <div className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Openness</span>
-                      <span className="text-sm font-bold">{oceanProfile.openness || 0}%</span>
+                  {/* Prominent percentage display */}
+                  <div className="grid grid-cols-5 gap-4 text-center">
+                    <div>
+                      <div className="text-3xl font-bold text-primary mb-1">{oceanProfile.openness || 0}%</div>
+                      <div className="text-sm text-muted-foreground font-medium">Openness</div>
                     </div>
-                    <Progress value={oceanProfile.openness || 0} className="h-2" />
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Conscientiousness</span>
-                      <span className="text-sm font-bold">{oceanProfile.conscientiousness || 0}%</span>
+                    <div>
+                      <div className="text-3xl font-bold text-primary mb-1">{oceanProfile.conscientiousness || 0}%</div>
+                      <div className="text-sm text-muted-foreground font-medium">Conscientiousness</div>
                     </div>
-                    <Progress value={oceanProfile.conscientiousness || 0} className="h-2" />
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Extraversion</span>
-                      <span className="text-sm font-bold">{oceanProfile.extraversion || 0}%</span>
+                    <div>
+                      <div className="text-3xl font-bold text-primary mb-1">{oceanProfile.extraversion || 0}%</div>
+                      <div className="text-sm text-muted-foreground font-medium">Extraversion</div>
                     </div>
-                    <Progress value={oceanProfile.extraversion || 0} className="h-2" />
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Agreeableness</span>
-                      <span className="text-sm font-bold">{oceanProfile.agreeableness || 0}%</span>
+                    <div>
+                      <div className="text-3xl font-bold text-primary mb-1">{oceanProfile.agreeableness || 0}%</div>
+                      <div className="text-sm text-muted-foreground font-medium">Agreeableness</div>
                     </div>
-                    <Progress value={oceanProfile.agreeableness || 0} className="h-2" />
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Stability</span>
-                      <span className="text-sm font-bold">{100 - (oceanProfile.neuroticism || 0)}%</span>
+                    <div>
+                      <div className="text-3xl font-bold text-primary mb-1">{100 - (oceanProfile.neuroticism || 0)}%</div>
+                      <div className="text-sm text-muted-foreground font-medium">Stability</div>
                     </div>
-                    <Progress value={100 - (oceanProfile.neuroticism || 0)} className="h-2" />
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-4 mt-6">
+                  
+                  {/* Detailed description */}
+                  <div className="bg-muted/50 rounded-lg p-6 mt-6">
                     <p className="text-sm text-foreground/80 leading-relaxed">
-                      {oceanProfile.summary || "Your personality profile reveals unique patterns based on conversational analysis. These dimensions work together to create your distinctive approach to challenges and relationships."}
+                      {oceanProfile.summary || "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities."}
                     </p>
                   </div>
                 </div>
