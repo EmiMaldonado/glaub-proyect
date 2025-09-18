@@ -575,7 +575,7 @@ const Dashboard = () => {
                   <div className="bg-muted/50 rounded-lg p-8 flex-1 min-h-[120px] flex items-center">
                     {isLoadingDescription ? <div className="flex items-center gap-2 w-full justify-center">
                         <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full"></div>
-                        <p className="text-sm text-muted-foreground">Generating personalized analysis...</p>
+                        <p className="text-sm text-muted-foreground">ai thinking...</p>
                        </div> : <p className="text-base text-foreground/90 leading-relaxed">
                          {oceanDescription || oceanProfile.summary || `Based on your ${stats.completedConversations} conversations, your personality profile shows consistent patterns in how you approach challenges and relationships. Your communication style and decision-making preferences have been analyzed to create this personalized summary of your professional strengths and growth areas.`}
                        </p>}
