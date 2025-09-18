@@ -717,6 +717,17 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Sharing Preferences */}
+      <div className="grid lg:grid-cols-10 gap-8">
+        <div className="lg:col-span-3 lg:col-start-8">
+          <SharingPreferences 
+            userProfile={userProfile} 
+            managerId={currentManager?.id} 
+            onPreferencesChange={handleSharingPreferencesChange} 
+          />
+        </div>
+      </div>
+
       {/* Results, Strengths, and Personal Recommendations Container */}
       <div className="space-y-8">
         {/* Your Results Section */}
@@ -890,11 +901,6 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      </div>
-
-      {/* Data Sharing Preferences - Hidden section for backend functionality */}
-      <div className="hidden">
-        <SharingPreferences userProfile={userProfile} managerId={currentManager?.id} onPreferencesChange={handleSharingPreferencesChange} />
       </div>
     </div>;
 };
