@@ -34,7 +34,9 @@ const DashboardViewSwitch: React.FC = () => {
         onClick={() => navigate('/dashboard')}
         className={cn(
           "flex items-center gap-2 px-3 py-2 text-sm transition-all",
-          isOnPersonalDashboard && "bg-background shadow-sm"
+          isOnPersonalDashboard 
+            ? "bg-background shadow-sm" 
+            : "text-primary hover:text-primary/80 hover:bg-primary/10"
         )}
         data-testid="personal-view-button"
       >
@@ -48,7 +50,9 @@ const DashboardViewSwitch: React.FC = () => {
         onClick={() => navigate('/dashboard/manager')}
         className={cn(
           "flex items-center gap-2 px-3 py-2 text-sm transition-all",
-          isOnManagerDashboard && "bg-background shadow-sm"
+          isOnManagerDashboard 
+            ? "bg-background shadow-sm"
+            : "text-primary hover:text-primary/80 hover:bg-primary/10"
         )}
         data-testid="manager-view-button"
       >
