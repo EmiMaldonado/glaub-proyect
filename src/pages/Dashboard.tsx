@@ -495,18 +495,21 @@ const Dashboard = () => {
                 Start a new conversation
               </p>
               <div className="flex gap-3 mt-4">
-                <Button variant="secondary" size="lg" asChild>
-                  <Link to="/conversation" onClick={handleStartNewConversation}>
-                    <Plus className="mr-2 h-5 w-5" />
-                    Start new session
-                  </Link>
-                </Button>
-                {hasPausedConversation && <Button variant="outline" size="lg" asChild>
+                {hasPausedConversation ? (
+                  <Button variant="secondary" size="lg" asChild>
                     <Link to="/conversation?continue=true">
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Continue Previous
+                      Resume previous conversation
                     </Link>
-                  </Button>}
+                  </Button>
+                ) : (
+                  <Button variant="secondary" size="lg" asChild>
+                    <Link to="/conversation" onClick={handleStartNewConversation}>
+                      <Plus className="mr-2 h-5 w-5" />
+                      Start new session
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
             <div className="hidden md:block">
