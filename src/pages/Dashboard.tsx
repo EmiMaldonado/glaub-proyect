@@ -707,43 +707,43 @@ const Dashboard = () => {
                 <BarChart3 className="h-5 w-5 text-primary" />
                 Your results
               </CardTitle>
-            </div>
-            {/* Tab Navigation - Only for Your Results section */}
-            <div className="flex gap-4 border-b mt-4">
-              <button 
-                className={`pb-2 px-1 border-b-2 transition-colors ${
-                  activeTab === 'last' 
-                    ? 'border-primary text-primary font-medium' 
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-                onClick={() => setActiveTab('last')}
-              >
-                Last session
-              </button>
-              <button 
-                className={`pb-2 px-1 border-b-2 transition-colors ${
-                  activeTab === 'historical' 
-                    ? 'border-primary text-primary font-medium' 
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-                onClick={() => setActiveTab('historical')}
-              >
-                Historical
-              </button>
-              {activeTab === 'historical' && (
-                <div className="ml-auto">
-                  <Select value={selectedPeriod} onValueChange={(value: 'last_week' | 'last_month' | 'last_3_months') => setSelectedPeriod(value)}>
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue placeholder="Select period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="last_week">Last week</SelectItem>
-                      <SelectItem value="last_month">Last month</SelectItem>
-                      <SelectItem value="last_3_months">Last 3 months</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {/* Tab Navigation */}
+              <div className="flex gap-4 items-center">
+                <button 
+                  className={`pb-2 px-1 border-b-2 transition-colors ${
+                    activeTab === 'last' 
+                      ? 'border-primary text-primary font-medium' 
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                  onClick={() => setActiveTab('last')}
+                >
+                  Last session
+                </button>
+                <button 
+                  className={`pb-2 px-1 border-b-2 transition-colors ${
+                    activeTab === 'historical' 
+                      ? 'border-primary text-primary font-medium' 
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                  onClick={() => setActiveTab('historical')}
+                >
+                  Historical
+                </button>
+                {activeTab === 'historical' && (
+                  <div className="ml-2">
+                    <Select value={selectedPeriod} onValueChange={(value: 'last_week' | 'last_month' | 'last_3_months') => setSelectedPeriod(value)}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Select period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="last_week">Last week</SelectItem>
+                        <SelectItem value="last_month">Last month</SelectItem>
+                        <SelectItem value="last_3_months">Last 3 months</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
