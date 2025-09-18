@@ -5,8 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Users, CheckCircle, XCircle, Calendar, User, Building } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Calendar, User, Building, Crown } from 'lucide-react';
 
 interface InvitationDetails {
   id: string;
@@ -14,6 +16,7 @@ interface InvitationDetails {
   status: string;
   invited_at: string;
   expires_at: string;
+  invitation_type: string;
   manager: {
     full_name: string;
     display_name: string;
@@ -29,6 +32,7 @@ const InvitationAccept: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [teamName, setTeamName] = useState<string>('');
 
   useEffect(() => {
     if (token && user) {
@@ -82,6 +86,13 @@ const InvitationAccept: React.FC = () => {
       }
 
       setInvitation(data as InvitationDetails);
+      
+      // Set default team name for manager requests
+      if (data.invitation_type === 'manager_request') {
+        const defaultTeamName = data.manager.team_name || 
+          `${data.manager.display_name || data.manager.full_name}'s Team`;
+        setTeamName(defaultTeamName);
+      }
     } catch (error: any) {
       console.error('Error fetching invitation details:', error);
       setError('Failed to load invitation details');
@@ -101,7 +112,8 @@ const InvitationAccept: React.FC = () => {
         body: {
           token: token,
           user_id: user.id,
-          action: action
+          action: action,
+          team_name: invitation.invitation_type === 'manager_request' ? teamName : undefined
         }
       });
 
@@ -124,7 +136,11 @@ const InvitationAccept: React.FC = () => {
         // Redirect to appropriate page
         setTimeout(() => {
           if (action === 'accept') {
-            navigate('/team-overview');
+            if (invitation.invitation_type === 'manager_request') {
+              navigate('/manager-dashboard');
+            } else {
+              navigate('/team-overview');
+            }
           } else {
             navigate('/dashboard');
           }
@@ -198,39 +214,82 @@ const InvitationAccept: React.FC = () => {
     );
   }
 
-  const teamName = invitation.manager.team_name || 
+  const displayTeamName = invitation.manager.team_name || 
     `${invitation.manager.display_name || invitation.manager.full_name}'s Team`;
+
+  const isManagerRequest = invitation.invitation_type === 'manager_request';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
-          <Users className="h-12 w-12 text-primary mx-auto mb-4" />
-          <CardTitle>Team Invitation</CardTitle>
+          {isManagerRequest ? (
+            <Crown className="h-12 w-12 text-primary mx-auto mb-4" />
+          ) : (
+            <Users className="h-12 w-12 text-primary mx-auto mb-4" />
+          )}
+          <CardTitle>
+            {isManagerRequest ? 'Manager Invitation' : 'Team Invitation'}
+          </CardTitle>
           <CardDescription>
-            You've been invited to join a team
+            {isManagerRequest 
+              ? 'You\'ve been invited to become a manager' 
+              : 'You\'ve been invited to join a team'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Invitation Details */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Building className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-medium">Team Name</p>
-                <p className="text-sm text-muted-foreground">{teamName}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <User className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-medium">Manager</p>
-                <p className="text-sm text-muted-foreground">
-                  {invitation.manager.display_name || invitation.manager.full_name}
-                </p>
-              </div>
-            </div>
+            {isManagerRequest ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="teamName">Team Name</Label>
+                  <Input
+                    id="teamName"
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
+                    placeholder="Enter your team name"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You can customize your team name or use the default
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <User className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Invited by</p>
+                    <p className="text-sm text-muted-foreground">
+                      {invitation.manager.display_name || invitation.manager.full_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Will become your first team member
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Building className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Team Name</p>
+                    <p className="text-sm text-muted-foreground">{displayTeamName}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <User className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Manager</p>
+                    <p className="text-sm text-muted-foreground">
+                      {invitation.manager.display_name || invitation.manager.full_name}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
             
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Calendar className="h-5 w-5 text-primary" />
@@ -256,14 +315,14 @@ const InvitationAccept: React.FC = () => {
             <Button
               className="flex-1"
               onClick={() => handleInvitationAction('accept')}
-              disabled={processing}
+              disabled={processing || (isManagerRequest && !teamName.trim())}
             >
               {processing ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               ) : (
                 <CheckCircle className="h-4 w-4 mr-2" />
               )}
-              Accept Invitation
+              {isManagerRequest ? 'Accept & Create Team' : 'Accept Invitation'}
             </Button>
             
             <Button
@@ -284,8 +343,10 @@ const InvitationAccept: React.FC = () => {
           {/* Additional Info */}
           <div className="text-center text-sm text-muted-foreground">
             <p>
-              By accepting this invitation, you'll become a member of this team and be able to 
-              collaborate with other team members.
+              {isManagerRequest 
+                ? 'By accepting this invitation, you\'ll become a manager and the person who invited you will join your team.'
+                : 'By accepting this invitation, you\'ll become a member of this team and be able to collaborate with other team members.'
+              }
             </p>
           </div>
         </CardContent>
