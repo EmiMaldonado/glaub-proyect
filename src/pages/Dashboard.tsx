@@ -162,6 +162,9 @@ const Dashboard = () => {
             summary: `Based on ${allPersonalityData.length} therapeutic conversations, showing consistent patterns across sessions.`
           };
           setOceanProfile(avgOcean);
+          
+          // Generate AI description immediately with the calculated avgOcean data
+          generateOceanDescription(avgOcean, profile);
         }
 
         // Create personalized summary
@@ -184,10 +187,6 @@ const Dashboard = () => {
           key_insights: lastConvInsights
         });
 
-        // Generate AI description for OCEAN profile after we have the latest conversation data
-        if (oceanProfile) {
-          generateOceanDescription(oceanProfile, profile, lastConv.id);
-        }
       }
       // Load current manager if user has one
       if (profile?.manager_id) {
