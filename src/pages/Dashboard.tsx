@@ -472,6 +472,7 @@ const Dashboard = () => {
               {personalizedSummary || `You've completed ${stats.completedConversations} sessions with ${allInsights.length} insights generated.`}
             </p>
           </div>
+          <DashboardViewSwitch />
         </div>
       </div>
 
