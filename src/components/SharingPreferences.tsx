@@ -208,7 +208,7 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="text-lg flex items-center gap-2">
           <Settings className="h-4 w-4 text-primary" />
           Your preferences
         </CardTitle>
