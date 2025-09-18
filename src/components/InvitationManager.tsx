@@ -116,10 +116,10 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('employee-invite-manager', {
-        body: {
-          managerEmail: managerEmail.trim(),
-          employeeId: userProfile?.id
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+        body: { 
+          email: managerEmail.trim(),
+          invitationType: 'manager_request'
         }
       });
 

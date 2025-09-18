@@ -93,8 +93,11 @@ serve(async (req: Request) => {
       .from("invitations")
       .insert({
         manager_id: profile.id,
+        invited_by_id: profile.id,
         email: managerEmail,
         token,
+        invitation_type: 'manager_request',
+        expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
       })
       .select()
       .single();

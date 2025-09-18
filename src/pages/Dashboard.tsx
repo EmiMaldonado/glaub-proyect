@@ -330,13 +330,11 @@ const Dashboard = () => {
     }
     setIsInvitingManager(true);
     try {
-      // Use the employee-invite-manager edge function to send email
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('employee-invite-manager', {
+      // Use the unified-invitation function to send email
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
         body: {
-          managerEmail: managerEmail.trim()
+          email: managerEmail.trim(),
+          invitationType: 'manager_request'
         }
       });
       if (error) {

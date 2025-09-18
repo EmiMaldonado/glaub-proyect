@@ -103,9 +103,13 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
     try {
       console.log('Sending invitation for:', email);
       
-      // Call the invite-manager edge function to send email
-      const { data, error } = await supabase.functions.invoke('invite-manager', {
-        body: { managerEmail: email.trim() }
+      // Call the unified invitation function to send email
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+        body: { 
+          email: email.trim(),
+          invitationType: 'team_member',
+          teamId: userProfile?.id
+        }
       });
 
       if (error) {

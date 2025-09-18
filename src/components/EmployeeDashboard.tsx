@@ -174,8 +174,11 @@ const EmployeeDashboard: React.FC = () => {
     try {
       console.log('Sending manager invitation to:', email);
       
-      const { data, error } = await supabase.functions.invoke('employee-invite-manager', {
-        body: { managerEmail: email.trim() }
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+        body: { 
+          email: email.trim(),
+          invitationType: 'manager_request'
+        }
       });
 
       if (error) {
