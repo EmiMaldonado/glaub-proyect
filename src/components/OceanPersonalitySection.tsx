@@ -83,7 +83,7 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
           <div className="pt-4 border-t">
             <div className="flex items-center gap-2 mb-3">
               <Users className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Team Profile Description</span>
+              <h3 className="font-medium text-sm">Team Profile Description</h3>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {teamDescription}
