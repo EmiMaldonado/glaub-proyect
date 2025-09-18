@@ -158,7 +158,7 @@ serve(async (req) => {
             
             Return your response as a JSON object with this exact structure:
             {
-              "oceanDescription": "A personalized description of the team's OCEAN personality profile and dynamics (2-3 sentences)",
+              "oceanDescription": "A comprehensive management-focused analysis of the team's OCEAN personality profile. This should be a detailed paragraph (3-5 sentences) that provides specific insights about the team's personality composition, their strengths and potential challenges, and concrete guidance for managers on how to leverage their personality traits for optimal performance. Include specific recommendations about work styles, communication preferences, innovation approaches, and leadership strategies tailored to this exact team composition.",
               "teamAnalysis": {
                 "strengths": ["strength1", "strength2", "strength3"],
                 "challenges": ["challenge1", "challenge2"],
@@ -189,14 +189,17 @@ serve(async (req) => {
               • Neuroticism: ${member.personality.neuroticism}
             `).join('\n')}
 
-            Provide:
-            1. A compelling OCEAN profile description highlighting the team's personality dynamics
-            2. Specific team strengths based on personality composition
-            3. Actionable leadership recommendations tailored to this exact team
-            4. Communication strategies optimized for these personality types
-            5. Individual motivation approaches for each personality profile
+            For the oceanDescription, provide a comprehensive management analysis similar to this example format:
+            "Based on the OCEAN analysis of this team, the key takeaway for management is to leverage their strengths while strategically addressing potential weaknesses. [Analyze high/low scores and their implications]. [Discuss collaboration patterns and work preferences]. [Provide specific management strategies]. [Address innovation and risk-taking approaches]. By understanding these personality traits, managers can tailor their leadership style to maximize the team's efficiency, well-being, and overall performance."
 
-            Make the recommendations specific and actionable for a manager leading this particular team.`
+            Provide:
+            1. A detailed OCEAN profile analysis with specific management insights (4-6 sentences)
+            2. Concrete team strengths based on personality composition
+            3. Actionable leadership recommendations tailored to this exact team
+            4. Communication and work environment strategies optimized for these personality types
+            5. Specific approaches for fostering innovation while respecting team preferences
+
+            Make all recommendations specific and actionable for a manager leading this particular team.`
           }
         ],
         max_completion_tokens: 1500
