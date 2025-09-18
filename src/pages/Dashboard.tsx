@@ -858,10 +858,9 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Strengths Section */}
-      <Card className="shadow-soft">
+        {/* Strengths Section */}
+        <Card className="shadow-soft">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
