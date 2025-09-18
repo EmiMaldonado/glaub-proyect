@@ -55,6 +55,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         recommendations: existingRec.recommendations,
         teamAnalysis: existingRec.team_analysis,
+        oceanDescription: existingRec.ocean_description || "Your team shows a balanced personality profile with diverse strengths and collaborative potential.",
         cached: true,
         generatedAt: existingRec.generated_at
       }), {
@@ -95,8 +96,9 @@ serve(async (req) => {
             
             Return your response as a JSON object with this exact structure:
             {
+              "oceanDescription": "A personalized description of the team's OCEAN personality profile and dynamics (2-3 sentences)",
               "teamAnalysis": {
-                "strengths": ["strength1", "strength2"],
+                "strengths": ["strength1", "strength2", "strength3"],
                 "challenges": ["challenge1", "challenge2"],
                 "dynamics": "Overall team dynamic assessment",
                 "diversity": "Personality diversity analysis"
@@ -104,7 +106,7 @@ serve(async (req) => {
               "recommendations": [
                 {
                   "title": "Recommendation Title",
-                  "description": "Detailed description",
+                  "description": "Detailed actionable description for the manager",
                   "priority": "high|medium|low",
                   "category": "communication|productivity|development|wellbeing"
                 }
@@ -113,7 +115,7 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Analyze this team of ${teamData.length} members and provide management recommendations:
+            content: `Analyze this team of ${teamData.length} members and provide personalized management recommendations:
 
             ${teamData.map(member => `
             - ${member.name} (${member.role})
@@ -125,16 +127,17 @@ serve(async (req) => {
               • Neuroticism: ${member.personality.neuroticism}
             `).join('\n')}
 
-            Focus on:
-            1. Team communication strategies based on personality mix
-            2. Task assignment optimization
-            3. Conflict prevention and resolution
-            4. Team development opportunities
-            5. Individual motivation approaches`
+            Provide:
+            1. A compelling OCEAN profile description highlighting the team's personality dynamics
+            2. Specific team strengths based on personality composition
+            3. Actionable leadership recommendations tailored to this exact team
+            4. Communication strategies optimized for these personality types
+            5. Individual motivation approaches for each personality profile
+
+            Make the recommendations specific and actionable for a manager leading this particular team.`
           }
         ],
-        max_completion_tokens: 1000,
-        temperature: 0.7
+        max_completion_tokens: 1500
       }),
     });
 
@@ -156,22 +159,23 @@ serve(async (req) => {
       console.error('Failed to parse AI response:', parseError);
       // Fallback response if parsing fails
       parsedResult = {
+        oceanDescription: "Your team shows a balanced personality profile with diverse strengths. The mix of personality types creates good potential for collaboration and innovative problem-solving.",
         teamAnalysis: {
-          strengths: ["Diverse skill set", "Strong collaboration potential"],
-          challenges: ["Communication styles vary", "Need structured processes"],
+          strengths: ["Diverse skill set", "Strong collaboration potential", "Balanced personality mix"],
+          challenges: ["Communication styles may vary", "Need structured processes"],
           dynamics: "Team shows good potential with balanced personalities",
           diversity: "Good mix of personality traits across the team"
         },
         recommendations: [
           {
             title: "Establish Communication Guidelines",
-            description: "Create clear communication protocols to accommodate different personality types",
+            description: "Create clear communication protocols to accommodate different personality types and ensure everyone feels heard",
             priority: "high",
             category: "communication"
           },
           {
             title: "Regular Team Check-ins",
-            description: "Schedule weekly team meetings to maintain alignment and address concerns",
+            description: "Schedule weekly team meetings to maintain alignment, address concerns, and leverage diverse perspectives",
             priority: "medium", 
             category: "productivity"
           }
@@ -200,6 +204,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       recommendations: parsedResult.recommendations,
       teamAnalysis: parsedResult.teamAnalysis,
+      oceanDescription: parsedResult.oceanDescription,
       cached: false,
       generatedAt: new Date().toISOString()
     }), {
