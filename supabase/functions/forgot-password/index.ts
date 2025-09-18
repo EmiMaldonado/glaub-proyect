@@ -92,19 +92,21 @@ const handler = async (req: Request): Promise<Response> => {
     try {
       const baseUrl = Deno.env.get("SITE_URL") || "https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev";
       const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+      
+      console.log("Generating reset URL:", resetUrl);
 
       const emailResponse = await resend.emails.send({
         from: "Glaub <onboarding@resend.dev>",
         to: [email],
         subject: "Reset your password",
         html: `
-          <h2>Password Reset Request</h2>
-          <p>You requested to reset your password. Click the link below to create a new password:</p>
-          <p><a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Reset Password</a></p>
-          <p>If the button doesn't work, copy and paste this link into your browser:</p>
-          <p>${resetUrl}</p>
-          <p>This link will expire in 1 hour.</p>
-          <p>If you didn't request this password reset, please ignore this email.</p>
+          <h2>Restablecer Contraseña</h2>
+          <p>Has solicitado restablecer tu contraseña. Haz clic en el enlace de abajo para crear una nueva contraseña:</p>
+          <p><a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Restablecer Contraseña</a></p>
+          <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+          <p><a href="${resetUrl}">${resetUrl}</a></p>
+          <p>Este enlace expirará en 1 hora.</p>
+          <p>Si no solicitaste este restablecimiento de contraseña, ignora este email.</p>
         `,
       });
 
