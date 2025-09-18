@@ -27,8 +27,6 @@ serve(async (req) => {
 Person details:
 - Name: ${userProfile?.full_name || userProfile?.display_name || 'User'}
 - Job Position: ${userProfile?.job_position || 'Professional'}
-- Age: ${userProfile?.age || 'Adult'}
-- Gender: ${userProfile?.gender || 'Individual'}
 
 OCEAN Profile Scores (0-100%):
 - Openness: ${oceanProfile.openness}%
@@ -43,8 +41,10 @@ Generate a comprehensive 4-5 sentence paragraph that:
 3. Relates to their professional context and daily life
 4. Uses an engaging, warm but professional tone
 5. Focuses on strengths and growth opportunities
+6. NEVER mentions age, gender, or any demographic characteristics
+7. Focuses purely on personality traits and professional behavior patterns
 
-Make it personal, specific to their scores, and actionable. Avoid generic statements.`;
+Make it personal, specific to their scores, and actionable. Avoid generic statements and demographic references.`;
 
     console.log('Generating OCEAN description for user:', userProfile?.full_name || 'Unknown');
     console.log('OCEAN scores:', oceanProfile);
