@@ -540,7 +540,7 @@ const Dashboard = () => {
               {oceanProfile ? (
                 <div className="space-y-8 flex-1">
                   {/* Prominent percentage display */}
-                  <div className="grid grid-cols-5 gap-6 text-center">
+                  <div className="flex flex-wrap justify-center gap-6 text-center">
                     <div className="p-4 rounded-lg bg-muted/30">
                       <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.openness || 0}%</div>
                       <div className="text-sm text-muted-foreground font-medium">Openness</div>
