@@ -590,110 +590,130 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Right Column - 30% - Team Management */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Request to Join Team Widget */}
+        {/* Right Column - 30% - Your Teams */}
+        <div className="lg:col-span-3">
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle className="text-lg">Request to Join Team</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Your Teams
+              </CardTitle>
               <CardDescription className="text-sm">
-                Send join team conversation
+                Manage your team memberships and invitations
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  type="email"
-                  placeholder="Manager's email"
-                  value={managerEmail}
-                  onChange={(e) => setManagerEmail(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleInviteManager()}
-                />
-              </div>
-              <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full" size="sm">
-                {isInvitingManager ? 'Sending...' : 'Send a team Request'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Your Teams Widget */}
-          <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle className="text-lg">Your teams</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {userTeams.length > 0 ? (
-                <div className="space-y-2">
-                  {userTeams.map((team) => (
-                    <div key={team.id} className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                      <p className="font-medium text-sm">
-                        {team.manager?.team_name || `${team.manager?.full_name || team.manager?.display_name}'s team`} - {team.manager?.full_name || team.manager?.display_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Manager: {team.manager?.full_name || team.manager?.display_name}
-                      </p>
-                    </div>
-                  ))}
+            <CardContent className="space-y-6">
+              {/* Current Teams */}
+              {userTeams.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Active Memberships
+                  </h4>
+                  <div className="space-y-2">
+                    {userTeams.map((team) => (
+                      <div key={team.id} className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                        <p className="font-medium text-sm">
+                          {team.manager?.team_name || `${team.manager?.full_name || team.manager?.display_name}'s team`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Manager: {team.manager?.full_name || team.manager?.display_name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p>Emilia team - Emilia Maldonado</p>
+              )}
+
+              {/* Pending Invitations */}
+              {pendingInvitations.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-primary" />
+                    Pending Invitations
+                  </h4>
+                  <div className="space-y-3">
+                    {pendingInvitations.map((invitation) => (
+                      <div key={invitation.id} className="p-3 border rounded-lg bg-yellow-50 border-yellow-200 space-y-3">
+                        <div>
+                          <p className="font-medium text-sm">
+                            From {invitation.manager?.display_name || invitation.manager?.full_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Expires {new Date(invitation.expires_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleAcceptInvitation(invitation)}
+                            className="flex-1"
+                          >
+                            Accept
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleDeclineInvitation(invitation)}
+                            className="flex-1"
+                          >
+                            Decline
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p>Juan team - Juan Maldonado</p>
+                </div>
+              )}
+
+              {/* Request to Join Team */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Request to Join Team
+                </h4>
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <p className="text-xs text-muted-foreground">
+                    Send a join request to a manager
+                  </p>
+                  <div className="space-y-2">
+                    <Input
+                      type="email"
+                      placeholder="Manager's email"
+                      value={managerEmail}
+                      onChange={(e) => setManagerEmail(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleInviteManager()}
+                    />
                   </div>
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p>Equipo ventas - Estela Paez</p>
+                  <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full" size="sm">
+                    {isInvitingManager ? 'Sending...' : 'Send Team Request'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Show example teams if no actual teams */}
+              {userTeams.length === 0 && pendingInvitations.length === 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    Example Teams
+                  </h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <p>Emilia team - Emilia Maldonado</p>
+                    </div>
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <p>Juan team - Juan Maldonado</p>
+                    </div>
+                    <div className="p-3 bg-muted/30 rounded-lg">
+                      <p>Equipo ventas - Estela Paez</p>
+                    </div>
+                    <p className="text-xs text-center pt-2">Example teams - request to join one above</p>
                   </div>
-                  <p className="text-xs text-center pt-2">Example teams - join one above</p>
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {/* Pending Invitations */}
-          {pendingInvitations.length > 0 && (
-            <Card className="shadow-soft border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <UserCheck className="h-4 w-4 text-primary" />
-                  Pending Invitations
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {pendingInvitations.map((invitation) => (
-                  <div key={invitation.id} className="p-3 border rounded-lg bg-primary/5 space-y-3">
-                    <div>
-                      <p className="font-medium text-sm">
-                        From {invitation.manager?.display_name || invitation.manager?.full_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Expires {new Date(invitation.expires_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleAcceptInvitation(invitation)}
-                        className="flex-1"
-                      >
-                        Accept
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => handleDeclineInvitation(invitation)}
-                        className="flex-1"
-                      >
-                        Decline
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 
