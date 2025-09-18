@@ -649,14 +649,40 @@ const Dashboard = () => {
       </div>
 
       {/* Tab Navigation - affects Your results, Strengths, and Personal Recommendations */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            Your results
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="flex gap-4 border-b mb-8">
+        <button 
+          className={`pb-2 px-1 border-b-2 transition-colors ${
+            activeTab === 'last' 
+              ? 'border-primary text-primary font-medium' 
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+          onClick={() => setActiveTab('last')}
+        >
+          Last session
+        </button>
+        <button 
+          className={`pb-2 px-1 border-b-2 transition-colors ${
+            activeTab === 'historical' 
+              ? 'border-primary text-primary font-medium' 
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+          onClick={() => setActiveTab('historical')}
+        >
+          Historical
+        </button>
+      </div>
+
+      {/* Results, Strengths, and Personal Recommendations Container */}
+      <div className="space-y-8">
+        {/* Your Results Section */}
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Your results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
           <div className="space-y-6">
             {/* Your Last Meeting Subsection */}
             <div>
@@ -706,11 +732,10 @@ const Dashboard = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* Full-Width Sections */}
-      {/* Strengths Section */}
-      <Card className="shadow-soft">
+        {/* Strengths Section */}
+        <Card className="shadow-soft">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -843,7 +868,8 @@ const Dashboard = () => {
             className="border-0 shadow-none p-0"
           />
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       {/* Data Sharing Preferences - Hidden section for backend functionality */}
       <div className="hidden">
