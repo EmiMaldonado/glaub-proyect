@@ -28,6 +28,8 @@ const Dashboard = () => {
   const [personalizedSummary, setPersonalizedSummary] = useState<string>('');
   const [managerEmail, setManagerEmail] = useState('');
   const [isInvitingManager, setIsInvitingManager] = useState(false);
+  const [oceanDescription, setOceanDescription] = useState<string>('');
+  const [isLoadingDescription, setIsLoadingDescription] = useState(false);
   const [sharingPreferences, setSharingPreferences] = useState({
     share_profile: false,
     share_insights: false,
@@ -109,6 +111,9 @@ const Dashboard = () => {
             summary: `Based on ${allPersonalityData.length} therapeutic conversations, showing consistent patterns across sessions.`
           };
           setOceanProfile(avgOcean);
+          
+          // Generate AI description for OCEAN profile
+          generateOceanDescription(avgOcean, profile);
         }
 
         // Create personalized summary
@@ -171,6 +176,34 @@ const Dashboard = () => {
           variant: "destructive"
         });
       }
+    }
+  };
+
+  const generateOceanDescription = async (oceanProfile: any, userProfile: any) => {
+    if (!oceanProfile) return;
+    
+    setIsLoadingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-ocean-description', {
+        body: {
+          oceanProfile,
+          userProfile
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.description) {
+        setOceanDescription(data.description);
+      } else {
+        throw new Error(data?.error || 'Failed to generate description');
+      }
+    } catch (error: any) {
+      console.error('Error generating OCEAN description:', error);
+      // Keep fallback description if AI fails
+      setOceanDescription("Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities.");
+    } finally {
+      setIsLoadingDescription(false);
     }
   };
 
@@ -469,9 +502,16 @@ const Dashboard = () => {
                   
                   {/* Detailed description */}
                   <div className="bg-muted/50 rounded-lg p-6 mt-6">
-                    <p className="text-sm text-foreground/80 leading-relaxed">
-                      {oceanProfile.summary || "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities."}
-                    </p>
+                    {isLoadingDescription ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                        <p className="text-sm text-muted-foreground">Generating personalized analysis...</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-foreground/80 leading-relaxed">
+                        {oceanDescription || oceanProfile.summary || "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities."}
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : (
