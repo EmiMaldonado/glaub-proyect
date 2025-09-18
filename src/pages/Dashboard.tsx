@@ -576,9 +576,9 @@ const Dashboard = () => {
                     {isLoadingDescription ? <div className="flex items-center gap-2 w-full justify-center">
                         <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full"></div>
                         <p className="text-sm text-muted-foreground">Generating personalized analysis...</p>
-                      </div> : <p className="text-base text-foreground/90 leading-relaxed">
-                        {oceanDescription || oceanProfile.summary || "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities."}
-                      </p>}
+                       </div> : <p className="text-base text-foreground/90 leading-relaxed">
+                         {oceanDescription || oceanProfile.summary || `Based on your ${stats.completedConversations} conversations, your personality profile shows consistent patterns in how you approach challenges and relationships. Your communication style and decision-making preferences have been analyzed to create this personalized summary of your professional strengths and growth areas.`}
+                       </p>}
                   </div>
                 </div> : <div className="text-center py-8">
                   <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
