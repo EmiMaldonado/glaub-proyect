@@ -49,13 +49,45 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
   const { toast } = useToast();
 
   const generatePersonalizedRecommendations = async () => {
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) return;
+
+    // Check cache first - only regenerate if there's a new conversation
+    const cacheKey = `personal_recommendations_${userId}_${context}_${period}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    
+    // Get latest conversation ID to check if we need fresh data
+    let latestConversationId;
+    try {
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      latestConversationId = conversations?.[0]?.id;
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    }
+    
+    if (cachedData && latestConversationId) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        // If we have cached data for the same conversation, use it
+        if (parsed.conversationId === latestConversationId && parsed.recommendations) {
+          setRecommendations(parsed.recommendations);
+          setHasConversations(true);
+          return;
+        }
+      } catch (e) {
+        console.log('Cache parse error, regenerating...');
+      }
+    }
+
     setIsLoading(true);
     try {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
       let data, error;
       
       if (context === 'historical') {
@@ -82,6 +114,14 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
             ) || []
           };
           setRecommendations(transformedRecs);
+          
+          // Cache the result with conversation ID
+          const cacheData = {
+            recommendations: transformedRecs,
+            conversationId: latestConversationId,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(cacheKey, JSON.stringify(cacheData));
         }
       } else {
         // Call last session function
@@ -91,6 +131,14 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
         
         if (data?.recommendations) {
           setRecommendations(data.recommendations);
+          
+          // Cache the result with conversation ID
+          const cacheData = {
+            recommendations: data.recommendations,
+            conversationId: latestConversationId,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(cacheKey, JSON.stringify(cacheData));
         }
       }
 
