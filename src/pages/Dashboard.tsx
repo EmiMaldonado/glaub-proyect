@@ -459,35 +459,10 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Tab Navigation - affects Your results, Strengths, and Personal Recommendations */}
-      <div className="flex gap-4 border-b mb-8">
-        <button 
-          className={`pb-2 px-1 border-b-2 transition-colors ${
-            activeTab === 'last' 
-              ? 'border-primary text-primary font-medium' 
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('last')}
-        >
-          Last session
-        </button>
-        <button 
-          className={`pb-2 px-1 border-b-2 transition-colors ${
-            activeTab === 'historical' 
-              ? 'border-primary text-primary font-medium' 
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('historical')}
-        >
-          Historical
-        </button>
-      </div>
-
-      {/* Two Column Layout */}
+      {/* Variables Profile and Team Management Row */}
       <div className="grid lg:grid-cols-10 gap-8">
-        {/* Left Column - 70% */}
-        <div className="lg:col-span-7 space-y-8">
-          {/* Variables Profile Section */}
+        {/* Left Column - 70% - Variables Profile */}
+        <div className="lg:col-span-7">
           <Card className="shadow-soft">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -566,7 +541,7 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Right Column - 30% */}
+        {/* Right Column - 30% - Team Management */}
         <div className="lg:col-span-3 space-y-6">
           {/* Request to Join Team Widget */}
           <Card className="shadow-soft">
@@ -673,7 +648,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Full-Width Your Results Section */}
+      {/* Tab Navigation - affects Your results, Strengths, and Personal Recommendations */}
       <Card className="shadow-soft">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
