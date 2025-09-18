@@ -91,8 +91,8 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-2 w-full max-w-md">
-            <TabsTrigger value="overview">Team Overview</TabsTrigger>
-            <TabsTrigger value="individual">Individual Member Review</TabsTrigger>
+            <TabsTrigger value="overview">Last session</TabsTrigger>
+            <TabsTrigger value="individual">Historical</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 mt-6">

@@ -8,16 +8,14 @@ import { toast } from '@/hooks/use-toast';
 import { 
   Users, 
   MessageCircle, 
-  Plus,
-  Settings
+  Plus
 } from 'lucide-react';
 import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
-import TeamManagementInterface from './TeamManagementInterface';
+import ManageTeamSection from './ManageTeamSection';
 import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 import { useTeamRecommendations } from '@/hooks/useTeamRecommendations';
 import OceanPersonalitySection from './OceanPersonalitySection';
-import TeamMembersSidebar from './TeamMembersSidebar';
 import TeamResultsSection from './TeamResultsSection';
 
 interface TeamMember {
@@ -46,7 +44,6 @@ const ModernManagerDashboard: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
-  const [showManagement, setShowManagement] = useState(false);
   
   // Team analytics hook
   const { analyticsData, loading: analyticsLoading } = useTeamAnalytics(
@@ -189,39 +186,14 @@ const ModernManagerDashboard: React.FC = () => {
               <Users className="mr-1 h-3 w-3" />
               Manager
             </Badge>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowManagement(!showManagement)}
-              className="flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
           </div>
         </div>
       </div>
 
-      {/* Management Interface (conditionally shown) */}
-      {showManagement && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Team Management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TeamManagementInterface 
-              managerProfile={managerProfile}
-              teamMembers={teamMembers}
-              onTeamUpdate={handleTeamUpdate}
-            />
-          </CardContent>
-        </Card>
-      )}
-
       {/* Main Dashboard Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Left Column - Main Content */}
-        <div className="lg:col-span-3 space-y-8">
-          {/* OCEAN Personality Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+        {/* Left Column - OCEAN Personality (70%) */}
+        <div className="lg:col-span-7">
           <OceanPersonalitySection
             personalityData={
               analyticsData?.distribution.personalityDistribution || {
@@ -235,39 +207,37 @@ const ModernManagerDashboard: React.FC = () => {
             teamDescription={getTeamDescription()}
             loading={analyticsLoading}
           />
-
-          {/* Team Results Section */}
-          <TeamResultsSection
-            teamMembers={teamMembers}
-            selectedMember={selectedMember}
-            teamStrengths={
-              recommendationsData?.teamAnalysis.strengths.map(strength => ({
-                title: strength,
-                description: "Team demonstrates consistent performance in this area"
-              })) || [
-                { title: "Collaborative Communication", description: "Team members effectively share ideas and feedback" },
-                { title: "Goal-Oriented Focus", description: "Strong alignment on objectives and deliverables" },
-                { title: "Adaptability", description: "Flexible approach to changing requirements" }
-              ]
-            }
-            recommendations={recommendationsData?.recommendations || []}
-            onMemberSelect={setSelectedMember}
-            loading={recommendationsLoading}
-            onRefresh={handleRefreshRecommendations}
-          />
         </div>
 
-        {/* Right Column - Team Members Sidebar */}
-        <div className="lg:col-span-1">
-          <TeamMembersSidebar
+        {/* Right Column - Manage Team (30%) */}
+        <div className="lg:col-span-3">
+          <ManageTeamSection
+            managerProfile={managerProfile}
             teamMembers={teamMembers}
-            selectedMember={selectedMember}
-            onMemberSelect={setSelectedMember}
             onTeamUpdate={handleTeamUpdate}
-            onAddMember={() => setShowManagement(true)}
           />
         </div>
       </div>
+
+      {/* Team Results Section */}
+      <TeamResultsSection
+        teamMembers={teamMembers}
+        selectedMember={selectedMember}
+        teamStrengths={
+          recommendationsData?.teamAnalysis.strengths.map(strength => ({
+            title: strength,
+            description: "Team demonstrates consistent performance in this area"
+          })) || [
+            { title: "Collaborative Communication", description: "Team members effectively share ideas and feedback" },
+            { title: "Goal-Oriented Focus", description: "Strong alignment on objectives and deliverables" },
+            { title: "Adaptability", description: "Flexible approach to changing requirements" }
+          ]
+        }
+        recommendations={recommendationsData?.recommendations || []}
+        onMemberSelect={setSelectedMember}
+        loading={recommendationsLoading}
+        onRefresh={handleRefreshRecommendations}
+      />
     </div>
   );
 };
