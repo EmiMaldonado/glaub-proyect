@@ -851,7 +851,7 @@ const Dashboard = () => {
         {/* Strengths Section */}
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
+            <CardTitle className="font-semibold flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-primary" />
               Strengths
             </CardTitle>
