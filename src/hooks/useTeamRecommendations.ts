@@ -18,6 +18,7 @@ interface TeamAnalysis {
 interface TeamRecommendationsData {
   recommendations: TeamRecommendation[];
   teamAnalysis: TeamAnalysis;
+  oceanDescription?: string;
   cached: boolean;
   generatedAt: string;
 }

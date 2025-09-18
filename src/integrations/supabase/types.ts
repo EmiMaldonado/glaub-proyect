@@ -212,6 +212,7 @@ export type Database = {
           generated_at: string
           id: string
           manager_id: string
+          ocean_description: string | null
           recommendations: Json
           team_analysis: Json
           team_hash: string
@@ -223,6 +224,7 @@ export type Database = {
           generated_at?: string
           id?: string
           manager_id: string
+          ocean_description?: string | null
           recommendations?: Json
           team_analysis?: Json
           team_hash: string
@@ -234,6 +236,7 @@ export type Database = {
           generated_at?: string
           id?: string
           manager_id?: string
+          ocean_description?: string | null
           recommendations?: Json
           team_analysis?: Json
           team_hash?: string

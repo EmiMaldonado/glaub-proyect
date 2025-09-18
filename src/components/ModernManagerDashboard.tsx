@@ -132,6 +132,12 @@ const ModernManagerDashboard: React.FC = () => {
       return "Add team members to generate personality insights and team analysis.";
     }
     
+    // Use AI-generated team description if available
+    if (recommendationsData?.oceanDescription) {
+      return recommendationsData.oceanDescription;
+    }
+    
+    // Fallback to basic description while AI generates content
     return `Your team shows a balanced personality profile with strong ${
       analyticsData.distribution.personalityDistribution.conscientiousness > 70 ? 'conscientiousness' : 
       analyticsData.distribution.personalityDistribution.openness > 70 ? 'openness' : 

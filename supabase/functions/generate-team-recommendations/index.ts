@@ -66,18 +66,80 @@ serve(async (req) => {
     console.log('No valid cache found, generating new recommendations');
 
     // Prepare team data for AI analysis
-    const teamData = teamMembers.map((member: any) => ({
-      name: member.display_name || member.full_name,
-      role: member.role,
-      // Mock OCEAN personality data for demonstration
-      personality: {
-        openness: Math.round(Math.random() * 30 + 60),
-        conscientiousness: Math.round(Math.random() * 25 + 70),
-        extraversion: Math.round(Math.random() * 40 + 40),
-        agreeableness: Math.round(Math.random() * 20 + 75),
-        neuroticism: Math.round(Math.random() * 35 + 25)
+    const teamData = [];
+    
+    for (const member of teamMembers) {
+      try {
+        // Fetch conversations and insights for this team member to calculate real OCEAN scores
+        const { data: conversations } = await supabase
+          .from('conversations')
+          .select('ocean_signals, insights')
+          .eq('user_id', member.user_id)
+          .not('ocean_signals', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        // Calculate OCEAN personality from conversation data
+        let personality = {
+          openness: 50,
+          conscientiousness: 50,
+          extraversion: 50,
+          agreeableness: 50,
+          neuroticism: 50
+        };
+
+        if (conversations && conversations.length > 0) {
+          // Aggregate OCEAN scores from conversations
+          let totalScores = { openness: 0, conscientiousness: 0, extraversion: 0, agreeableness: 0, neuroticism: 0 };
+          let validConversations = 0;
+
+          conversations.forEach(conv => {
+            if (conv.ocean_signals && typeof conv.ocean_signals === 'object') {
+              const signals = conv.ocean_signals as any;
+              if (signals.openness !== undefined) {
+                totalScores.openness += Number(signals.openness) || 0;
+                totalScores.conscientiousness += Number(signals.conscientiousness) || 0;
+                totalScores.extraversion += Number(signals.extraversion) || 0;
+                totalScores.agreeableness += Number(signals.agreeableness) || 0;
+                totalScores.neuroticism += Number(signals.neuroticism) || 0;
+                validConversations++;
+              }
+            }
+          });
+
+          // Calculate averages if we have valid data
+          if (validConversations > 0) {
+            personality = {
+              openness: Math.round(totalScores.openness / validConversations),
+              conscientiousness: Math.round(totalScores.conscientiousness / validConversations),
+              extraversion: Math.round(totalScores.extraversion / validConversations),
+              agreeableness: Math.round(totalScores.agreeableness / validConversations),
+              neuroticism: Math.round(totalScores.neuroticism / validConversations)
+            };
+          }
+        }
+
+        teamData.push({
+          name: member.display_name || member.full_name,
+          role: member.role,
+          personality
+        });
+      } catch (memberError) {
+        console.error(`Error processing member ${member.id}:`, memberError);
+        // Add member with default personality if error occurs
+        teamData.push({
+          name: member.display_name || member.full_name,
+          role: member.role,
+          personality: {
+            openness: 50,
+            conscientiousness: 50,
+            extraversion: 50,
+            agreeableness: 50,
+            neuroticism: 50
+          }
+        });
       }
-    }));
+    }
 
     // Generate AI recommendations using GPT-5-mini
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -191,6 +253,7 @@ serve(async (req) => {
         team_hash: teamHashString,
         recommendations: parsedResult.recommendations,
         team_analysis: parsedResult.teamAnalysis,
+        ocean_description: parsedResult.oceanDescription,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
       });
 
