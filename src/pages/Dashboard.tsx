@@ -330,30 +330,18 @@ const Dashboard = () => {
     }
     setIsInvitingManager(true);
     try {
-      // Create invitation directly in database
-      const {
-        data: invitation,
-        error
-      } = await supabase.from('invitations').insert({
-        email: managerEmail.trim(),
-        token: crypto.randomUUID(),
-        manager_id: userProfile?.id,
-        invited_by_id: userProfile?.id,
-        invitation_type: 'manager_request',
-        status: 'pending'
-      }).select('token').single();
+      // Use the employee-invite-manager edge function to send email
+      const { data, error } = await supabase.functions.invoke('employee-invite-manager', {
+        body: { managerEmail: managerEmail.trim() }
+      });
+
       if (error) {
         throw error;
       }
 
-      // Generate invitation URL
-      const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
-
-      // Copy to clipboard
-      await navigator.clipboard.writeText(invitationUrl);
       toast({
         title: "Request Sent!",
-        description: `Your request to join the team has been sent to ${managerEmail}. They will see your request in their manager dashboard and can approve it.`
+        description: `Your request to join the team has been sent to ${managerEmail}. They will receive an email with your invitation.`
       });
       setManagerEmail(''); // Clear the input
     } catch (error: any) {
