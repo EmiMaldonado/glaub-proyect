@@ -356,15 +356,19 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     }
 
     // Regular chat flow continues here...
-    const { message, conversationId, userId, isFirstMessage } = requestBody;
+    const { message, conversationId, userId, isFirstMessage, aiInitiated } = requestBody;
+
+    // Handle AI-initiated conversation
+    const isAIInitiated = aiInitiated || message === "__AI_START_CONVERSATION__";
 
     // Validate required fields
-    if (!message || !conversationId) {
-      const missingFields = [];
-      if (!message) missingFields.push('message');
-      if (!conversationId) missingFields.push('conversationId');
-      
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    if (!conversationId) {
+      throw new Error('Missing required field: conversationId');
+    }
+
+    // For AI-initiated conversations, we don't need a user message
+    if (!isAIInitiated && !message) {
+      throw new Error('Missing required field: message');
     }
 
     // Use provided userId or 'system' for insights generation
@@ -404,13 +408,13 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
 
     debugInfo.processing_steps.push(`Retrieved ${messages?.length || 0} historical messages`);
 
-    // Save user message only if it's not a system instruction
-    const isSystemInstruction = message.toLowerCase().includes('start the first conversation') ||
+    // Save user message only if it's not a system instruction and not AI-initiated
+    const isSystemInstruction = !isAIInitiated && (message.toLowerCase().includes('start the first conversation') ||
                                 message.toLowerCase().includes('start this conversation by welcoming') ||
                                 message.toLowerCase().includes('begin personality discovery') ||
-                                message.toLowerCase().includes('this is a returning user');
+                                message.toLowerCase().includes('this is a returning user'));
     
-    if (!isSystemInstruction) {
+    if (!isSystemInstruction && !isAIInitiated && message) {
       debugInfo.processing_steps.push('Saving user message to database');
       const saveUserStartTime = Date.now();
       
@@ -443,7 +447,7 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
 
       debugInfo.processing_steps.push('User message saved successfully');
     } else {
-      debugInfo.processing_steps.push('Skipping user message save for system instruction');
+      debugInfo.processing_steps.push('Skipping user message save for AI-initiated conversation or system instruction');
     }
 
     // Check if this is first conversation ever (user has never completed a session) and get previous insights
@@ -500,8 +504,8 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
       isFirstConversationEver = true;
     }
     
-    // Use the updated logic for determining first conversation
-    const isFirstConversation = isFirstConversationEver;
+    // Use the updated logic for determining first conversation (for AI-initiated, it's always first conversation logic)
+    const isFirstConversation = isFirstConversationEver || isAIInitiated;
 
     // Prepare messages for OpenAI with personalized system prompt
     const systemPrompt = getSystemPrompt(isFirstConversation, previousInsights);
@@ -517,11 +521,16 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
              !content.includes('begin personality discovery');
     });
     
+    // Build chat messages for OpenAI
     const chatMessages = [
       { role: 'system', content: systemPrompt },
-      ...filteredMessages.map(m => ({ role: m.role, content: m.content })),
-      { role: 'user', content: message }
+      ...filteredMessages.map(m => ({ role: m.role, content: m.content }))
     ];
+
+    // Only add current user message if it's not AI-initiated and has actual content
+    if (!isAIInitiated && message && message !== "__AI_START_CONVERSATION__") {
+      chatMessages.push({ role: 'user', content: message });
+    }
 
     debugInfo.processing_steps.push(`Prepared ${chatMessages.length} messages for OpenAI (first: ${isFirstConversation})`);
     debugInfo.metadata.openai_messages_count = chatMessages.length;
@@ -567,11 +576,16 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     debugInfo.metadata.assistant_message_length = assistantMessage.length;
     debugInfo.metadata.finish_reason = data.choices[0].finish_reason;
 
-    // Analyze message for OCEAN signals and insights
-    debugInfo.processing_steps.push('Analyzing message for insights');
-    const insightsStartTime = Date.now();
-    const insights = analyzeMessageForInsights(message, assistantMessage);
-    debugInfo.timing.insights_analysis_ms = Date.now() - insightsStartTime;
+    // Analyze message for OCEAN signals and insights (only if we have a real user message)
+    let insights = { ocean_signals: {}, key_insights: [], themes: [], engagement: 0.5 };
+    if (!isAIInitiated && message && message !== "__AI_START_CONVERSATION__") {
+      debugInfo.processing_steps.push('Analyzing message for insights');
+      const insightsStartTime = Date.now();
+      insights = analyzeMessageForInsights(message, assistantMessage);
+      debugInfo.timing.insights_analysis_ms = Date.now() - insightsStartTime;
+    } else {
+      debugInfo.processing_steps.push('Skipping insights analysis for AI-initiated conversation');
+    }
 
     debugInfo.processing_steps.push('Starting database save operations');
 

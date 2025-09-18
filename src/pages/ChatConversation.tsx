@@ -52,7 +52,7 @@ const ChatConversation: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Create new conversation without automatic AI message
+  // Create new conversation with AI automatically starting the conversation
   const createNewConversation = async () => {
     if (!user || isLoading) return;
 
@@ -80,8 +80,11 @@ const ChatConversation: React.FC = () => {
 
       if (error) throw error;
       
-      // Start new session - user can now type the first message
+      // Start new session
       startNewSession(newConversation as Conversation);
+
+      // AI automatically starts the conversation with OCEAN profiling questions
+      await sendAIFirstMessage(newConversation.id);
 
     } catch (error) {
       console.error('Error creating conversation:', error);
@@ -92,6 +95,41 @@ const ChatConversation: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Send AI's first message to start the conversation
+  const sendAIFirstMessage = async (conversationId: string) => {
+    try {
+      const response = await supabase.functions.invoke('ai-chat', {
+        body: {
+          message: "__AI_START_CONVERSATION__", // Special trigger for AI to start
+          conversationId: conversationId,
+          userId: user?.id,
+          isFirstMessage: true,
+          aiInitiated: true
+        }
+      });
+
+      if (response.error) {
+        console.error('Supabase function error:', response.error);
+        throw new Error(response.error.message || 'Failed to start AI conversation');
+      }
+
+      if (response.data?.error) {
+        console.error('AI chat function error:', response.data.error);
+        throw new Error(response.data.error);
+      }
+
+      console.log('✅ AI conversation started successfully', response.data?.debug);
+
+    } catch (error) {
+      console.error('Error starting AI conversation:', error);
+      toast({
+        title: "Error",
+        description: "AI couldn't start the conversation. Please type a message to begin.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -377,8 +415,8 @@ const ChatConversation: React.FC = () => {
                   <div className="max-w-md mx-auto space-y-4">
                     <h3 className="text-lg font-medium text-foreground">Welcome to Therapeutic Chat</h3>
                     <p className="text-sm">
-                      Start by typing a message below. Your AI therapeutic assistant is ready to listen 
-                      and support you through our conversation.
+                      Your AI therapeutic assistant will start the conversation and guide you through 
+                      personalized questions to understand you better.
                     </p>
                     <p className="text-xs opacity-75">
                       All conversations are private and secure.
