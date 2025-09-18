@@ -190,7 +190,7 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Initialize conversation on mount
+  // Initialize conversation on mount - AI always starts
   useEffect(() => {
     if (!user) return;
     
@@ -201,26 +201,15 @@ const ChatConversation: React.FC = () => {
         if (continueConversation === 'true') {
           await handleContinuePausedConversation();
         } else {
-          // Check for existing session first
-          const existingSession = loadSessionFromLocal();
-          if (existingSession && existingSession.conversation) {
-            console.log('📂 Restored existing session');
-            updateActivity();
-            
-            // If restored session has no messages, AI should start the conversation
-            if (!existingSession.messages || existingSession.messages.length === 0) {
-              console.log('🤖 Starting AI conversation for restored session with no messages');
-              await sendAIFirstMessage(existingSession.conversation.id);
-            }
-          } else {
-            // Create new conversation - AI will start automatically
-            await createNewConversation();
-          }
+          // Always create new conversation - no session restoration in chat mode
+          // This ensures AI always starts fresh conversations like in voice chat
+          console.log('🤖 Creating new chat conversation - AI will start automatically');
+          await createNewConversation();
         }
       } catch (error) {
         console.error('Error initializing conversation:', error);
         toast({
-          title: "Error",
+          title: "Error", 
           description: "Could not initialize conversation",
           variant: "destructive",
         });
@@ -309,6 +298,10 @@ const ChatConversation: React.FC = () => {
 
       // Resume session with previous messages
       resumeSession(newConversation as Conversation, previousMessages);
+
+      // AI should continue the conversation after resuming
+      console.log('🤖 AI continuing conversation after resume');
+      await sendAIFirstMessage(newConversation.id);
 
       // Delete the paused conversation since we're continuing it
       await supabase
@@ -422,10 +415,10 @@ const ChatConversation: React.FC = () => {
               {messages.length === 0 && !isLoading && (
                 <div className="text-center text-muted-foreground py-8">
                   <div className="max-w-md mx-auto space-y-4">
-                    <h3 className="text-lg font-medium text-foreground">Welcome to Therapeutic Chat</h3>
+                    <h3 className="text-lg font-medium text-foreground">Therapeutic Chat Starting...</h3>
                     <p className="text-sm">
-                      Your AI therapeutic assistant will start the conversation and guide you through 
-                      personalized questions to understand you better.
+                      Your AI therapeutic assistant is starting the conversation. 
+                      It will guide you through personalized questions to understand you better.
                     </p>
                     <p className="text-xs opacity-75">
                       All conversations are private and secure.
