@@ -466,7 +466,7 @@ const Dashboard = () => {
 
       {/* Welcome Header */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
               Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
