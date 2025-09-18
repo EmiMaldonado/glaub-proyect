@@ -85,7 +85,12 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
               <Users className="h-4 w-4 text-primary" />
               <h3 className="font-medium text-sm">Team Profile Description</h3>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className={`text-sm leading-relaxed ${
+              teamDescription.toLowerCase().includes('no information available') || 
+              teamDescription.toLowerCase().includes('no comprehensive information') 
+                ? 'text-muted-foreground italic' 
+                : 'text-muted-foreground'
+            }`}>
               {teamDescription}
             </p>
           </div>

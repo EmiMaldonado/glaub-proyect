@@ -50,12 +50,12 @@ serve(async (req) => {
       .gt('expires_at', new Date().toISOString())
       .single();
 
-    if (existingRec) {
-      console.log('Found valid cached recommendations');
+    if (existingRec && existingRec.ocean_description) {
+      console.log('Found valid cached recommendations with ocean description');
       return new Response(JSON.stringify({
         recommendations: existingRec.recommendations,
         teamAnalysis: existingRec.team_analysis,
-        oceanDescription: existingRec.ocean_description || "Your team shows a balanced personality profile with diverse strengths and collaborative potential.",
+        oceanDescription: existingRec.ocean_description,
         cached: true,
         generatedAt: existingRec.generated_at
       }), {
@@ -63,7 +63,18 @@ serve(async (req) => {
       });
     }
 
-    console.log('No valid cache found, generating new recommendations');
+    // If cache exists but no ocean description, regenerate
+    if (existingRec && !existingRec.ocean_description) {
+      console.log('Cache exists but missing ocean description, regenerating...');
+    }
+
+    // Clear old cache entries for this manager (force regeneration with new logic)
+    await supabase
+      .from('manager_recommendations')
+      .delete()
+      .eq('manager_id', managerId);
+
+    console.log('Cleared existing cache, generating new recommendations with enhanced logic');
 
     // Prepare team data for AI analysis
     const teamData = [];
@@ -122,7 +133,8 @@ serve(async (req) => {
         teamData.push({
           name: member.display_name || member.full_name,
           role: member.role,
-          personality
+          personality,
+          hasConversationData: validConversations > 0
         });
       } catch (memberError) {
         console.error(`Error processing member ${member.id}:`, memberError);
@@ -136,7 +148,8 @@ serve(async (req) => {
             extraversion: 50,
             agreeableness: 50,
             neuroticism: 50
-          }
+          },
+          hasConversationData: false
         });
       }
     }
@@ -180,7 +193,7 @@ serve(async (req) => {
             content: `Analyze this team of ${teamData.length} members and provide personalized management recommendations:
 
             ${teamData.map(member => `
-            - ${member.name} (${member.role})
+            - ${member.name} (${member.role}) ${!member.hasConversationData ? '[Using baseline OCEAN profile - limited data]' : '[Based on conversation analysis]'}
               Personality (OCEAN scores 0-100):
               • Openness: ${member.personality.openness}
               • Conscientiousness: ${member.personality.conscientiousness} 
@@ -189,8 +202,18 @@ serve(async (req) => {
               • Neuroticism: ${member.personality.neuroticism}
             `).join('\n')}
 
+            ${teamData.every(m => !m.hasConversationData) ? 
+              'NOTE: This team analysis is based on baseline OCEAN profiles as no conversation data is available yet. Generate a description that indicates limited information is available but still provides general guidance based on the baseline personality scores.' : 
+              'Team analysis includes both conversation-based and baseline OCEAN profiles where indicated.'
+            }
+
             For the oceanDescription, provide a comprehensive management analysis similar to this example format:
             "Based on the OCEAN analysis of this team, the key takeaway for management is to leverage their strengths while strategically addressing potential weaknesses. [Analyze high/low scores and their implications]. [Discuss collaboration patterns and work preferences]. [Provide specific management strategies]. [Address innovation and risk-taking approaches]. By understanding these personality traits, managers can tailor their leadership style to maximize the team's efficiency, well-being, and overall performance."
+
+            ${teamData.every(m => !m.hasConversationData) ? 
+              'If all team members have baseline profiles (no conversation data), start the oceanDescription with: "No comprehensive information is available from the team yet, however based on baseline personality profiles..." and provide general guidance.' : 
+              'Provide detailed, data-driven insights for members with conversation analysis.'
+            }
 
             Provide:
             1. A detailed OCEAN profile analysis with specific management insights (4-6 sentences)
@@ -224,25 +247,19 @@ serve(async (req) => {
       console.error('Failed to parse AI response:', parseError);
       // Fallback response if parsing fails
       parsedResult = {
-        oceanDescription: "Your team shows a balanced personality profile with diverse strengths. The mix of personality types creates good potential for collaboration and innovative problem-solving.",
+        oceanDescription: "No information available from the team. Unable to generate personality analysis at this time.",
         teamAnalysis: {
-          strengths: ["Diverse skill set", "Strong collaboration potential", "Balanced personality mix"],
-          challenges: ["Communication styles may vary", "Need structured processes"],
-          dynamics: "Team shows good potential with balanced personalities",
-          diversity: "Good mix of personality traits across the team"
+          strengths: ["Team composition pending analysis"],
+          challenges: ["Insufficient data for analysis"],
+          dynamics: "Team analysis unavailable",
+          diversity: "Personality diversity analysis pending"
         },
         recommendations: [
           {
-            title: "Establish Communication Guidelines",
-            description: "Create clear communication protocols to accommodate different personality types and ensure everyone feels heard",
+            title: "Complete Team Setup",
+            description: "Ensure all team members complete their onboarding to enable personality analysis",
             priority: "high",
-            category: "communication"
-          },
-          {
-            title: "Regular Team Check-ins",
-            description: "Schedule weekly team meetings to maintain alignment, address concerns, and leverage diverse perspectives",
-            priority: "medium", 
-            category: "productivity"
+            category: "development"
           }
         ]
       };
