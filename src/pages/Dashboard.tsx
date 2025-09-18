@@ -527,12 +527,7 @@ const Dashboard = () => {
                     Personality dimensions based on your conversations
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="share-profile" className="text-sm font-medium">
-                    Share with manager
-                  </Label>
-                  <Switch id="share-profile" checked={sharingPreferences.share_ocean_profile} disabled={!currentManager} />
-                </div>
+                
               </div>
             </CardHeader>
             <CardContent className="h-full flex flex-col">
@@ -717,17 +712,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Sharing Preferences */}
-      <div className="grid lg:grid-cols-10 gap-8">
-        <div className="lg:col-span-3 lg:col-start-8">
-          <SharingPreferences 
-            userProfile={userProfile} 
-            managerId={currentManager?.id} 
-            onPreferencesChange={handleSharingPreferencesChange} 
-          />
-        </div>
-      </div>
-
       {/* Results, Strengths, and Personal Recommendations Container */}
       <div className="space-y-8">
         {/* Your Results Section */}
@@ -873,13 +857,8 @@ const Dashboard = () => {
 
         {/* Strengths Section */}
         <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-primary" />
-              Strengths
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        
+        <CardContent>
           {lastConversation?.key_insights ? allInsights.filter(insight => insight.conversation_id === lastConversation.id).length > 0 ? <ul className="space-y-3">
                 {allInsights.filter(insight => insight.conversation_id === lastConversation.id).flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
                       <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
@@ -901,6 +880,11 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
+      </div>
+
+      {/* Data Sharing Preferences - Hidden section for backend functionality */}
+      <div className="hidden">
+        <SharingPreferences userProfile={userProfile} managerId={currentManager?.id} onPreferencesChange={handleSharingPreferencesChange} />
       </div>
     </div>;
 };
