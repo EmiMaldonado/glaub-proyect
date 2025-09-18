@@ -184,6 +184,11 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
               <Share2 className="h-4 w-4" />
               <span>Share with manager</span>
             </div>
+            <Switch 
+              checked={shareSettings.summary || false} 
+              onCheckedChange={(checked) => handleShareToggle('summary', checked)}
+              className="scale-75"
+            />
             <Button
               variant="outline"
               size="sm"
