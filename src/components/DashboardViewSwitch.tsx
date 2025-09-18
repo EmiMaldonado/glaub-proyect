@@ -27,7 +27,7 @@ const DashboardViewSwitch: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-2 p-1 bg-muted rounded-lg" data-testid="dashboard-view-switch">
+    <div className="flex items-center gap-2 p-1 bg-background-secondary border border-border-strong rounded-lg" data-testid="dashboard-view-switch">
       <Button
         variant={isOnPersonalDashboard ? "default" : "ghost"}
         size="sm"
