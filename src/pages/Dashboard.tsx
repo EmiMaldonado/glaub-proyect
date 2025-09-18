@@ -467,7 +467,7 @@ const Dashboard = () => {
       });
     }
   };
-  return <div className="container mx-auto px-4 py-8 space-y-8">
+  return <div className="container mx-auto px-4 pt-8 pb-8 space-y-8">
       {/* Navigation */}
       
 
