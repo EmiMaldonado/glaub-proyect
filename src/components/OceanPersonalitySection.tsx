@@ -26,7 +26,7 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
     { key: 'conscientiousness', label: 'Conscientiousness', value: personalityData.conscientiousness },
     { key: 'extraversion', label: 'Extraversion', value: personalityData.extraversion },
     { key: 'agreeableness', label: 'Agreeableness', value: personalityData.agreeableness },
-    { key: 'neuroticism', label: 'Neuroticism', value: personalityData.neuroticism },
+    { key: 'neuroticism', label: 'Stability', value: personalityData.neuroticism },
   ];
 
   if (loading) {
