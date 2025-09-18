@@ -16,9 +16,7 @@ const Navigation = () => {
     await signOut();
     navigate('/');
   };
-  
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  
   return <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
@@ -27,23 +25,15 @@ const Navigation = () => {
           </Link>
           
           {/* Hamburger Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleMenu}
-            className="p-2"
-            aria-label="Toggle menu"
-          >
+          <Button variant="ghost" size="sm" onClick={toggleMenu} className="p-2" aria-label="Toggle menu">
             {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
         </nav>
         
         {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="absolute left-0 right-0 top-full bg-background border-b shadow-lg">
+        {isMenuOpen && <div className="absolute left-0 right-0 top-full bg-background border-b shadow-lg">
             <div className="container mx-auto px-4 py-4 space-y-4">
-              {user ? (
-                <>
+              {user ? <>
                   <div className="flex items-center gap-3 pb-4 border-b">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email} />
@@ -69,26 +59,17 @@ const Navigation = () => {
                       </Link>
                     </Button>
                     <Button variant="ghost" asChild className="w-full justify-start">
-                      <Link to="/settings" onClick={() => setIsMenuOpen(false)}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        Settings
-                      </Link>
+                      
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-destructive hover:text-destructive" 
-                      onClick={() => {
-                        handleSignOut();
-                        setIsMenuOpen(false);
-                      }}
-                    >
+                    <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive" onClick={() => {
+                handleSignOut();
+                setIsMenuOpen(false);
+              }}>
                       <LogOut className="mr-2 h-4 w-4" />
                       Log Out
                     </Button>
                   </div>
-                </>
-              ) : (
-                <div className="space-y-2">
+                </> : <div className="space-y-2">
                   <Button variant="ghost" asChild className="w-full justify-start">
                     <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                       Sign In
@@ -99,11 +80,9 @@ const Navigation = () => {
                       Start Free
                     </Link>
                   </Button>
-                </div>
-              )}
+                </div>}
             </div>
-          </div>
-        )}
+          </div>}
       </div>
     </header>;
 };
