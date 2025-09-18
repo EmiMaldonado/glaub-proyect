@@ -100,19 +100,51 @@ serve(async (req) => {
         };
 
         if (conversations && conversations.length > 0) {
+          console.log(`Processing ${conversations.length} conversations for member: ${member.display_name || member.full_name}`);
+          
           // Aggregate OCEAN scores from conversations
           let totalScores = { openness: 0, conscientiousness: 0, extraversion: 0, agreeableness: 0, neuroticism: 0 };
           let validConversations = 0;
 
-          conversations.forEach(conv => {
+          conversations.forEach((conv, index) => {
             if (conv.ocean_signals && typeof conv.ocean_signals === 'object') {
               const signals = conv.ocean_signals as any;
               if (signals.openness !== undefined) {
-                totalScores.openness += Number(signals.openness) || 0;
-                totalScores.conscientiousness += Number(signals.conscientiousness) || 0;
-                totalScores.extraversion += Number(signals.extraversion) || 0;
-                totalScores.agreeableness += Number(signals.agreeableness) || 0;
-                totalScores.neuroticism += Number(signals.neuroticism) || 0;
+                // Normalize OCEAN values: detect if they're on 0-1 scale or 0-100 scale
+                const normalizeOceanValue = (value: number): number => {
+                  const numValue = Number(value) || 0;
+                  // If value is between 0-1, convert to 0-100 scale
+                  if (numValue > 0 && numValue <= 1) {
+                    return Math.round(numValue * 100);
+                  }
+                  // If value is already 0-100 scale or invalid, return as is (clamped to 0-100)
+                  return Math.max(0, Math.min(100, Math.round(numValue)));
+                };
+
+                const normalizedScores = {
+                  openness: normalizeOceanValue(signals.openness),
+                  conscientiousness: normalizeOceanValue(signals.conscientiousness),
+                  extraversion: normalizeOceanValue(signals.extraversion),
+                  agreeableness: normalizeOceanValue(signals.agreeableness),
+                  neuroticism: normalizeOceanValue(signals.neuroticism)
+                };
+
+                console.log(`Conversation ${index + 1} OCEAN scores:`, {
+                  raw: {
+                    openness: signals.openness,
+                    conscientiousness: signals.conscientiousness,
+                    extraversion: signals.extraversion,
+                    agreeableness: signals.agreeableness,
+                    neuroticism: signals.neuroticism
+                  },
+                  normalized: normalizedScores
+                });
+
+                totalScores.openness += normalizedScores.openness;
+                totalScores.conscientiousness += normalizedScores.conscientiousness;
+                totalScores.extraversion += normalizedScores.extraversion;
+                totalScores.agreeableness += normalizedScores.agreeableness;
+                totalScores.neuroticism += normalizedScores.neuroticism;
                 validConversations++;
               }
             }
@@ -127,6 +159,9 @@ serve(async (req) => {
               agreeableness: Math.round(totalScores.agreeableness / validConversations),
               neuroticism: Math.round(totalScores.neuroticism / validConversations)
             };
+            
+            console.log(`Final averaged OCEAN scores for ${member.display_name || member.full_name}:`, personality);
+            console.log(`Based on ${validConversations} valid conversations out of ${conversations.length} total`);
           }
         }
 
@@ -155,6 +190,44 @@ serve(async (req) => {
     }
 
     // Generate AI recommendations using GPT-5-mini
+    const promptContent = `Analyze this team of ${teamData.length} members and provide personalized management recommendations:
+
+${teamData.map(member => `
+- ${member.name} (${member.role}) ${!member.hasConversationData ? '[Using baseline OCEAN profile - limited data]' : '[Based on conversation analysis]'}
+  Personality (OCEAN scores 0-100):
+  • Openness: ${member.personality.openness}
+  • Conscientiousness: ${member.personality.conscientiousness} 
+  • Extraversion: ${member.personality.extraversion}
+  • Agreeableness: ${member.personality.agreeableness}
+  • Neuroticism: ${member.personality.neuroticism}
+`).join('\n')}
+
+${teamData.every(m => !m.hasConversationData) ? 
+  'NOTE: This team analysis is based on baseline OCEAN profiles as no conversation data is available yet. Generate a description that indicates limited information is available but still provides general guidance based on the baseline personality scores.' : 
+  'Team analysis includes both conversation-based and baseline OCEAN profiles where indicated.'
+}
+
+For the oceanDescription, provide a comprehensive management analysis similar to this example format:
+"Based on the OCEAN analysis of this team, the key takeaway for management is to leverage their strengths while strategically addressing potential weaknesses. [Analyze high/low scores and their implications]. [Discuss collaboration patterns and work preferences]. [Provide specific management strategies]. [Address innovation and risk-taking approaches]. By understanding these personality traits, managers can tailor their leadership style to maximize the team's efficiency, well-being, and overall performance."
+
+${teamData.every(m => !m.hasConversationData) ? 
+  'If all team members have baseline profiles (no conversation data), start the oceanDescription with: "No comprehensive information is available from the team yet, however based on baseline personality profiles..." and provide general guidance.' : 
+  'Provide detailed, data-driven insights for members with conversation analysis.'
+}
+
+Provide:
+1. A detailed OCEAN profile analysis with specific management insights (4-6 sentences)
+2. Concrete team strengths based on personality composition
+3. Actionable leadership recommendations tailored to this exact team
+4. Communication and work environment strategies optimized for these personality types
+5. Specific approaches for fostering innovation while respecting team preferences
+
+Make all recommendations specific and actionable for a manager leading this particular team.`;
+
+    console.log('=== PROMPT BEING SENT TO OPENAI ===');
+    console.log(promptContent);
+    console.log('=== END PROMPT ===');
+
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
