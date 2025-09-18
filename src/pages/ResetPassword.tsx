@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,47 +11,54 @@ import { toast } from "@/hooks/use-toast";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdated, setIsUpdated] = useState(false);
   const [error, setError] = useState("");
   const [validToken, setValidToken] = useState<boolean | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleRecoveryFlow = async () => {
-      // Check for hash parameters from Supabase recovery flow
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const token = hashParams.get('access_token');
-      const type = hashParams.get('type');
+    const validateToken = async () => {
+      // Get token from URL parameters
+      const tokenParam = searchParams.get('token');
       
-      if (!token || type !== 'recovery') {
+      if (!tokenParam) {
         setError("No valid reset token provided. Please request a new password reset.");
         setValidToken(false);
         return;
       }
       
-      setValidToken(true);
+      setToken(tokenParam);
       
-      // Set the session with the recovery token
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: token,
-        refresh_token: hashParams.get('refresh_token') || ''
-      });
-      
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        setError("Invalid or expired reset link. Please request a new one.");
+      try {
+        // Validate token using our custom function
+        const { data, error: validationError } = await supabase.rpc('validate_reset_token', {
+          token_input: tokenParam
+        });
+        
+        if (validationError || !data) {
+          console.error('Token validation error:', validationError);
+          setError("This reset link is invalid or has expired. Please request a new one.");
+          setValidToken(false);
+        } else {
+          setValidToken(true);
+        }
+      } catch (err) {
+        console.error('Unexpected token validation error:', err);
+        setError("Unable to validate reset token. Please try again.");
         setValidToken(false);
       }
     };
     
-    handleRecoveryFlow();
-  }, []);
+    validateToken();
+  }, [searchParams]);
 
   const validatePassword = (password: string) => {
-    if (password.length < 6) {
-      return "Password must be at least 6 characters long";
+    if (password.length < 8) {
+      return "Password must be at least 8 characters long";
     }
     if (password.length > 128) {
       return "Password must be less than 128 characters";
@@ -74,17 +81,30 @@ const ResetPassword = () => {
       return;
     }
 
+    if (!token) {
+      setError("No valid token found");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Use Supabase's built-in updateUser method
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
+      // Use our custom reset-password edge function
+      const { data, error: resetError } = await supabase.functions.invoke('reset-password', {
+        body: {
+          token: token,
+          new_password: password
+        }
       });
 
-      if (updateError) {
-        console.error("Reset password error:", updateError);
-        setError(updateError.message || "Failed to update password");
+      if (resetError) {
+        console.error("Reset password error:", resetError);
+        setError("Failed to update password. Please try again.");
+        return;
+      }
+
+      if (data && data.error) {
+        setError(data.error);
         return;
       }
 
@@ -94,8 +114,6 @@ const ResetPassword = () => {
         description: "Your password has been successfully updated. You can now sign in.",
       });
       
-      // Sign out after password reset so user can sign in with new password
-      await supabase.auth.signOut();
     } catch (err: any) {
       console.error("Unexpected error:", err);
       setError("An unexpected error occurred");
@@ -178,7 +196,7 @@ const ResetPassword = () => {
             </div>
             <CardTitle>Create a New Password</CardTitle>
             <CardDescription>
-              Create a new password (minimum 6 characters)
+              Create a new password (minimum 8 characters)
             </CardDescription>
           </CardHeader>
           <CardContent>
