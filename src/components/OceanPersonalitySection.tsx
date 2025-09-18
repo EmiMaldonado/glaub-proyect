@@ -65,7 +65,7 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* OCEAN Percentages Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           {oceanTraits.map((trait) => (
             <div key={trait.key} className="text-center">
               <div className="text-3xl font-bold text-primary mb-1">
