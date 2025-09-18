@@ -46,30 +46,10 @@ serve(async (req) => {
     }
 
     if (!conversations || conversations.length === 0) {
-      // Return default recommendations if no conversations found
+      // Return empty response if no conversations found
       return new Response(JSON.stringify({
-        recommendations: {
-          development: [
-            "Schedule 15 minutes daily for self-reflection to strengthen self-awareness",
-            "Practice active listening in your next three conversations",
-            "Set one specific, measurable goal for this week and track your progress"
-          ],
-          wellness: [
-            "Try a 5-minute breathing exercise when you feel overwhelmed",
-            "Establish a consistent evening routine to improve sleep quality",
-            "Take short walks during work breaks to boost mental clarity"
-          ],
-          skills: [
-            "Focus on improving communication skills by asking more open-ended questions",
-            "Practice time management by using priority matrices for daily tasks",
-            "Develop emotional intelligence through mindful observation of your reactions"
-          ],
-          goals: [
-            "Create a personal development plan with 3 monthly objectives",
-            "Build stronger relationships by reaching out to one colleague weekly",
-            "Establish boundaries that protect your energy and well-being"
-          ]
-        }
+        recommendations: null,
+        message: "No conversation data available for generating recommendations"
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

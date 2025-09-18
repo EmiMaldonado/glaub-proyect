@@ -28,6 +28,7 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
 }) => {
   const [recommendations, setRecommendations] = useState(propRecommendations);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasConversations, setHasConversations] = useState(true);
   const { toast } = useToast();
   const generatePersonalizedRecommendations = async () => {
     setIsLoading(true);
@@ -48,26 +49,25 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
 
       if (data?.recommendations) {
         setRecommendations(data.recommendations);
+        setHasConversations(true);
         toast({
           title: "Recommendations Updated",
           description: "Your personal recommendations have been generated based on your latest conversation.",
         });
+      } else {
+        // No recommendations means no conversations
+        setRecommendations(null);
+        setHasConversations(false);
       }
     } catch (error) {
       console.error('Failed to generate recommendations:', error);
+      setRecommendations(null);
+      setHasConversations(false);
       toast({
-        title: "Error",
-        description: "Failed to generate personalized recommendations. Using default ones.",
-        variant: "destructive",
+        title: "No Conversation Data",
+        description: "Complete a conversation session to get personalized recommendations.",
+        variant: "default",
       });
-      // Fallback to default recommendations
-      const fallbackRecs = {
-        development: ["Schedule 15 minutes daily for self-reflection to strengthen self-awareness", "Practice active listening in your next three conversations", "Set one specific, measurable goal for this week and track your progress"],
-        wellness: ["Try a 5-minute breathing exercise when you feel overwhelmed", "Establish a consistent evening routine to improve sleep quality", "Take short walks during work breaks to boost mental clarity"],
-        skills: ["Focus on improving emotional regulation during stressful situations", "Develop your communication skills by asking more open-ended questions", "Practice saying 'no' to commitments that don't align with your priorities"],
-        goals: ["Create a personal development plan with 3 monthly objectives", "Build stronger relationships by reaching out to one colleague weekly", "Establish boundaries that protect your energy and well-being"]
-      };
-      setRecommendations(fallbackRecs);
     } finally {
       setIsLoading(false);
     }
@@ -79,12 +79,12 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
       generatePersonalizedRecommendations();
     }
   }, [propRecommendations]);
-  const personalRecs = recommendations || {
-    development: ["Loading personalized recommendations..."],
-    wellness: ["Loading personalized recommendations..."],
-    skills: ["Loading personalized recommendations..."],
-    goals: ["Loading personalized recommendations..."]
-  };
+  // Don't show anything if there are no conversations and no recommendations
+  if (!recommendations && !isLoading && !hasConversations) {
+    return null;
+  }
+
+  const personalRecs = recommendations;
   const categoryIcons = {
     development: TrendingUp,
     wellness: Star,
@@ -105,10 +105,15 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
   };
   return <Card className={`${className}`}>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-primary" />
-          Personal Recommendations
-        </CardTitle>
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-primary" />
+            Personal Recommendations
+          </CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            AI-powered recommendations based on your conversations
+          </p>
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -122,7 +127,14 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {Object.entries(personalRecs).map(([category, items]) => {
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-muted-foreground">Generating AI-powered recommendations...</span>
+          </div>
+        )}
+        
+        {!isLoading && personalRecs && Object.entries(personalRecs).map(([category, items]) => {
         const Icon = categoryIcons[category as keyof typeof categoryIcons];
         const colorClass = categoryColors[category as keyof typeof categoryColors];
         const label = categoryLabels[category as keyof typeof categoryLabels];
@@ -144,12 +156,6 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
             </div>;
       })}
 
-        {isLoading && (
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-muted-foreground">Generating AI-powered recommendations...</span>
-          </div>
-        )}
         
       </CardContent>
     </Card>;
