@@ -624,6 +624,11 @@ const Dashboard = () => {
                           <p className="font-medium text-sm">
                             From {invitation.manager?.display_name || invitation.manager?.full_name}
                           </p>
+                          <p className="text-sm font-medium text-primary">
+                            {invitation.invitation_type === 'manager_request' 
+                              ? '🏢 They want you to be THEIR MANAGER' 
+                              : '👥 They want you to JOIN THEIR TEAM'}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             Expires {new Date(invitation.expires_at).toLocaleDateString()}
                           </p>
