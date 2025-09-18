@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield, BarChart3, Bot } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield, BarChart3, Bot, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
@@ -15,6 +16,7 @@ import { usePausedConversations } from "@/hooks/usePausedConversations";
 import SharingPreferences from "@/components/SharingPreferences";
 import SharedDataIndicator from "@/components/SharedDataIndicator";
 import PersonalRecommendations from "@/components/PersonalRecommendations";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -49,11 +51,58 @@ const Dashboard = () => {
   const [userTeams, setUserTeams] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'last' | 'historical'>('last');
   
+  // Historical data state
+  const [selectedPeriod, setSelectedPeriod] = useState<'last_week' | 'last_month' | 'last_3_months'>('last_week');
+  const [historicalData, setHistoricalData] = useState<any>(null);
+  const [loadingHistorical, setLoadingHistorical] = useState(false);
+  
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
   }, [user]);
+
+  // Load historical data when tab or period changes  
+  useEffect(() => {
+    if (user && activeTab === 'historical') {
+      loadHistoricalData();
+    }
+  }, [user, activeTab, selectedPeriod]);
+
+  const loadHistoricalData = async () => {
+    if (!user) return;
+    
+    setLoadingHistorical(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-historical-data', {
+        body: {
+          period: selectedPeriod,
+          userId: user.id
+        }
+      });
+
+      if (error) {
+        console.error('Error loading historical data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load historical data",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setHistoricalData(data);
+    } catch (error) {
+      console.error('Unexpected error loading historical data:', error);
+      toast({
+        title: "Error", 
+        description: "Failed to load historical data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingHistorical(false);
+    }
+  };
 
   const loadDashboardData = async () => {
     if (!user) return;
@@ -677,61 +726,136 @@ const Dashboard = () => {
         {/* Your Results Section */}
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              Your results
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-          <div className="space-y-6">
-            {/* Your Last Meeting Subsection */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold">Your Last Meeting</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="share-meeting" className="text-sm font-medium">
-                    Share with manager
-                  </Label>
-                  <Switch
-                    id="share-meeting"
-                    checked={sharingPreferences.share_conversations}
-                    disabled={!currentManager}
-                  />
-                </div>
-              </div>
-              
-              {lastConversation ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Completed on {new Date(lastConversation.created_at).toLocaleDateString()}
-                  </p>
-                  <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-                    <div>
-                      <span className="text-sm text-muted-foreground">Duration:</span>
-                      <p className="font-medium">{lastConversation.duration_minutes || 15} min</p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-muted-foreground">Type:</span>
-                      <p className="font-medium">Complete</p>
-                    </div>
-                    <div>
-                      <span className="text-sm text-muted-foreground">Insights:</span>
-                      <p className="font-medium">{lastConversation.key_insights?.insights?.length || 0} generated</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-6 bg-muted/30 rounded-lg">
-                  <History className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                  <p className="text-muted-foreground text-sm">No meeting data available</p>
-                </div>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Your results
+              </CardTitle>
+              {activeTab === 'historical' && (
+                <Select value={selectedPeriod} onValueChange={(value: 'last_week' | 'last_month' | 'last_3_months') => setSelectedPeriod(value)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="last_week">Last week</SelectItem>
+                    <SelectItem value="last_month">Last month</SelectItem>
+                    <SelectItem value="last_3_months">Last 3 months</SelectItem>
+                  </SelectContent>
+                </Select>
               )}
             </div>
-          </div>
-        </CardContent>
+          </CardHeader>
+          <CardContent>
+            {activeTab === 'last' ? (
+              <div className="space-y-6">
+                {/* Your Last Meeting Subsection */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4 text-primary" />
+                      <h3 className="font-semibold">Your Last Meeting</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="share-meeting" className="text-sm font-medium">
+                        Share with manager
+                      </Label>
+                      <Switch
+                        id="share-meeting"
+                        checked={sharingPreferences.share_conversations}
+                        disabled={!currentManager}
+                      />
+                    </div>
+                  </div>
+                  
+                  {lastConversation ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Completed on {new Date(lastConversation.created_at).toLocaleDateString()}
+                      </p>
+                      <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                        <div>
+                          <span className="text-sm text-muted-foreground">Duration:</span>
+                          <p className="font-medium">{lastConversation.duration_minutes || 15} min</p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Type:</span>
+                          <p className="font-medium">Complete</p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Insights:</span>
+                          <p className="font-medium">{lastConversation.key_insights?.insights?.length || 0} generated</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-muted/30 rounded-lg">
+                      <History className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-muted-foreground text-sm">No meeting data available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              // Historical Content
+              <div className="space-y-6">
+                {loadingHistorical ? (
+                  <div className="text-center py-8">
+                    <LoadingSpinner />
+                    <p className="text-muted-foreground text-sm mt-2">Loading historical data...</p>
+                  </div>
+                ) : historicalData ? (
+                  <div className="space-y-6">
+                    {/* Conversation Summary Card */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-primary" />
+                          <h3 className="font-semibold">Conversation Summary</h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="share-summary" className="text-sm font-medium">
+                            Share with manager
+                          </Label>
+                          <Switch
+                            id="share-summary"
+                            checked={sharingPreferences.share_conversations}
+                            disabled={!currentManager}
+                          />
+                        </div>
+                      </div>
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <p className="text-sm leading-relaxed">{historicalData.conversation_summary}</p>
+                        {historicalData.total_conversations > 0 && (
+                          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-muted">
+                            <div>
+                              <span className="text-sm text-muted-foreground">Total Conversations:</span>
+                              <p className="font-medium">{historicalData.total_conversations}</p>
+                            </div>
+                            <div>
+                              <span className="text-sm text-muted-foreground">Total Duration:</span>
+                              <p className="font-medium">{historicalData.total_duration} min</p>
+                            </div>
+                            <div>
+                              <span className="text-sm text-muted-foreground">Avg Duration:</span>
+                              <p className="font-medium">{historicalData.avg_duration} min</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Clock className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground font-medium">No historical data available</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Complete more conversations to see historical insights
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
         </Card>
 
         {/* Strengths Section */}
@@ -789,21 +913,31 @@ const Dashboard = () => {
                 </p>
               </div>
             )
-          ) : activeTab === 'historical' && allInsights.length > 0 ? (
+          ) : activeTab === 'historical' && historicalData?.strengths?.length > 0 ? (
             <ul className="space-y-3">
-              {allInsights.flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => (
+              {historicalData.strengths.map((strength: string, index: number) => (
                 <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
                   <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
-                  <span className="text-sm leading-relaxed">{insight}</span>
+                  <span className="text-sm leading-relaxed">{strength}</span>
                 </li>
               ))}
             </ul>
+          ) : activeTab === 'historical' && loadingHistorical ? (
+            <div className="text-center py-8">
+              <LoadingSpinner />
+              <p className="text-muted-foreground text-sm mt-2">Loading historical strengths...</p>
+            </div>
           ) : (
             <div className="text-center py-8">
               <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">No strengths data available</p>
+              <p className="text-muted-foreground font-medium">
+                {activeTab === 'historical' ? 'No historical strengths data available' : 'No strengths data available'}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Complete a conversation to identify your strengths
+                {activeTab === 'historical' 
+                  ? 'Complete more conversations in this period to identify strengths'
+                  : 'Complete a conversation to identify your strengths'
+                }
               </p>
             </div>
           )}

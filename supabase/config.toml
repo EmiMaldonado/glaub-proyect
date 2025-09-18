@@ -1,5 +1,8 @@
 project_id = "bmrifufykczudfxomenr"
 
+[edge_functions.generate-historical-data]
+verify_jwt = true
+
 [edge_functions.ai-chat]
 verify_jwt = true
 
