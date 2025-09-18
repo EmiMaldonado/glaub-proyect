@@ -72,7 +72,17 @@ serve(async (req: Request) => {
       throw new Error("Invitation has expired");
     }
 
-    // Get the new user's profile - use maybeSingle to handle case where profile doesn't exist
+    // Validate that the user exists in auth.users first
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(user_id);
+    
+    if (authError || !authUser?.user) {
+      console.error("User does not exist in auth.users:", { user_id, authError });
+      throw new Error("Invalid user - user must be registered and authenticated first");
+    }
+
+    console.log("Validated auth user:", { id: authUser.user.id, email: authUser.user.email });
+
+    // Get the user's profile - use maybeSingle to handle case where profile doesn't exist
     const { data: existingProfile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
@@ -81,21 +91,23 @@ serve(async (req: Request) => {
 
     if (profileError) {
       console.error("Error finding user profile:", profileError);
-      throw new Error("User profile not found: " + profileError.message);
+      throw new Error("User profile lookup failed: " + profileError.message);
     }
 
     let userProfile;
     if (!existingProfile) {
-      console.error("No user profile found for user_id:", user_id);
-      console.log("Creating new profile for user_id:", user_id);
+      console.log("No profile found, creating new profile for authenticated user:", user_id);
       
-      // Create a new profile for the user
+      // Create profile for the authenticated user
       const { data: newProfile, error: createProfileError } = await supabase
         .from("profiles")
         .insert({
           user_id: user_id,
           role: 'employee',
-          onboarding_completed: false
+          onboarding_completed: false,
+          full_name: authUser.user.user_metadata?.full_name,
+          display_name: authUser.user.user_metadata?.display_name,
+          email: authUser.user.email
         })
         .select()
         .single();
