@@ -14,7 +14,12 @@ interface ForgotPasswordRequest {
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -35,11 +40,26 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user exists
-    const { data: authUser, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    // Check if user exists by looking in the profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('email', email)
+      .single();
+
+    let userId = null;
     
-    if (userError || !authUser.user) {
-      // Don't reveal if user exists or not for security
+    // If no profile found with email, try to find by auth user email
+    if (!profile) {
+      // For security, we'll proceed as if we're sending an email regardless
+      // This prevents email enumeration attacks
+      console.log(`No user found with email: ${email}`);
+    } else {
+      userId = profile.user_id;
+    }
+
+    // If we don't have a user, still return success for security
+    if (!userId) {
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -64,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { error: storeError } = await supabase
       .from('password_reset_tokens')
       .insert({
-        user_id: authUser.user.id,
+        user_id: userId,
         token: token,
         expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour from now
         is_used: false
