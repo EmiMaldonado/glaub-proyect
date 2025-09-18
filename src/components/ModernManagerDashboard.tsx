@@ -169,24 +169,22 @@ const ModernManagerDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <DashboardBreadcrumbs />
-        <DashboardViewSwitch />
-      </div>
-
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              Welcome to {managerProfile.team_name || `${managerProfile.display_name || managerProfile.full_name}'s Team`} Dashboard
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Team usage: {analyticsData?.overview.totalSessions || 0} sessions • {teamMembers.length} member{teamMembers.length !== 1 ? 's' : ''}
-            </p>
+          <div className="flex items-center gap-6">
+            <DashboardBreadcrumbs />
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                Welcome to {managerProfile.team_name || `${managerProfile.display_name || managerProfile.full_name}'s Team`} Dashboard
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Team usage: {analyticsData?.overview.totalSessions || 0} sessions • {teamMembers.length} member{teamMembers.length !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
+            <DashboardViewSwitch />
             <Badge variant="secondary" className="text-sm">
               <Users className="mr-1 h-3 w-3" />
               Manager
