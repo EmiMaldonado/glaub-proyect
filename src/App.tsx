@@ -94,7 +94,11 @@ const App = () => {
                       </AuthGuard>
                     } />
                     <Route path="/auth/callback" element={<AuthCallback />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/reset-password" element={
+                      <AuthGuard requireAuth={false}>
+                        <ResetPassword />
+                      </AuthGuard>
+                    } />
                     <Route path="/accept-invitation" element={<AcceptInvitationRedirect />} />
                     <Route path="/voice-assistant" element={<VoiceAssistant />} />
                     <Route path="/500" element={<ServerError />} />
