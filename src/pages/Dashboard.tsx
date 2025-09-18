@@ -577,7 +577,7 @@ const Dashboard = () => {
         </div>
 
         {/* Right Column - 30% - Your Teams */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-6">
           <Card className="shadow-soft">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
