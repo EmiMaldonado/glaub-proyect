@@ -664,7 +664,9 @@ const Dashboard = () => {
                         </div>
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => handleAcceptInvitation(invitation)} className="flex-1">
-                            Accept
+                            {invitation.invitation_type === 'manager_request' 
+                              ? 'Become Their Manager' 
+                              : 'Accept'}
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => handleDeclineInvitation(invitation)} className="flex-1">
                             Decline
