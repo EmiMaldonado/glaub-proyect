@@ -1,0 +1,1 @@
+SELECT public.migrate_team_memberships();
