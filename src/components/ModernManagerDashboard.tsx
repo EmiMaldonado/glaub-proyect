@@ -22,6 +22,8 @@ import NotificationSystem from '@/components/NotificationSystem';
 import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
 import TeamAnalyticsDashboard from '@/components/TeamAnalyticsDashboard';
+import TeamRecommendationsDashboard from '@/components/TeamRecommendationsDashboard';
+import IndividualRecommendationsDashboard from '@/components/IndividualRecommendationsDashboard';
 import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 
 interface TeamMember {
@@ -220,13 +222,14 @@ const ModernManagerDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Main Dashboard Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="insights">Team Insights</TabsTrigger>
-          <TabsTrigger value="management">Team Management</TabsTrigger>
-        </TabsList>
+        {/* Main Dashboard Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid grid-cols-4 w-full max-w-lg">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="insights">Team Insights</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+            <TabsTrigger value="management">Management</TabsTrigger>
+          </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
@@ -319,6 +322,23 @@ const ModernManagerDashboard: React.FC = () => {
             selectedMember={selectedMember}
             onMemberSelect={setSelectedMember}
           />
+        </TabsContent>
+
+        {/* Recommendations Tab */}
+        <TabsContent value="recommendations" className="space-y-6">
+          <div className="grid grid-cols-1 gap-6">
+            <TeamRecommendationsDashboard 
+              managerId={managerProfile.id}
+              teamMembers={teamMembers}
+            />
+            
+            {selectedMember && (
+              <IndividualRecommendationsDashboard
+                managerId={managerProfile.id}
+                member={selectedMember}
+              />
+            )}
+          </div>
         </TabsContent>
 
         {/* Team Management Tab */}

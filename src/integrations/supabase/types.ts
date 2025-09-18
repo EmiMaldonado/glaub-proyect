@@ -62,6 +62,48 @@ export type Database = {
         }
         Relationships: []
       }
+      individual_recommendations: {
+        Row: {
+          created_at: string
+          expires_at: string
+          generated_at: string
+          id: string
+          leadership_tips: Json
+          manager_id: string
+          member_analysis: Json
+          member_hash: string
+          member_id: string
+          recommendations: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          leadership_tips?: Json
+          manager_id: string
+          member_analysis?: Json
+          member_hash: string
+          member_id: string
+          recommendations?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          leadership_tips?: Json
+          manager_id?: string
+          member_analysis?: Json
+          member_hash?: string
+          member_id?: string
+          recommendations?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -162,6 +204,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      manager_recommendations: {
+        Row: {
+          created_at: string
+          expires_at: string
+          generated_at: string
+          id: string
+          manager_id: string
+          recommendations: Json
+          team_analysis: Json
+          team_hash: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          manager_id: string
+          recommendations?: Json
+          team_analysis?: Json
+          team_hash: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          manager_id?: string
+          recommendations?: Json
+          team_analysis?: Json
+          team_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       messages: {
         Row: {
