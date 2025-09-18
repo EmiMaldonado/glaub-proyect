@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lightbulb, Target, TrendingUp, Star, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Lightbulb, Target, TrendingUp, Star, ArrowRight, CheckCircle2, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 interface PersonalRecommendationsProps {
   recommendations: {
     development: string[];
@@ -20,36 +22,69 @@ interface PersonalRecommendationsProps {
   className?: string;
 }
 const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
-  recommendations,
+  recommendations: propRecommendations,
   oceanProfile,
   className = ""
 }) => {
-  const generatePersonalizedRecommendations = () => {
-    const personal = {
-      development: ["Schedule 15 minutes daily for self-reflection to strengthen self-awareness", "Practice active listening in your next three conversations", "Set one specific, measurable goal for this week and track your progress"],
-      wellness: ["Try a 5-minute breathing exercise when you feel overwhelmed", "Establish a consistent evening routine to improve sleep quality", "Take short walks during work breaks to boost mental clarity"],
-      skills: ["Focus on improving emotional regulation during stressful situations", "Develop your communication skills by asking more open-ended questions", "Practice saying 'no' to commitments that don't align with your priorities"],
-      goals: ["Create a personal development plan with 3 monthly objectives", "Build stronger relationships by reaching out to one colleague weekly", "Establish boundaries that protect your energy and well-being"]
-    };
+  const [recommendations, setRecommendations] = useState(propRecommendations);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const generatePersonalizedRecommendations = async () => {
+    setIsLoading(true);
+    try {
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
 
-    // Customize based on OCEAN profile if available
-    if (oceanProfile) {
-      if (oceanProfile.openness > 0.7) {
-        personal.development.push("Explore creative problem-solving techniques in your work");
+      const { data, error } = await supabase.functions.invoke('generate-personal-recommendations', {
+        body: { userId }
+      });
+
+      if (error) {
+        console.error('Error generating recommendations:', error);
+        throw error;
       }
-      if (oceanProfile.conscientiousness < 0.4) {
-        personal.skills.push("Use time-blocking techniques to improve task completion");
+
+      if (data?.recommendations) {
+        setRecommendations(data.recommendations);
+        toast({
+          title: "Recommendations Updated",
+          description: "Your personal recommendations have been generated based on your latest conversation.",
+        });
       }
-      if (oceanProfile.extraversion < 0.4) {
-        personal.wellness.push("Practice small social interactions to build confidence");
-      }
-      if (oceanProfile.neuroticism > 0.6) {
-        personal.wellness.push("Develop stress management strategies and regular check-ins with yourself");
-      }
+    } catch (error) {
+      console.error('Failed to generate recommendations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate personalized recommendations. Using default ones.",
+        variant: "destructive",
+      });
+      // Fallback to default recommendations
+      const fallbackRecs = {
+        development: ["Schedule 15 minutes daily for self-reflection to strengthen self-awareness", "Practice active listening in your next three conversations", "Set one specific, measurable goal for this week and track your progress"],
+        wellness: ["Try a 5-minute breathing exercise when you feel overwhelmed", "Establish a consistent evening routine to improve sleep quality", "Take short walks during work breaks to boost mental clarity"],
+        skills: ["Focus on improving emotional regulation during stressful situations", "Develop your communication skills by asking more open-ended questions", "Practice saying 'no' to commitments that don't align with your priorities"],
+        goals: ["Create a personal development plan with 3 monthly objectives", "Build stronger relationships by reaching out to one colleague weekly", "Establish boundaries that protect your energy and well-being"]
+      };
+      setRecommendations(fallbackRecs);
+    } finally {
+      setIsLoading(false);
     }
-    return personal;
   };
-  const personalRecs = recommendations || generatePersonalizedRecommendations();
+
+  // Load AI-generated recommendations on component mount if no props provided
+  useEffect(() => {
+    if (!propRecommendations) {
+      generatePersonalizedRecommendations();
+    }
+  }, [propRecommendations]);
+  const personalRecs = recommendations || {
+    development: ["Loading personalized recommendations..."],
+    wellness: ["Loading personalized recommendations..."],
+    skills: ["Loading personalized recommendations..."],
+    goals: ["Loading personalized recommendations..."]
+  };
   const categoryIcons = {
     development: TrendingUp,
     wellness: Star,
@@ -69,6 +104,22 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
     goals: "Goal Achievement"
   };
   return <Card className={`${className}`}>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <Lightbulb className="h-5 w-5 text-primary" />
+          Personal Recommendations
+        </CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={generatePersonalizedRecommendations}
+          disabled={isLoading}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? 'Generating...' : 'Refresh'}
+        </Button>
+      </CardHeader>
       
       <CardContent className="space-y-6">
         {Object.entries(personalRecs).map(([category, items]) => {
@@ -93,7 +144,12 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
             </div>;
       })}
 
-        {/* Action Buttons */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-muted-foreground">Generating AI-powered recommendations...</span>
+          </div>
+        )}
         
       </CardContent>
     </Card>;
