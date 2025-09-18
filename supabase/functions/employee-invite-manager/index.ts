@@ -90,48 +90,50 @@ serve(async (req: Request) => {
     
     // Send invitation email using Resend
     const { error: emailError } = await resend.emails.send({
-      from: "EmpathAI <onboarding@resend.dev>",
+      from: "Glaub <onboarding@resend.dev>",
       to: [managerEmail],
-      subject: `${employeeName} wants you to be their manager on EmpathAI`,
+      subject: `${employeeName} invited you to be their manager`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2563eb; text-align: center;">You've Been Requested as a Manager!</h1>
-          
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
-              Hello! <strong>${employeeName}</strong> has requested you to be their manager on EmpathAI.
-            </p>
-            
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              EmpathAI is an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being. As a manager, you'll be able to view shared insights and provide better support to your team.
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${acceptUrl}" 
-                 style="background-color: #16a34a; color: white; padding: 12px 24px; 
-                        text-decoration: none; border-radius: 6px; font-weight: bold; 
-                        display: inline-block; margin-right: 10px;">
-                Accept & Become Manager
-              </a>
-              <a href="${acceptUrl}&action=decline" 
-                 style="background-color: #dc2626; color: white; padding: 12px 24px; 
-                        text-decoration: none; border-radius: 6px; font-weight: bold; 
-                        display: inline-block;">
-                Decline Request
-              </a>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; text-align: center;">
+                <img src="https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
+
+                <h1 style="color: #333; margin-bottom: 20px;">You've been invited to become a manager on Gläub</h1>
+
+                <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                    <strong>${employeeName}</strong> has invited you to be their manager on Gläub, a platform for personality insights and professional development.
+                </p>
+
+                <p style="color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                    As their manager, you'll be able to:
+                </p>
+
+                <ul style="color: #666; font-size: 16px; line-height: 1.6; text-align: left; margin-bottom: 30px; padding-left: 20px;">
+                    <li>View shared personality insights to better understand their work style</li>
+                    <li>Access personalized recommendations for effective communication</li>
+                    <li>Get suggestions for professional development opportunities</li>
+                    <li>Build stronger team dynamics through personality awareness</li>
+                </ul>
+
+                <a href="${acceptUrl}" style="background: linear-gradient(135deg, hsl(214, 28%, 56%), hsl(214, 28%, 65%)); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; margin-bottom: 20px;">
+                    Accept Manager Invitation
+                </a>
+
+                <p style="color: #999; font-size: 14px; margin-top: 30px;">
+                    If the button doesn't work, copy and paste this link in your browser:<br>
+                    <span style="color: #6889B4; word-break: break-all;">${acceptUrl}</span>
+                </p>
+
+                <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                    This invitation will expire in 7 days.
+                </p>
+
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+                <p style="color: #999; font-size: 12px; text-align: center;">
+                    If you didn't expect this invitation, you can safely ignore this email.
+                </p>
             </div>
-            
-            <p style="font-size: 14px; color: #64748b; margin-top: 20px;">
-              If the buttons don't work, you can copy and paste this link into your browser:
-              <br><a href="${acceptUrl}" style="color: #2563eb;">${acceptUrl}</a>
-            </p>
-          </div>
-          
-          <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px;">
-            <p style="font-size: 12px; color: #94a3b8; text-align: center;">
-              This manager request was sent by ${employeeName}. If you believe this was sent in error, you can safely ignore this email.
-            </p>
-          </div>
         </div>
       `,
     });
