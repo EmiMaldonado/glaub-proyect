@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 interface RemoveTeamMemberRequest {
-  membershipId: string;
+  member_id: string;
+  manager_id: string;
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -46,54 +47,57 @@ serve(async (req: Request) => {
       throw new Error("Only managers can remove team members");
     }
 
-    const { membershipId }: RemoveTeamMemberRequest = await req.json();
+    const { member_id, manager_id }: RemoveTeamMemberRequest = await req.json();
 
-    if (!membershipId) {
-      throw new Error("Membership ID is required");
+    if (!member_id) {
+      throw new Error("Member ID is required");
     }
 
     console.log("Processing team member removal:", { 
       managerId: userProfile.id, 
-      membershipId 
+      member_id 
     });
 
-    // Verify the team membership exists and belongs to this manager
-    const { data: membership, error: membershipError } = await supabase
-      .from("team_memberships")
-      .select(`
-        id,
-        employee_id,
-        manager_id,
-        employee:profiles!team_memberships_employee_id_fkey(
-          id, full_name, display_name
-        )
-      `)
-      .eq("id", membershipId)
-      .eq("manager_id", userProfile.id)
+    // Verify the team member exists and belongs to this manager's team
+    const { data: teamMember, error: memberError } = await supabase
+      .from("team_members")
+      .select("*")
+      .eq("member_id", member_id)
+      .eq("team_id", userProfile.id)
       .single();
 
-    if (membershipError || !membership) {
-      throw new Error("Team membership not found or unauthorized");
+    if (memberError || !teamMember) {
+      throw new Error("Team member not found or unauthorized");
     }
 
-    // Delete the team membership
+    // Get the member's profile info for response
+    const { data: memberProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("full_name, display_name")
+      .eq("id", member_id)
+      .single();
+
+    const memberName = memberProfile?.display_name || memberProfile?.full_name || "Unknown member";
+
+    // Delete the team member
     const { error: deleteError } = await supabase
-      .from("team_memberships")
+      .from("team_members")
       .delete()
-      .eq("id", membershipId);
+      .eq("member_id", member_id)
+      .eq("team_id", userProfile.id);
 
     if (deleteError) {
-      console.error("Error deleting team membership:", deleteError);
+      console.error("Error deleting team member:", deleteError);
       throw new Error(`Failed to remove team member: ${deleteError.message}`);
     }
 
-    console.log("Team membership deleted successfully");
+    console.log("Team member deleted successfully");
 
     // Check if manager has any remaining team members
     const { data: remainingMembers, error: checkError } = await supabase
-      .from("team_memberships")
-      .select("id")
-      .eq("manager_id", userProfile.id);
+      .from("team_members")
+      .select("member_id")
+      .eq("team_id", userProfile.id);
 
     let wasLastMember = false;
 
@@ -121,39 +125,37 @@ serve(async (req: Request) => {
 
     // Fetch updated team members list
     const { data: updatedTeamMembers, error: teamError } = await supabase
-      .from("team_memberships")
-      .select(`
-        id,
-        employee_id,
-        joined_at,
-        employee:profiles!team_memberships_employee_id_fkey(
-          id, user_id, full_name, display_name, role
-        )
-      `)
-      .eq("manager_id", userProfile.id)
-      .order("joined_at", { ascending: false });
+      .from("team_members")
+      .select("member_id")
+      .eq("team_id", userProfile.id);
 
     if (teamError) {
       console.error("Error fetching updated team members:", teamError);
     }
 
-    const teamMembers = (updatedTeamMembers || []).map(membership => ({
-      id: membership.employee.id,
-      user_id: membership.employee.user_id,
-      full_name: membership.employee.full_name,
-      display_name: membership.employee.display_name,
-      role: membership.employee.role,
-      membershipId: membership.id
-    }));
+    // Get full profile data for remaining team members
+    const teamMemberIds = (updatedTeamMembers || []).map(tm => tm.member_id);
+    
+    let teamMembers = [];
+    if (teamMemberIds.length > 0) {
+      const { data: memberProfiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, display_name, role")
+        .in("id", teamMemberIds);
+
+      if (!profilesError && memberProfiles) {
+        teamMembers = memberProfiles;
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Successfully removed ${membership.employee.display_name || membership.employee.full_name} from team`,
+        message: `Successfully removed ${memberName} from team`,
         teamMembers,
         wasLastMember,
         removedMember: {
-          name: membership.employee.display_name || membership.employee.full_name
+          name: memberName
         }
       }),
       {

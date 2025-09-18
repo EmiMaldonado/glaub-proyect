@@ -54,22 +54,23 @@ serve(async (req: Request) => {
     });
 
     // Verify the team membership exists
-    const { data: membership, error: membershipError } = await supabase
-      .from("team_memberships")
-      .select("id, manager_id")
-      .eq("employee_id", userProfile.id)
-      .eq("manager_id", managerId)
+    const { data: teamMembership, error: membershipError } = await supabase
+      .from("team_members")
+      .select("member_id, team_id")
+      .eq("member_id", userProfile.id)
+      .eq("team_id", managerId)
       .single();
 
-    if (membershipError || !membership) {
+    if (membershipError || !teamMembership) {
       throw new Error("Team membership not found");
     }
 
     // Delete the team membership
     const { error: deleteError } = await supabase
-      .from("team_memberships")
+      .from("team_members")
       .delete()
-      .eq("id", membership.id);
+      .eq("member_id", userProfile.id)
+      .eq("team_id", managerId);
 
     if (deleteError) {
       console.error("Error deleting team membership:", deleteError);
@@ -80,9 +81,9 @@ serve(async (req: Request) => {
 
     // Check if manager has any remaining team members
     const { data: remainingMembers, error: checkError } = await supabase
-      .from("team_memberships")
-      .select("id")
-      .eq("manager_id", managerId);
+      .from("team_members")
+      .select("member_id")
+      .eq("team_id", managerId);
 
     if (checkError) {
       console.error("Error checking remaining team members:", checkError);
