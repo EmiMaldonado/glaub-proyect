@@ -21,6 +21,8 @@ import MeetingHistoryTabs from '@/components/MeetingHistoryTabs';
 import NotificationSystem from '@/components/NotificationSystem';
 import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
+import TeamAnalyticsDashboard from '@/components/TeamAnalyticsDashboard';
+import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 
 interface TeamMember {
   id: string;
@@ -49,6 +51,12 @@ const ModernManagerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  
+  // Team analytics hook
+  const { analyticsData, loading: analyticsLoading } = useTeamAnalytics(
+    managerProfile?.id || '', 
+    teamMembers
+  );
 
   useEffect(() => {
     if (user) {
@@ -178,8 +186,10 @@ const ModernManagerDashboard: React.FC = () => {
               <MessageCircle className="h-5 w-5 text-primary" />
               <span className="text-sm font-medium text-muted-foreground">Active Sessions</span>
             </div>
-            <p className="text-2xl font-bold">--</p>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
+            <p className="text-2xl font-bold">
+              {analyticsLoading ? '--' : (analyticsData?.overview.totalSessions || 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">Total sessions</p>
           </CardContent>
         </Card>
 
@@ -189,8 +199,10 @@ const ModernManagerDashboard: React.FC = () => {
               <Target className="h-5 w-5 text-primary" />
               <span className="text-sm font-medium text-muted-foreground">Shared Insights</span>
             </div>
-            <p className="text-2xl font-bold">--</p>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
+            <p className="text-2xl font-bold">
+              {analyticsLoading ? '--' : (analyticsData?.trends.insightGeneration || 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">Generated this month</p>
           </CardContent>
         </Card>
 
@@ -200,8 +212,10 @@ const ModernManagerDashboard: React.FC = () => {
               <TrendingUp className="h-5 w-5 text-primary" />
               <span className="text-sm font-medium text-muted-foreground">Team Progress</span>
             </div>
-            <p className="text-2xl font-bold">--</p>
-            <p className="text-xs text-muted-foreground">Coming soon</p>
+            <p className="text-2xl font-bold">
+              {analyticsLoading ? '--' : `${analyticsData?.teamHealth.overallScore || 0}%`}
+            </p>
+            <p className="text-xs text-muted-foreground">Overall team health</p>
           </CardContent>
         </Card>
       </div>
@@ -269,12 +283,29 @@ const ModernManagerDashboard: React.FC = () => {
                   Team Analytics
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <p className="text-muted-foreground mt-4">Team analytics coming soon</p>
-                  <p className="text-sm text-muted-foreground">View aggregated team insights and progress</p>
-                </div>
+              <CardContent className="p-0">
+                {analyticsLoading ? (
+                  <div className="text-center py-8 px-6">
+                    <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground mt-4">Loading team analytics...</p>
+                  </div>
+                ) : analyticsData && teamMembers.length > 0 ? (
+                  <div className="p-6">
+                    <TeamAnalyticsDashboard 
+                      analyticsData={analyticsData}
+                      dateRange={{
+                        start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+                        end: new Date()
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-8 px-6">
+                    <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground mt-4">No analytics data available</p>
+                    <p className="text-sm text-muted-foreground">Add team members to generate analytics</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

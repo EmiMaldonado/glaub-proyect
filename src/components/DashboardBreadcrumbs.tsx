@@ -14,6 +14,11 @@ import { Home, Users } from 'lucide-react';
 const DashboardBreadcrumbs: React.FC = () => {
   const location = useLocation();
   
+  // Don't show breadcrumbs on auth routes (homepage)
+  if (location.pathname === '/auth' || location.pathname === '/') {
+    return null;
+  }
+  
   const getBreadcrumbs = () => {
     const path = location.pathname;
     
