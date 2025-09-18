@@ -235,9 +235,9 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
               
               <div className="space-y-2">
                 {items.slice(0, 3).map((item, index) => (
-                  <div key={index} className={`p-3 rounded-lg border ${colorClass} flex items-start gap-3`}>
+                  <div key={index} className="p-3 rounded-lg border bg-gray-50 border-gray-200 text-gray-700 flex items-start gap-3">
                     <ArrowRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm font-medium">{item}</p>
+                    <p className="text-sm">{item}</p>
                   </div>
                 ))}
               </div>
