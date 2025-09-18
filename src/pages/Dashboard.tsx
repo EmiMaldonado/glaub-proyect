@@ -338,6 +338,8 @@ const Dashboard = () => {
         email: managerEmail.trim(),
         token: crypto.randomUUID(),
         manager_id: userProfile?.id,
+        invited_by_id: userProfile?.id,
+        invitation_type: 'manager_request',
         status: 'pending'
       }).select('token').single();
       if (error) {
