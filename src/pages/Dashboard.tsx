@@ -3,7 +3,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -527,12 +526,6 @@ const Dashboard = () => {
                     Personality dimensions based on your conversations
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="share-profile" className="text-sm font-medium">
-                    Share with manager
-                  </Label>
-                  <Switch id="share-profile" checked={sharingPreferences.share_ocean_profile} disabled={!currentManager} />
-                </div>
               </div>
             </CardHeader>
             <CardContent className="h-full flex flex-col">
@@ -715,6 +708,13 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Sharing Preferences */}
+        <SharingPreferences 
+          userProfile={userProfile} 
+          managerId={currentManager?.id}
+          onPreferencesChange={setSharingPreferences}
+        />
       </div>
 
       {/* Results, Strengths, and Personal Recommendations Container */}
@@ -757,12 +757,6 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2">
                       <History className="h-4 w-4 text-primary" />
                       <h3 className="font-semibold">Your Last Meeting</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="share-meeting" className="text-sm font-medium">
-                        Share with manager
-                      </Label>
-                      <Switch id="share-meeting" checked={sharingPreferences.share_conversations} disabled={!currentManager} />
                     </div>
                   </div>
                   
@@ -816,12 +810,6 @@ const Dashboard = () => {
                           <BarChart3 className="h-4 w-4 text-primary" />
                           <h3 className="font-semibold">Conversation Summary</h3>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="share-summary" className="text-sm font-medium">
-                            Share with manager
-                          </Label>
-                          <Switch id="share-summary" checked={sharingPreferences.share_conversations} disabled={!currentManager} />
-                        </div>
                       </div>
                       <div className="p-4 bg-muted/30 rounded-lg">
                         <p className="text-sm leading-relaxed">{historicalData.conversation_summary}</p>
@@ -874,12 +862,9 @@ const Dashboard = () => {
                 Your main identified strengths
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Share2 className="h-4 w-4" />
-                <span>Share with manager</span>
-              </div>
-              <Switch checked={sharingPreferences.share_insights} disabled={!currentManager} className="scale-75" />
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Share2 className="h-4 w-4" />
+              <span>Share with manager</span>
             </div>
           </div>
         </CardHeader>

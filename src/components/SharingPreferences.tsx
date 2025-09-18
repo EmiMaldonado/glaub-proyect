@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Share2, Eye, EyeOff, Shield, Users, User, Brain, BarChart3, MessageCircle } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 interface SharingPreferencesProps {
   userProfile: any;
@@ -116,7 +115,7 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
     }
   };
 
-  const updateSharingPreference = async (key: keyof SharingPreferences, value: boolean) => {
+  const updateAllPreferences = async () => {
     if (!user?.id || !userProfile?.id || !hasManager) return;
 
     setSaving(true);
@@ -134,34 +133,32 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
         throw new Error('Manager not found');
       }
 
-      const newPreferences = { ...preferences, [key]: value };
-
       // Upsert sharing preferences
       const { error } = await supabase
         .from('sharing_preferences')
         .upsert({
           user_id: user.id,
           manager_id: teamMembership.manager_id,
-          ...newPreferences
+          ...preferences,
+          share_ocean_profile: true // Always shared
         }, {
           onConflict: 'user_id,manager_id'
         });
 
       if (error) throw error;
 
-      setPreferences(newPreferences);
-      onPreferencesChange?.(newPreferences);
+      onPreferencesChange?.(preferences);
 
       toast({
-        title: value ? "Sharing Enabled" : "Sharing Disabled",
-        description: `${getSharingLabel(key)} ${value ? 'will now be' : 'is no longer'} visible to your manager`,
+        title: "Preferences Updated",
+        description: "Your data sharing preferences have been saved successfully",
       });
 
     } catch (error: any) {
-      console.error('Error updating sharing preference:', error);
+      console.error('Error updating sharing preferences:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update sharing preference",
+        description: error.message || "Failed to update sharing preferences",
         variant: "destructive",
       });
     } finally {
@@ -171,46 +168,20 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
 
   const getSharingLabel = (key: keyof SharingPreferences): string => {
     const labels = {
-      share_profile: 'Profile Information',
-      share_insights: 'Therapeutic Insights',
-      share_conversations: 'Conversation History',
-      share_ocean_profile: 'OCEAN Personality Profile',
-      share_progress: 'Progress Reports'
+      share_profile: 'Profile',
+      share_insights: 'Insights',
+      share_conversations: 'Conversations',
+      share_ocean_profile: 'OCEAN profile',
+      share_progress: 'Progress'
     };
     return labels[key];
   };
 
-  const getSharingIcon = (key: keyof SharingPreferences) => {
-    const icons = {
-      share_profile: User,
-      share_insights: Brain,
-      share_conversations: MessageCircle,
-      share_ocean_profile: BarChart3,
-      share_progress: BarChart3
-    };
-    const Icon = icons[key];
-    return <Icon className="h-4 w-4" />;
-  };
-
-  const getSharingDescription = (key: keyof SharingPreferences): string => {
-    const descriptions = {
-      share_profile: 'Your name, role, and basic profile information',
-      share_insights: 'Key insights and recommendations from your sessions',
-      share_conversations: 'Your therapeutic conversation history and summaries',
-      share_ocean_profile: 'Your OCEAN personality assessment results',
-      share_progress: 'Your progress reports and session statistics'
-    };
-    return descriptions[key];
-  };
-
   if (!hasManager) {
     return (
-      <Card className="shadow-soft">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            Data Sharing
-          </CardTitle>
+          <CardTitle>Your preferences</CardTitle>
           <CardDescription>
             Join a team to enable data sharing with your manager
           </CardDescription>
@@ -229,138 +200,56 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
 
   const sharingOptions: Array<keyof SharingPreferences> = [
     'share_profile',
-    'share_insights',
+    'share_insights', 
     'share_conversations',
     'share_progress'
   ];
 
-  // OCEAN profile is always shared for individual analysis
-  const alwaysSharedOptions: Array<keyof SharingPreferences> = [
-    'share_ocean_profile'
-  ];
-
-  const sharedCount = Object.values(preferences).filter(Boolean).length;
-
   return (
-    <Card className="shadow-soft">
+    <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5 text-primary" />
-              Data Sharing with {managerName}
-            </CardTitle>
-            <CardDescription>
-              Intelligent defaults are enabled for better collaboration. You can adjust these settings anytime.
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={sharedCount > 0 ? "default" : "secondary"}>
-              {sharedCount} of {sharingOptions.length} shared
-            </Badge>
-          </div>
-        </div>
+        <CardTitle>Your preferences</CardTitle>
+        <CardDescription>
+          Choose what you want to share with {managerName}
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Quick toggle all */}
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Shield className="h-5 w-5 text-primary" />
-            <div>
-              <Label className="font-medium">Share All Data (Recommended)</Label>
-              <p className="text-sm text-muted-foreground">
-                Smart defaults enable all sharing for comprehensive insights. Best for collaboration.
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={sharedCount === sharingOptions.length}
-            onCheckedChange={async (checked) => {
-              // Update all preferences
-              for (const option of sharingOptions) {
-                await updateSharingPreference(option, checked);
-              }
-            }}
-            disabled={saving}
-          />
-        </div>
-
-        {/* Individual sharing options */}
-        <div className="space-y-4">
+      <CardContent className="space-y-4">
+        {/* Checkbox list */}
+        <div className="space-y-3">
           {sharingOptions.map((option) => (
-            <div key={option} className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-3">
-                {getSharingIcon(option)}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Label className="font-medium">{getSharingLabel(option)}</Label>
-                    {preferences[option] ? (
-                      <Badge variant="default" className="text-xs">
-                        <Eye className="h-3 w-3 mr-1" />
-                        Shared
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">
-                        <EyeOff className="h-3 w-3 mr-1" />
-                        Private
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {getSharingDescription(option)}
-                  </p>
-                </div>
-              </div>
-              <Switch
+            <div key={option} className="flex items-center space-x-2">
+              <Checkbox
+                id={option}
                 checked={preferences[option]}
-                onCheckedChange={(checked) => updateSharingPreference(option, checked)}
-                disabled={saving}
+                onCheckedChange={(checked) => 
+                  setPreferences(prev => ({ ...prev, [option]: checked as boolean }))
+                }
               />
-            </div>
-          ))}
-          
-          {/* Always shared options (OCEAN profile) */}
-          {alwaysSharedOptions.map((option) => (
-            <div key={option} className="flex items-center justify-between p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
-              <div className="flex items-center gap-3">
-                {getSharingIcon(option)}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Label className="font-medium">{getSharingLabel(option)}</Label>
-                    <Badge variant="default" className="text-xs">
-                      <Eye className="h-3 w-3 mr-1" />
-                      Always Shared
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {getSharingDescription(option)} (Required for individual analysis)
-                  </p>
-                </div>
-              </div>
-              <Switch
-                checked={true}
-                disabled={true}
-                className="opacity-75"
-              />
+              <Label htmlFor={option} className="text-sm font-medium">
+                {getSharingLabel(option)}
+              </Label>
             </div>
           ))}
         </div>
 
-        {/* Privacy notice */}
-        <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-start gap-3">
-            <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Privacy & Security
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                You have full control over your data. You can modify these settings anytime, 
-                and your manager will only see information you explicitly choose to share.
-              </p>
-            </div>
+        {/* Always shared OCEAN profile */}
+        <div className="pt-2 border-t">
+          <div className="flex items-center space-x-2 opacity-75">
+            <Checkbox checked={true} disabled={true} />
+            <Label className="text-sm font-medium text-muted-foreground">
+              OCEAN profile (always shared)
+            </Label>
           </div>
         </div>
+
+        {/* Update button */}
+        <Button 
+          onClick={updateAllPreferences} 
+          disabled={saving}
+          className="w-full mt-4"
+        >
+          {saving ? 'Saving...' : 'Update preferences'}
+        </Button>
       </CardContent>
     </Card>
   );
