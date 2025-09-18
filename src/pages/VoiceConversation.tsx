@@ -180,6 +180,12 @@ const VoiceConversation: React.FC = () => {
       setIsInitializing(true);
       resetConversationState();
 
+      // Clear any existing paused conversation first (only one paused conversation allowed)
+      await supabase
+        .from('paused_conversations')
+        .delete()
+        .eq('user_id', user.id);
+
       // Create new conversation
       const { data: newConversation, error } = await supabase
         .from('conversations')

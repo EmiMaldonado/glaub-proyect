@@ -28,7 +28,34 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('🔍 Fetching conversation messages...');
+    console.log('🔍 Fetching conversation and validating status...');
+
+    // First, validate that the conversation is completed
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select('status, user_id')
+      .eq('id', conversationId)
+      .single();
+
+    if (conversationError) {
+      throw new Error(`Failed to fetch conversation: ${conversationError.message}`);
+    }
+
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+
+    // Only analyze completed sessions
+    if (conversation.status !== 'completed') {
+      throw new Error(`Cannot analyze session with status '${conversation.status}'. Only completed sessions can be analyzed.`);
+    }
+
+    // Verify user owns this conversation
+    if (conversation.user_id !== userId) {
+      throw new Error('User does not have permission to analyze this conversation');
+    }
+
+    console.log('✅ Conversation validated - status: completed');
 
     // Fetch all messages from the conversation
     const { data: messages, error: messagesError } = await supabase

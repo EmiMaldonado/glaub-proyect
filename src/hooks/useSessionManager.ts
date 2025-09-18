@@ -33,7 +33,7 @@ interface SessionState {
 
 const SESSION_STORAGE_KEY = 'chat_session_state';
 const AUTOSAVE_INTERVAL = 30000; // 30 seconds
-const SESSION_TIMEOUT = 900000; // 15 minutes
+const SESSION_TIMEOUT = 300000; // 5 minutes
 
 export const useSessionManager = () => {
   const { user } = useAuth();

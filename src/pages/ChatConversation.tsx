@@ -59,6 +59,12 @@ const ChatConversation: React.FC = () => {
     try {
       setIsLoading(true);
       
+      // Clear any existing paused conversation first (only one paused conversation allowed)
+      await supabase
+        .from('paused_conversations')
+        .delete()
+        .eq('user_id', user.id);
+      
       // Count existing conversations to get the next number
       const { count } = await supabase
         .from('conversations')

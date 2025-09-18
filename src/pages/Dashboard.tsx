@@ -64,6 +64,33 @@ const Dashboard = () => {
     }
   }, [user]);
 
+  // Add realtime listener for paused conversations to update button immediately
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('paused-conversations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'paused_conversations',
+          filter: `user_id=eq.${user.id}`
+        },
+        async () => {
+          // Check if user has paused conversation when table changes
+          const pausedConv = await getPausedConversation(user.id);
+          setHasPausedConversation(!!pausedConv);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, getPausedConversation]);
+
   // Load historical data when tab or period changes  
   useEffect(() => {
     if (user && activeTab === 'historical') {
@@ -535,7 +562,7 @@ const Dashboard = () => {
                   <Button variant="outline" size="lg" asChild>
                     <Link to="/conversation?continue=true">
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Continue Previous
+                      Resume previous conversation
                     </Link>
                   </Button>
                 )}
