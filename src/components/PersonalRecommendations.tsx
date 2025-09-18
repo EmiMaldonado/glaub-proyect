@@ -6,7 +6,6 @@ import { Switch } from '@/components/ui/switch';
 import { Lightbulb, Target, TrendingUp, Star, ArrowRight, CheckCircle2, RefreshCw, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
 interface PersonalRecommendationsProps {
   context?: 'last_session' | 'historical';
   period?: 'last_week' | 'last_month' | 'last_3_months';
@@ -27,7 +26,6 @@ interface PersonalRecommendationsProps {
   className?: string;
   onShareToggle?: (category: string, shared: boolean) => void;
 }
-
 const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
   context = 'last_session',
   period = 'last_week',
@@ -46,8 +44,9 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
     skills: false,
     goals: false
   });
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const generatePersonalizedRecommendations = async () => {
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) return;
@@ -55,23 +54,19 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
     // Check cache first - only regenerate if there's a new conversation
     const cacheKey = `personal_recommendations_${userId}_${context}_${period}`;
     const cachedData = localStorage.getItem(cacheKey);
-    
+
     // Get latest conversation ID to check if we need fresh data
     let latestConversationId;
     try {
-      const { data: conversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
+      const {
+        data: conversations
+      } = await supabase.from('conversations').select('id').eq('user_id', userId).eq('status', 'completed').order('created_at', {
+        ascending: false
+      }).limit(1);
       latestConversationId = conversations?.[0]?.id;
     } catch (error) {
       console.error('Error fetching conversations:', error);
     }
-    
     if (cachedData && latestConversationId) {
       try {
         const parsed = JSON.parse(cachedData);
@@ -85,36 +80,31 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
         console.log('Cache parse error, regenerating...');
       }
     }
-
     setIsLoading(true);
     try {
       let data, error;
-      
       if (context === 'historical') {
         // Call historical data function
-        ({ data, error } = await supabase.functions.invoke('generate-historical-data', {
-          body: { 
+        ({
+          data,
+          error
+        } = await supabase.functions.invoke('generate-historical-data', {
+          body: {
             userId,
             period: period || 'last_week'
           }
         }));
-        
         if (data?.aggregated_recommendations) {
           // Transform historical data format to match expected format
           const transformedRecs = {
-            development: data.aggregated_recommendations.personal_development?.map((item: any) => 
-              typeof item === 'string' ? item : item.description || item.title
-            ) || [],
-            wellness: [], // Historical data doesn't separate wellness, add to development
-            skills: data.aggregated_recommendations.skill_building?.map((item: any) => 
-              typeof item === 'string' ? item : item.description || item.title
-            ) || [],
-            goals: data.aggregated_recommendations.goal_achievement?.map((item: any) => 
-              typeof item === 'string' ? item : item.description || item.title
-            ) || []
+            development: data.aggregated_recommendations.personal_development?.map((item: any) => typeof item === 'string' ? item : item.description || item.title) || [],
+            wellness: [],
+            // Historical data doesn't separate wellness, add to development
+            skills: data.aggregated_recommendations.skill_building?.map((item: any) => typeof item === 'string' ? item : item.description || item.title) || [],
+            goals: data.aggregated_recommendations.goal_achievement?.map((item: any) => typeof item === 'string' ? item : item.description || item.title) || []
           };
           setRecommendations(transformedRecs);
-          
+
           // Cache the result with conversation ID
           const cacheData = {
             recommendations: transformedRecs,
@@ -125,13 +115,17 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
         }
       } else {
         // Call last session function
-        ({ data, error } = await supabase.functions.invoke('generate-personal-recommendations', {
-          body: { userId }
+        ({
+          data,
+          error
+        } = await supabase.functions.invoke('generate-personal-recommendations', {
+          body: {
+            userId
+          }
         }));
-        
         if (data?.recommendations) {
           setRecommendations(data.recommendations);
-          
+
           // Cache the result with conversation ID
           const cacheData = {
             recommendations: data.recommendations,
@@ -141,19 +135,15 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
           localStorage.setItem(cacheKey, JSON.stringify(cacheData));
         }
       }
-
       if (error) {
         console.error('Error generating recommendations:', error);
         throw error;
       }
-
       if (data && (data.recommendations || data.aggregated_recommendations)) {
         setHasConversations(true);
         toast({
           title: "Recommendations Updated",
-          description: context === 'historical' 
-            ? `Your recommendations have been generated based on ${period} data.`
-            : "Your personal recommendations have been generated based on your latest conversation.",
+          description: context === 'historical' ? `Your recommendations have been generated based on ${period} data.` : "Your personal recommendations have been generated based on your latest conversation."
         });
       } else {
         setRecommendations(null);
@@ -165,10 +155,8 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
       setHasConversations(false);
       toast({
         title: "No Conversation Data",
-        description: context === 'historical' 
-          ? `No conversation data available for ${period}.`
-          : "Complete a conversation session to get personalized recommendations.",
-        variant: "default",
+        description: context === 'historical' ? `No conversation data available for ${period}.` : "Complete a conversation session to get personalized recommendations.",
+        variant: "default"
       });
     } finally {
       setIsLoading(false);
@@ -181,9 +169,11 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
       generatePersonalizedRecommendations();
     }
   }, [propRecommendations]);
-
   const handleShareToggle = (category: string, shared: boolean) => {
-    setShareSettings(prev => ({ ...prev, [category]: shared }));
+    setShareSettings(prev => ({
+      ...prev,
+      [category]: shared
+    }));
     onShareToggle?.(category, shared);
   };
 
@@ -191,7 +181,6 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
   if (!recommendations && !isLoading && !hasConversations) {
     return null;
   }
-
   const personalRecs = recommendations;
   const categoryIcons = {
     development: TrendingUp,
@@ -199,23 +188,19 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
     skills: Target,
     goals: CheckCircle2
   };
-
   const categoryColors = {
     development: "bg-blue-50 border-blue-200 text-blue-700",
     wellness: "bg-green-50 border-green-200 text-green-700",
     skills: "bg-purple-50 border-purple-200 text-purple-700",
     goals: "bg-amber-50 border-amber-200 text-amber-700"
   };
-
   const categoryLabels = {
     development: "Personal Development",
     wellness: "Wellness & Balance",
     skills: "Skill Building",
     goals: "Goal Achievement"
   };
-
-  return (
-    <div className={className}>
+  return <div className={className}>
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
@@ -228,22 +213,9 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Share2 className="h-4 w-4" />
-              <span className="font-semibold">Share with manager</span>
-            </div>
-            <Switch 
-              checked={shareSettings.summary || false} 
-              onCheckedChange={(checked) => handleShareToggle('summary', checked)}
-              className="scale-75"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={generatePersonalizedRecommendations}
-              disabled={isLoading}
-              className="gap-2"
-            >
+            
+            
+            <Button variant="outline" size="sm" onClick={generatePersonalizedRecommendations} disabled={isLoading} className="gap-2">
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               {isLoading ? 'Generating...' : 'Refresh'}
             </Button>
@@ -252,20 +224,16 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
       </div>
       
       <div className="space-y-6">
-        {isLoading && (
-          <div className="flex items-center justify-center py-8">
+        {isLoading && <div className="flex items-center justify-center py-8">
             <RefreshCw className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2 text-muted-foreground">Generating AI-powered recommendations...</span>
-          </div>
-        )}
+          </div>}
         
         {!isLoading && personalRecs && Object.entries(personalRecs).map(([category, items]) => {
-          const Icon = categoryIcons[category as keyof typeof categoryIcons];
-          const colorClass = categoryColors[category as keyof typeof categoryColors];
-          const label = categoryLabels[category as keyof typeof categoryLabels];
-          
-          return (
-            <div key={category} className="space-y-3">
+        const Icon = categoryIcons[category as keyof typeof categoryIcons];
+        const colorClass = categoryColors[category as keyof typeof categoryColors];
+        const label = categoryLabels[category as keyof typeof categoryLabels];
+        return <div key={category} className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4 text-primary" />
@@ -274,27 +242,18 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
                     {items.length} items
                   </Badge>
                 </div>
-                <Switch 
-                  checked={shareSettings[category]} 
-                  onCheckedChange={(checked) => handleShareToggle(category, checked)}
-                  className="scale-75"
-                />
+                
               </div>
               
               <div className="space-y-2">
-                {items.slice(0, 3).map((item, index) => (
-                  <div key={index} className="p-3 rounded-lg border bg-gray-50 border-gray-200 text-gray-700 flex items-start gap-3">
+                {items.slice(0, 3).map((item, index) => <div key={index} className="p-3 rounded-lg border bg-gray-50 border-gray-200 text-gray-700 flex items-start gap-3">
                     <ArrowRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <p className="text-sm">{item}</p>
-                  </div>
-                ))}
+                  </div>)}
               </div>
-            </div>
-          );
-        })}
+            </div>;
+      })}
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default PersonalRecommendations;
