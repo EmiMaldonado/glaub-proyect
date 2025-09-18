@@ -357,8 +357,8 @@ const Dashboard = () => {
   };
   const handleAcceptInvitation = async (invitation: any) => {
     try {
-      if (!userProfile?.id) {
-        throw new Error('User profile not found');
+      if (!user?.id) {
+        throw new Error('User not authenticated');
       }
       const {
         data,
@@ -366,8 +366,8 @@ const Dashboard = () => {
       } = await supabase.functions.invoke('complete-invitation', {
         body: {
           token: invitation.token,
-          user_id: userProfile.id,
-          // Use profile ID instead of auth user ID
+          user_id: user.id,
+          // Use auth user ID for proper validation
           action: 'accept'
         }
       });
@@ -393,8 +393,8 @@ const Dashboard = () => {
   };
   const handleDeclineInvitation = async (invitation: any) => {
     try {
-      if (!userProfile?.id) {
-        throw new Error('User profile not found');
+      if (!user?.id) {
+        throw new Error('User not authenticated');
       }
       const {
         data,
@@ -402,8 +402,8 @@ const Dashboard = () => {
       } = await supabase.functions.invoke('complete-invitation', {
         body: {
           token: invitation.token,
-          user_id: userProfile.id,
-          // Use profile ID instead of auth user ID
+          user_id: user.id,
+          // Use auth user ID for proper validation
           action: 'decline'
         }
       });
