@@ -213,7 +213,7 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
           Your preferences
         </CardTitle>
         <CardDescription>
-          Choose what you want to share with {managerName}
+          Choose what you want to share with {managerName}. No personal details of conversations will be shared - this only helps create better communication strategies with management.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
