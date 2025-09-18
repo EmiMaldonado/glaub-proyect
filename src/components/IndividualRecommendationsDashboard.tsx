@@ -123,7 +123,7 @@ const IndividualRecommendationsDashboard: React.FC<IndividualRecommendationsDash
           <h2 className="text-2xl font-bold text-foreground">
             {member.display_name || member.full_name}
           </h2>
-          <p className="text-muted-foreground">Personalized management recommendations</p>
+          <p className="text-muted-foreground">Individual analysis based on shared data and OCEAN profile</p>
         </div>
         <div className="flex items-center gap-2">
           {data.cached && (
@@ -144,8 +144,11 @@ const IndividualRecommendationsDashboard: React.FC<IndividualRecommendationsDash
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
-            Personality Analysis
+            Analysis Based on Shared Data & OCEAN Profile
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            OCEAN personality profile is always available. Other insights are based on data the employee chose to share.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -197,8 +200,11 @@ const IndividualRecommendationsDashboard: React.FC<IndividualRecommendationsDash
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lightbulb className="h-5 w-5" />
-            Personalized Recommendations
+            Leadership Recommendations
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Based on OCEAN personality profile and shared behavioral data from the employee.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

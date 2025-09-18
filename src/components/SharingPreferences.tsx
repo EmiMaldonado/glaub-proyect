@@ -231,8 +231,12 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
     'share_profile',
     'share_insights',
     'share_conversations',
-    'share_ocean_profile',
     'share_progress'
+  ];
+
+  // OCEAN profile is always shared for individual analysis
+  const alwaysSharedOptions: Array<keyof SharingPreferences> = [
+    'share_ocean_profile'
   ];
 
   const sharedCount = Object.values(preferences).filter(Boolean).length;
@@ -311,6 +315,32 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
                 checked={preferences[option]}
                 onCheckedChange={(checked) => updateSharingPreference(option, checked)}
                 disabled={saving}
+              />
+            </div>
+          ))}
+          
+          {/* Always shared options (OCEAN profile) */}
+          {alwaysSharedOptions.map((option) => (
+            <div key={option} className="flex items-center justify-between p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
+              <div className="flex items-center gap-3">
+                {getSharingIcon(option)}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Label className="font-medium">{getSharingLabel(option)}</Label>
+                    <Badge variant="default" className="text-xs">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Always Shared
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {getSharingDescription(option)} (Required for individual analysis)
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={true}
+                disabled={true}
+                className="opacity-75"
               />
             </div>
           ))}
