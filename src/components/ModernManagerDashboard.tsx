@@ -19,6 +19,8 @@ import TeamManagementInterface from './TeamManagementInterface';
 import ManagerInsightsDashboard from './ManagerInsightsDashboard';
 import MeetingHistoryTabs from '@/components/MeetingHistoryTabs';
 import NotificationSystem from '@/components/NotificationSystem';
+import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
+import DashboardViewSwitch from "@/components/DashboardViewSwitch";
 
 interface TeamMember {
   id: string;
@@ -134,6 +136,12 @@ const ModernManagerDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <DashboardBreadcrumbs />
+        <DashboardViewSwitch />
+      </div>
+
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">

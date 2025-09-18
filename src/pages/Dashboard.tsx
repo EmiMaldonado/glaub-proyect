@@ -17,6 +17,8 @@ import SharingPreferences from "@/components/SharingPreferences";
 import SharedDataIndicator from "@/components/SharedDataIndicator";
 import PersonalRecommendations from "@/components/PersonalRecommendations";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
+import DashboardViewSwitch from "@/components/DashboardViewSwitch";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -451,6 +453,12 @@ const Dashboard = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <DashboardBreadcrumbs />
+        <DashboardViewSwitch />
+      </div>
+
       {/* Welcome Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -462,14 +470,6 @@ const Dashboard = () => {
               {personalizedSummary || `You've completed ${stats.completedConversations} sessions with ${allInsights.length} insights generated.`}
             </p>
           </div>
-          {userProfile?.role === 'manager' && (
-            <Button variant="default" asChild>
-              <Link to="/dashboard/manager">
-                <Users className="mr-2 h-4 w-4" />
-                Manager Dashboard
-              </Link>
-            </Button>
-          )}
         </div>
       </div>
 
