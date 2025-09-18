@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users } from 'lucide-react';
+import { Users, Settings } from 'lucide-react';
 
 interface SharingPreferencesProps {
   userProfile: any;
@@ -208,7 +208,10 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your preferences</CardTitle>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Settings className="h-4 w-4 text-primary" />
+          Your preferences
+        </CardTitle>
         <CardDescription>
           Choose what you want to share with {managerName}
         </CardDescription>
