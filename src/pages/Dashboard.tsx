@@ -19,11 +19,15 @@ import PersonalRecommendations from "@/components/PersonalRecommendations";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
-
 const Dashboard = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const navigate = useNavigate();
-  const { getPausedConversation, clearPausedConversation } = usePausedConversations();
+  const {
+    getPausedConversation,
+    clearPausedConversation
+  } = usePausedConversations();
   const [lastConversation, setLastConversation] = useState<any>(null);
   const [pausedConversations, setPausedConversations] = useState<any[]>([]);
   const [hasPausedConversation, setHasPausedConversation] = useState(false);
@@ -52,44 +56,16 @@ const Dashboard = () => {
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   const [userTeams, setUserTeams] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'last' | 'historical'>('last');
-  
+
   // Historical data state
   const [selectedPeriod, setSelectedPeriod] = useState<'last_week' | 'last_month' | 'last_3_months'>('last_week');
   const [historicalData, setHistoricalData] = useState<any>(null);
   const [loadingHistorical, setLoadingHistorical] = useState(false);
-  
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
   }, [user]);
-
-  // Add realtime listener for paused conversations to update button immediately
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('paused-conversations-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'paused_conversations',
-          filter: `user_id=eq.${user.id}`
-        },
-        async () => {
-          // Check if user has paused conversation when table changes
-          const pausedConv = await getPausedConversation(user.id);
-          setHasPausedConversation(!!pausedConv);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, getPausedConversation]);
 
   // Load historical data when tab or period changes  
   useEffect(() => {
@@ -97,19 +73,19 @@ const Dashboard = () => {
       loadHistoricalData();
     }
   }, [user, activeTab, selectedPeriod]);
-
   const loadHistoricalData = async () => {
     if (!user) return;
-    
     setLoadingHistorical(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-historical-data', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('generate-historical-data', {
         body: {
           period: selectedPeriod,
           userId: user.id
         }
       });
-
       if (error) {
         console.error('Error loading historical data:', error);
         toast({
@@ -119,12 +95,11 @@ const Dashboard = () => {
         });
         return;
       }
-
       setHistoricalData(data);
     } catch (error) {
       console.error('Unexpected error loading historical data:', error);
       toast({
-        title: "Error", 
+        title: "Error",
         description: "Failed to load historical data",
         variant: "destructive"
       });
@@ -132,17 +107,13 @@ const Dashboard = () => {
       setLoadingHistorical(false);
     }
   };
-
   const loadDashboardData = async () => {
     if (!user) return;
     try {
       // Load user profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
+      const {
+        data: profile
+      } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
       setUserProfile(profile);
 
       // Load all conversations for comprehensive analysis
@@ -212,7 +183,7 @@ const Dashboard = () => {
           ...lastConv,
           key_insights: lastConvInsights
         });
-        
+
         // Generate AI description for OCEAN profile after we have the latest conversation data
         if (oceanProfile) {
           generateOceanDescription(oceanProfile, profile, lastConv.id);
@@ -220,40 +191,31 @@ const Dashboard = () => {
       }
       // Load current manager if user has one
       if (profile?.manager_id) {
-        const { data: manager } = await supabase
-          .from('profiles')
-          .select('*, user_id')
-          .eq('id', profile.manager_id)
-          .single();
+        const {
+          data: manager
+        } = await supabase.from('profiles').select('*, user_id').eq('id', profile.manager_id).single();
         setCurrentManager(manager);
       }
 
       // Load user's team memberships
-      const { data: teamMemberships } = await supabase
-        .from('team_memberships')
-        .select(`
+      const {
+        data: teamMemberships
+      } = await supabase.from('team_memberships').select(`
           id,
           manager:profiles!manager_id(id, full_name, display_name, team_name)
-        `)
-        .or(`employee_1_id.eq.${profile?.id},employee_2_id.eq.${profile?.id},employee_3_id.eq.${profile?.id},employee_4_id.eq.${profile?.id},employee_5_id.eq.${profile?.id},employee_6_id.eq.${profile?.id},employee_7_id.eq.${profile?.id},employee_8_id.eq.${profile?.id},employee_9_id.eq.${profile?.id},employee_10_id.eq.${profile?.id}`);
-      
+        `).or(`employee_1_id.eq.${profile?.id},employee_2_id.eq.${profile?.id},employee_3_id.eq.${profile?.id},employee_4_id.eq.${profile?.id},employee_5_id.eq.${profile?.id},employee_6_id.eq.${profile?.id},employee_7_id.eq.${profile?.id},employee_8_id.eq.${profile?.id},employee_9_id.eq.${profile?.id},employee_10_id.eq.${profile?.id}`);
       if (teamMemberships && teamMemberships.length > 0) {
         setUserTeams(teamMemberships);
       }
 
       // Load pending invitations for this user's email
-      const { data: invitations } = await supabase
-        .from('invitations')
-        .select(`
+      const {
+        data: invitations
+      } = await supabase.from('invitations').select(`
           *,
           manager:profiles!invitations_manager_id_fkey(full_name, display_name)
-        `)
-        .eq('email', user.email)
-        .eq('status', 'pending')
-        .gt('expires_at', new Date().toISOString());
-      
+        `).eq('email', user.email).eq('status', 'pending').gt('expires_at', new Date().toISOString());
       setPendingInvitations(invitations || []);
-
       setStats({
         totalConversations: conversations?.length || 0,
         completedConversations: conversations?.filter(c => c.status === 'completed').length || 0,
@@ -273,14 +235,12 @@ const Dashboard = () => {
       }
     }
   };
-
   const generateOceanDescription = async (oceanProfile: any, userProfile: any, latestConversationId?: string) => {
     if (!oceanProfile) return;
-    
+
     // Check cache first - only regenerate if there's a new conversation
     const cacheKey = `ocean_description_${user?.id}`;
     const cachedData = localStorage.getItem(cacheKey);
-    
     if (cachedData) {
       try {
         const parsed = JSON.parse(cachedData);
@@ -293,21 +253,21 @@ const Dashboard = () => {
         console.log('Cache parse error, regenerating...');
       }
     }
-    
     setIsLoadingDescription(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-ocean-description', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('generate-ocean-description', {
         body: {
           oceanProfile,
           userProfile
         }
       });
-
       if (error) throw error;
-
       if (data?.success && data?.description) {
         setOceanDescription(data.description);
-        
+
         // Cache the result with conversation ID
         const cacheData = {
           description: data.description,
@@ -315,7 +275,6 @@ const Dashboard = () => {
           timestamp: Date.now()
         };
         localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-        
       } else {
         throw new Error(data?.error || 'Failed to generate description');
       }
@@ -324,7 +283,7 @@ const Dashboard = () => {
       // Keep fallback description if AI fails
       const fallbackDescription = "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities.";
       setOceanDescription(fallbackDescription);
-      
+
       // Cache fallback as well to avoid repeated failures
       const cacheData = {
         description: fallbackDescription,
@@ -344,16 +303,14 @@ const Dashboard = () => {
       await clearPausedConversation(user.id);
       setHasPausedConversation(false);
     }
-    
+
     // Clear OCEAN description cache when starting new conversation
     const cacheKey = `ocean_description_${user?.id}`;
     localStorage.removeItem(cacheKey);
   };
-  
   const handleSharingPreferencesChange = (preferences: any) => {
     setSharingPreferences(preferences);
   };
-  
   const handleInviteManager = async () => {
     if (!managerEmail.trim()) {
       toast({
@@ -374,33 +331,29 @@ const Dashboard = () => {
     setIsInvitingManager(true);
     try {
       // Create invitation directly in database
-      const { data: invitation, error } = await supabase
-        .from('invitations')
-        .insert({
-          email: managerEmail.trim(),
-          token: crypto.randomUUID(),
-          manager_id: userProfile?.id,
-          status: 'pending'
-        })
-        .select('token')
-        .single();
-
+      const {
+        data: invitation,
+        error
+      } = await supabase.from('invitations').insert({
+        email: managerEmail.trim(),
+        token: crypto.randomUUID(),
+        manager_id: userProfile?.id,
+        status: 'pending'
+      }).select('token').single();
       if (error) {
         throw error;
       }
 
       // Generate invitation URL
       const invitationUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/accept-invitation?token=${invitation.token}`;
-      
+
       // Copy to clipboard
-        await navigator.clipboard.writeText(invitationUrl);
-        
-        toast({
-          title: "Request Sent!",
-          description: `Your request to join the team has been sent to ${managerEmail}. They will see your request in their manager dashboard and can approve it.`,
-        });
+      await navigator.clipboard.writeText(invitationUrl);
+      toast({
+        title: "Request Sent!",
+        description: `Your request to join the team has been sent to ${managerEmail}. They will see your request in their manager dashboard and can approve it.`
+      });
       setManagerEmail(''); // Clear the input
-      
     } catch (error: any) {
       console.error('Error creating invitation:', error);
       toast({
@@ -412,27 +365,27 @@ const Dashboard = () => {
       setIsInvitingManager(false);
     }
   };
-
   const handleAcceptInvitation = async (invitation: any) => {
     try {
       if (!userProfile?.id) {
         throw new Error('User profile not found');
       }
-
-      const { data, error } = await supabase.functions.invoke('complete-invitation', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('complete-invitation', {
         body: {
           token: invitation.token,
-          user_id: userProfile.id, // Use profile ID instead of auth user ID
+          user_id: userProfile.id,
+          // Use profile ID instead of auth user ID
           action: 'accept'
         }
       });
-
       if (error) throw error;
-      
       if (data?.success) {
         toast({
           title: "Invitation Accepted!",
-          description: `You are now part of ${data.manager_name}'s team`,
+          description: `You are now part of ${data.manager_name}'s team`
         });
         // Reload dashboard data to reflect changes
         loadDashboardData();
@@ -448,29 +401,29 @@ const Dashboard = () => {
       });
     }
   };
-
   const handleDeclineInvitation = async (invitation: any) => {
     try {
       if (!userProfile?.id) {
         throw new Error('User profile not found');
       }
-
-      const { data, error } = await supabase.functions.invoke('complete-invitation', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('complete-invitation', {
         body: {
           token: invitation.token,
-          user_id: userProfile.id, // Use profile ID instead of auth user ID
+          user_id: userProfile.id,
+          // Use profile ID instead of auth user ID
           action: 'decline'
         }
       });
-
       if (error) throw error;
-      
       if (data?.success) {
         toast({
           title: "Invitation Declined",
-          description: "You have declined the team invitation",
+          description: "You have declined the team invitation"
         });
-        
+
         // Remove from pending invitations
         setPendingInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
       } else {
@@ -485,7 +438,6 @@ const Dashboard = () => {
       });
     }
   };
-
   const handleShareWithManager = async (type: 'strengths' | 'opportunities') => {
     try {
       if (!userProfile?.id || !currentManager) {
@@ -496,20 +448,16 @@ const Dashboard = () => {
         });
         return;
       }
-
-      const dataToShare = type === 'strengths' 
-        ? allInsights.flatMap(insight => insight.insights || []).slice(0, 5)
-        : allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5);
+      const dataToShare = type === 'strengths' ? allInsights.flatMap(insight => insight.insights || []).slice(0, 5) : allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5);
 
       // For now, just show a success message - in a real implementation, 
       // this would send data to the manager via email or notification
       toast({
         title: "Shared Successfully!",
-        description: `Your ${type} have been shared with your manager`,
+        description: `Your ${type} have been shared with your manager`
       });
 
       // Update sharing preferences would be handled by the SharingPreferences component
-      
     } catch (error: any) {
       console.error('Error sharing with manager:', error);
       toast({
@@ -519,14 +467,9 @@ const Dashboard = () => {
       });
     }
   };
-
-  return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+  return <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <DashboardBreadcrumbs />
-        <DashboardViewSwitch />
-      </div>
+      
 
       {/* Welcome Header */}
       <div className="space-y-2">
@@ -558,14 +501,12 @@ const Dashboard = () => {
                     Start new session
                   </Link>
                 </Button>
-                {hasPausedConversation && (
-                  <Button variant="outline" size="lg" asChild>
+                {hasPausedConversation && <Button variant="outline" size="lg" asChild>
                     <Link to="/conversation?continue=true">
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Resume previous conversation
+                      Continue Previous
                     </Link>
-                  </Button>
-                )}
+                  </Button>}
               </div>
             </div>
             <div className="hidden md:block">
@@ -597,17 +538,12 @@ const Dashboard = () => {
                   <Label htmlFor="share-profile" className="text-sm font-medium">
                     Share with manager
                   </Label>
-                  <Switch
-                    id="share-profile"
-                    checked={sharingPreferences.share_ocean_profile}
-                    disabled={!currentManager}
-                  />
+                  <Switch id="share-profile" checked={sharingPreferences.share_ocean_profile} disabled={!currentManager} />
                 </div>
               </div>
             </CardHeader>
             <CardContent className="h-full flex flex-col">
-              {oceanProfile ? (
-                <div className="space-y-8 flex-1">
+              {oceanProfile ? <div className="space-y-8 flex-1">
                   {/* Prominent percentage display */}
                   <div className="flex flex-wrap justify-center gap-6 text-center">
                     <div className="p-4 rounded-lg bg-muted/30">
@@ -634,27 +570,20 @@ const Dashboard = () => {
                   
                   {/* Detailed description */}
                   <div className="bg-muted/50 rounded-lg p-8 flex-1 min-h-[120px] flex items-center">
-                    {isLoadingDescription ? (
-                      <div className="flex items-center gap-2 w-full justify-center">
+                    {isLoadingDescription ? <div className="flex items-center gap-2 w-full justify-center">
                         <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full"></div>
                         <p className="text-sm text-muted-foreground">Generating personalized analysis...</p>
-                      </div>
-                    ) : (
-                      <p className="text-base text-foreground/90 leading-relaxed">
+                      </div> : <p className="text-base text-foreground/90 leading-relaxed">
                         {oceanDescription || oceanProfile.summary || "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities."}
-                      </p>
-                    )}
+                      </p>}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
+                </div> : <div className="text-center py-8">
                   <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-muted-foreground font-medium">No personality data available</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Complete a conversation to generate your personalized profile
                   </p>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
         </div>
@@ -673,37 +602,31 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Current Teams */}
-              {userTeams.length > 0 && (
-                <div className="space-y-3">
+              {userTeams.length > 0 && <div className="space-y-3">
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <Shield className="h-4 w-4" />
                     Active Memberships
                   </h4>
                   <div className="space-y-2">
-                    {userTeams.map((team) => (
-                      <div key={team.id} className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                    {userTeams.map(team => <div key={team.id} className="p-3 bg-primary/5 rounded-lg border border-primary/20">
                         <p className="font-medium text-sm">
                           {team.manager?.team_name || `${team.manager?.full_name || team.manager?.display_name}'s team`}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Manager: {team.manager?.full_name || team.manager?.display_name}
                         </p>
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
-                </div>
-              )}
+                </div>}
 
               {/* Pending Invitations */}
-              {pendingInvitations.length > 0 && (
-                <div className="space-y-3">
+              {pendingInvitations.length > 0 && <div className="space-y-3">
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <UserCheck className="h-4 w-4 text-primary" />
                     Pending Invitations
                   </h4>
                   <div className="space-y-3">
-                    {pendingInvitations.map((invitation) => (
-                      <div key={invitation.id} className="p-3 border rounded-lg bg-yellow-50 border-yellow-200 space-y-3">
+                    {pendingInvitations.map(invitation => <div key={invitation.id} className="p-3 border rounded-lg bg-yellow-50 border-yellow-200 space-y-3">
                         <div>
                           <p className="font-medium text-sm">
                             From {invitation.manager?.display_name || invitation.manager?.full_name}
@@ -713,27 +636,16 @@ const Dashboard = () => {
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleAcceptInvitation(invitation)}
-                            className="flex-1"
-                          >
+                          <Button size="sm" onClick={() => handleAcceptInvitation(invitation)} className="flex-1">
                             Accept
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleDeclineInvitation(invitation)}
-                            className="flex-1"
-                          >
+                          <Button size="sm" variant="outline" onClick={() => handleDeclineInvitation(invitation)} className="flex-1">
                             Decline
                           </Button>
                         </div>
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
-                </div>
-              )}
+                </div>}
 
               {/* Request to Join Team */}
               <div className="space-y-3">
@@ -746,13 +658,7 @@ const Dashboard = () => {
                     Send a join request to a manager
                   </p>
                   <div className="space-y-2">
-                    <Input
-                      type="email"
-                      placeholder="Manager's email"
-                      value={managerEmail}
-                      onChange={(e) => setManagerEmail(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleInviteManager()}
-                    />
+                    <Input type="email" placeholder="Manager's email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleInviteManager()} />
                   </div>
                   <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full" size="sm">
                     {isInvitingManager ? 'Sending...' : 'Send Team Request'}
@@ -761,8 +667,7 @@ const Dashboard = () => {
               </div>
 
               {/* Show example teams if no actual teams */}
-              {userTeams.length === 0 && pendingInvitations.length === 0 && (
-                <div className="space-y-3">
+              {userTeams.length === 0 && pendingInvitations.length === 0 && <div className="space-y-3">
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     Example Teams
@@ -779,8 +684,7 @@ const Dashboard = () => {
                     </div>
                     <p className="text-xs text-center pt-2">Example teams - request to join one above</p>
                   </div>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
         </div>
@@ -797,30 +701,15 @@ const Dashboard = () => {
             </CardTitle>
             {/* Tab Navigation - Separate Row */}
             <div className="flex gap-4 items-center border-b mt-4 pt-2">
-              <button 
-                className={`pb-2 px-1 border-b-2 transition-colors ${
-                  activeTab === 'last' 
-                    ? 'border-primary text-primary font-medium' 
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-                onClick={() => setActiveTab('last')}
-              >
+              <button className={`pb-2 px-1 border-b-2 transition-colors ${activeTab === 'last' ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'}`} onClick={() => setActiveTab('last')}>
                 Last session
               </button>
-              <button 
-                className={`pb-2 px-1 border-b-2 transition-colors ${
-                  activeTab === 'historical' 
-                    ? 'border-primary text-primary font-medium' 
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-                onClick={() => setActiveTab('historical')}
-              >
+              <button className={`pb-2 px-1 border-b-2 transition-colors ${activeTab === 'historical' ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'}`} onClick={() => setActiveTab('historical')}>
                 Historical
               </button>
             </div>
             {/* Dropdown on its own row */}
-            {activeTab === 'historical' && (
-              <div className="mt-2">
+            {activeTab === 'historical' && <div className="mt-2">
                 <Select value={selectedPeriod} onValueChange={(value: 'last_week' | 'last_month' | 'last_3_months') => setSelectedPeriod(value)}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Select period" />
@@ -831,12 +720,10 @@ const Dashboard = () => {
                     <SelectItem value="last_3_months">Last 3 months</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            )}
+              </div>}
           </CardHeader>
           <CardContent>
-            {activeTab === 'last' ? (
-              <div className="space-y-6">
+            {activeTab === 'last' ? <div className="space-y-6">
                 {/* Your Last Meeting Subsection */}
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -848,16 +735,11 @@ const Dashboard = () => {
                       <Label htmlFor="share-meeting" className="text-sm font-medium">
                         Share with manager
                       </Label>
-                      <Switch
-                        id="share-meeting"
-                        checked={sharingPreferences.share_conversations}
-                        disabled={!currentManager}
-                      />
+                      <Switch id="share-meeting" checked={sharingPreferences.share_conversations} disabled={!currentManager} />
                     </div>
                   </div>
                   
-                  {lastConversation ? (
-                    <div className="space-y-4">
+                  {lastConversation ? <div className="space-y-4">
                       <p className="text-sm text-muted-foreground">
                         Completed on {new Date(lastConversation.created_at).toLocaleDateString()}
                       </p>
@@ -875,13 +757,10 @@ const Dashboard = () => {
                           <p className="font-medium">{lastConversation.key_insights?.insights?.length || 0} generated</p>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 bg-muted/30 rounded-lg">
+                    </div> : <div className="text-center py-6 bg-muted/30 rounded-lg">
                       <History className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
                       <p className="text-muted-foreground text-sm">No meeting data available</p>
-                    </div>
-                  )}
+                    </div>}
                 </div>
                 
                 {/* Separator */}
@@ -889,44 +768,20 @@ const Dashboard = () => {
                 
                 {/* Personal Recommendations Subsection */}
                 <div>
-                  <PersonalRecommendations 
-                    context="last_session"
-                    sessionId={lastConversation?.id}
-                    recommendations={lastConversation?.key_insights ? {
-                      development: allInsights
-                        .filter(insight => insight.conversation_id === lastConversation.id)
-                        .flatMap(insight => insight.next_steps || [])
-                        .slice(0, 3),
-                      wellness: [
-                        "Take regular breaks during work to maintain mental clarity",
-                        "Practice mindfulness techniques when feeling overwhelmed", 
-                        "Establish boundaries to protect your energy"
-                      ],
-                      skills: [
-                        "Focus on active listening in your next conversations",
-                        "Practice emotional regulation during challenging situations",
-                        "Develop your communication skills with open-ended questions"
-                      ],
-                      goals: [
-                        "Set specific, measurable objectives for personal growth",
-                        "Create accountability systems for your development plan",
-                        "Track progress weekly to maintain momentum"
-                      ]
-                    } : undefined}
-                    className="border-0 shadow-none p-0" 
-                  />
+                  <PersonalRecommendations context="last_session" sessionId={lastConversation?.id} recommendations={lastConversation?.key_insights ? {
+                development: allInsights.filter(insight => insight.conversation_id === lastConversation.id).flatMap(insight => insight.next_steps || []).slice(0, 3),
+                wellness: ["Take regular breaks during work to maintain mental clarity", "Practice mindfulness techniques when feeling overwhelmed", "Establish boundaries to protect your energy"],
+                skills: ["Focus on active listening in your next conversations", "Practice emotional regulation during challenging situations", "Develop your communication skills with open-ended questions"],
+                goals: ["Set specific, measurable objectives for personal growth", "Create accountability systems for your development plan", "Track progress weekly to maintain momentum"]
+              } : undefined} className="border-0 shadow-none p-0" />
                 </div>
-              </div>
-            ) : (
-              // Historical Content
-              <div className="space-y-6">
-                {loadingHistorical ? (
-                  <div className="text-center py-8">
+              </div> :
+          // Historical Content
+          <div className="space-y-6">
+                {loadingHistorical ? <div className="text-center py-8">
                     <LoadingSpinner />
                     <p className="text-muted-foreground text-sm mt-2">Loading historical data...</p>
-                  </div>
-                ) : historicalData ? (
-                  <div className="space-y-6">
+                  </div> : historicalData ? <div className="space-y-6">
                     {/* Conversation Summary Card */}
                     <div>
                       <div className="flex items-center justify-between mb-4">
@@ -938,17 +793,12 @@ const Dashboard = () => {
                           <Label htmlFor="share-summary" className="text-sm font-medium">
                             Share with manager
                           </Label>
-                          <Switch
-                            id="share-summary"
-                            checked={sharingPreferences.share_conversations}
-                            disabled={!currentManager}
-                          />
+                          <Switch id="share-summary" checked={sharingPreferences.share_conversations} disabled={!currentManager} />
                         </div>
                       </div>
                       <div className="p-4 bg-muted/30 rounded-lg">
                         <p className="text-sm leading-relaxed">{historicalData.conversation_summary}</p>
-                        {historicalData.total_conversations > 0 && (
-                          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-muted">
+                        {historicalData.total_conversations > 0 && <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-muted">
                             <div>
                               <span className="text-sm text-muted-foreground">Total Conversations:</span>
                               <p className="font-medium">{historicalData.total_conversations}</p>
@@ -961,8 +811,7 @@ const Dashboard = () => {
                               <span className="text-sm text-muted-foreground">Avg Duration:</span>
                               <p className="font-medium">{historicalData.avg_duration} min</p>
                             </div>
-                          </div>
-                        )}
+                          </div>}
                       </div>
                     </div>
                     
@@ -971,24 +820,16 @@ const Dashboard = () => {
                     
                     {/* Personal Recommendations Subsection */}
                     <div>
-                      <PersonalRecommendations 
-                        context="historical"
-                        period={selectedPeriod}
-                        className="border-0 shadow-none p-0" 
-                      />
+                      <PersonalRecommendations context="historical" period={selectedPeriod} className="border-0 shadow-none p-0" />
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
+                  </div> : <div className="text-center py-8">
                     <Clock className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                     <p className="text-muted-foreground font-medium">No historical data available</p>
                     <p className="text-sm text-muted-foreground mt-1">
                       Complete more conversations to see historical insights
                     </p>
-                  </div>
-                )}
-              </div>
-            )}
+                  </div>}
+              </div>}
           </CardContent>
         </Card>
 
@@ -1016,47 +857,29 @@ const Dashboard = () => {
                 <Share2 className="h-4 w-4" />
                 <span>Share with manager</span>
               </div>
-              <Switch
-                checked={sharingPreferences.share_insights}
-                disabled={!currentManager}
-                className="scale-75"
-              />
+              <Switch checked={sharingPreferences.share_insights} disabled={!currentManager} className="scale-75" />
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {lastConversation?.key_insights ? (
-            allInsights.filter(insight => insight.conversation_id === lastConversation.id).length > 0 ? (
-              <ul className="space-y-3">
-                {allInsights
-                  .filter(insight => insight.conversation_id === lastConversation.id)
-                  .flatMap(insight => insight.insights || [])
-                  .slice(0, 5)
-                  .map((insight: string, index: number) => (
-                    <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
+          {lastConversation?.key_insights ? allInsights.filter(insight => insight.conversation_id === lastConversation.id).length > 0 ? <ul className="space-y-3">
+                {allInsights.filter(insight => insight.conversation_id === lastConversation.id).flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
                       <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
                       <span className="text-sm leading-relaxed">{insight}</span>
-                    </li>
-                  ))}
-              </ul>
-            ) : (
-              <div className="text-center py-8">
+                    </li>)}
+              </ul> : <div className="text-center py-8">
                 <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-muted-foreground font-medium">No strengths data from last session</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Your most recent session didn't generate strength insights
                 </p>
-              </div>
-            )
-          ) : (
-            <div className="text-center py-8">
+              </div> : <div className="text-center py-8">
               <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No strengths data available</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Complete a conversation to identify your strengths
               </p>
-            </div>
-          )}
+            </div>}
         </CardContent>
       </Card>
 
@@ -1064,14 +887,8 @@ const Dashboard = () => {
 
       {/* Data Sharing Preferences - Hidden section for backend functionality */}
       <div className="hidden">
-        <SharingPreferences
-          userProfile={userProfile}
-          managerId={currentManager?.id}
-          onPreferencesChange={handleSharingPreferencesChange}
-        />
+        <SharingPreferences userProfile={userProfile} managerId={currentManager?.id} onPreferencesChange={handleSharingPreferencesChange} />
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
