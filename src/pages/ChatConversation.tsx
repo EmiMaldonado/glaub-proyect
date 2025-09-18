@@ -248,7 +248,10 @@ const ChatConversation: React.FC = () => {
         },
         (payload) => {
           const newMessage = payload.new as Message;
-          addMessageToSession(newMessage);
+          // Only add AI messages via real-time, user messages are added immediately
+          if (newMessage.role === 'assistant') {
+            addMessageToSession(newMessage);
+          }
         }
       )
       .subscribe();
@@ -375,7 +378,7 @@ const ChatConversation: React.FC = () => {
     <div className="h-screen flex flex-col">
       {/* Header */}
       <header className="bg-background border-b px-4 py-3">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-3">
             <Button 
               variant="ghost" 
@@ -398,9 +401,9 @@ const ChatConversation: React.FC = () => {
       </header>
 
       {/* Chat Interface */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col w-full">
         <div className="flex-1 overflow-hidden p-4">
-          <div className="max-w-4xl mx-auto h-full flex flex-col">
+          <div className="w-full h-full flex flex-col">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-4">
               {/* Paused State Banner */}
@@ -467,23 +470,34 @@ const ChatConversation: React.FC = () => {
 
             {/* Input */}
             <div className="border-t bg-background p-4 space-y-4">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
+              <div className="flex space-x-2 items-end w-full">
+                <textarea
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !isLoading && !isPaused) {
+                    if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isPaused) {
+                      e.preventDefault();
                       handleSendMessage(textInput);
                     }
                   }}
                   placeholder={isPaused ? "Session is paused..." : "Write your message..."}
-                  className="flex-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex-1 resize-none px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring min-h-[40px] max-h-[150px] overflow-y-auto leading-5"
                   disabled={isLoading || isPaused}
+                  style={{
+                    height: 'auto',
+                    minHeight: '40px',
+                    maxHeight: '150px'
+                  }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = Math.min(target.scrollHeight, 150) + 'px';
+                  }}
                 />
                 <Button
                   onClick={() => handleSendMessage(textInput)}
                   disabled={!textInput.trim() || isLoading || isPaused}
+                  className="shrink-0"
                 >
                   Send
                 </Button>
