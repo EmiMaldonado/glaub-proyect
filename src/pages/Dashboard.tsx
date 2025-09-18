@@ -463,7 +463,7 @@ const Dashboard = () => {
       <div className="grid lg:grid-cols-10 gap-8">
         {/* Left Column - 70% - Variables Profile */}
         <div className="lg:col-span-7">
-          <Card className="shadow-soft">
+          <Card className="shadow-soft h-full">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -487,42 +487,42 @@ const Dashboard = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-full flex flex-col">
               {oceanProfile ? (
-                <div className="space-y-6">
+                <div className="space-y-8 flex-1">
                   {/* Prominent percentage display */}
-                  <div className="grid grid-cols-5 gap-4 text-center">
-                    <div>
-                      <div className="text-3xl font-bold text-primary mb-1">{oceanProfile.openness || 0}%</div>
+                  <div className="grid grid-cols-5 gap-6 text-center">
+                    <div className="p-4 rounded-lg bg-muted/30">
+                      <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.openness || 0}%</div>
                       <div className="text-sm text-muted-foreground font-medium">Openness</div>
                     </div>
-                    <div>
-                      <div className="text-3xl font-bold text-primary mb-1">{oceanProfile.conscientiousness || 0}%</div>
+                    <div className="p-4 rounded-lg bg-muted/30">
+                      <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.conscientiousness || 0}%</div>
                       <div className="text-sm text-muted-foreground font-medium">Conscientiousness</div>
                     </div>
-                    <div>
-                      <div className="text-3xl font-bold text-primary mb-1">{oceanProfile.extraversion || 0}%</div>
+                    <div className="p-4 rounded-lg bg-muted/30">
+                      <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.extraversion || 0}%</div>
                       <div className="text-sm text-muted-foreground font-medium">Extraversion</div>
                     </div>
-                    <div>
-                      <div className="text-3xl font-bold text-primary mb-1">{oceanProfile.agreeableness || 0}%</div>
+                    <div className="p-4 rounded-lg bg-muted/30">
+                      <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.agreeableness || 0}%</div>
                       <div className="text-sm text-muted-foreground font-medium">Agreeableness</div>
                     </div>
-                    <div>
-                      <div className="text-3xl font-bold text-primary mb-1">{100 - (oceanProfile.neuroticism || 0)}%</div>
+                    <div className="p-4 rounded-lg bg-muted/30">
+                      <div className="text-4xl font-bold text-primary mb-2">{100 - (oceanProfile.neuroticism || 0)}%</div>
                       <div className="text-sm text-muted-foreground font-medium">Stability</div>
                     </div>
                   </div>
                   
                   {/* Detailed description */}
-                  <div className="bg-muted/50 rounded-lg p-6 mt-6">
+                  <div className="bg-muted/50 rounded-lg p-8 flex-1 min-h-[120px] flex items-center">
                     {isLoadingDescription ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                      <div className="flex items-center gap-2 w-full justify-center">
+                        <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full"></div>
                         <p className="text-sm text-muted-foreground">Generating personalized analysis...</p>
                       </div>
                     ) : (
-                      <p className="text-sm text-foreground/80 leading-relaxed">
+                      <p className="text-base text-foreground/90 leading-relaxed">
                         {oceanDescription || oceanProfile.summary || "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities."}
                       </p>
                     )}
