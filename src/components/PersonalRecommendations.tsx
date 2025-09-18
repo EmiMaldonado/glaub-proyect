@@ -69,15 +69,7 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
     goals: "Goal Achievement"
   };
   return <Card className={`${className}`}>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-primary" />
-          <CardTitle>Your Personal Recommendations</CardTitle>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Tailored suggestions based on your conversation patterns and personal growth areas
-        </p>
-      </CardHeader>
+      
       <CardContent className="space-y-6">
         {Object.entries(personalRecs).map(([category, items]) => {
         const Icon = categoryIcons[category as keyof typeof categoryIcons];
