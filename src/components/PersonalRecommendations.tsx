@@ -238,9 +238,6 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4 text-primary" />
                   <h4 className="font-medium text-foreground">{label}</h4>
-                  <Badge variant="secondary" className="text-xs">
-                    {items.length} items
-                  </Badge>
                 </div>
                 
               </div>
