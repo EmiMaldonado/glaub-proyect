@@ -804,6 +804,27 @@ const Dashboard = () => {
                   <PersonalRecommendations 
                     context="last_session"
                     sessionId={lastConversation?.id}
+                    recommendations={lastConversation?.key_insights ? {
+                      development: allInsights
+                        .filter(insight => insight.conversation_id === lastConversation.id)
+                        .flatMap(insight => insight.next_steps || [])
+                        .slice(0, 3),
+                      wellness: [
+                        "Take regular breaks during work to maintain mental clarity",
+                        "Practice mindfulness techniques when feeling overwhelmed", 
+                        "Establish boundaries to protect your energy"
+                      ],
+                      skills: [
+                        "Focus on active listening in your next conversations",
+                        "Practice emotional regulation during challenging situations",
+                        "Develop your communication skills with open-ended questions"
+                      ],
+                      goals: [
+                        "Set specific, measurable objectives for personal growth",
+                        "Create accountability systems for your development plan",
+                        "Track progress weekly to maintain momentum"
+                      ]
+                    } : undefined}
                     className="border-0 shadow-none p-0" 
                   />
                 </div>
