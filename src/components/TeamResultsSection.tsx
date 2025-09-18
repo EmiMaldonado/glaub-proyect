@@ -90,10 +90,28 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 w-full max-w-md">
-            <TabsTrigger value="overview">Last session</TabsTrigger>
-            <TabsTrigger value="individual">Historical</TabsTrigger>
-          </TabsList>
+          <div className="flex gap-8 border-b border-border mb-6">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Team overview
+            </button>
+            <button
+              onClick={() => setActiveTab('individual')}
+              className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'individual'
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Individual member review
+            </button>
+          </div>
 
           <TabsContent value="overview" className="space-y-6 mt-6">
             {/* Team Strengths */}
