@@ -436,6 +436,44 @@ export type Database = {
           },
         ]
       }
+      team_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          joined_at: string | null
+          member_id: string
+          role: string
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          joined_at?: string | null
+          member_id: string
+          role?: string
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          joined_at?: string | null
+          member_id?: string
+          role?: string
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_memberships: {
         Row: {
           created_at: string
@@ -683,6 +721,10 @@ export type Database = {
       manager_has_team_members: {
         Args: { manager_profile_id: string }
         Returns: boolean
+      }
+      migrate_team_memberships: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       validate_reset_token: {
         Args: { token_input: string }

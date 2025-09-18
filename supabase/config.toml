@@ -1,7 +1,138 @@
 project_id = "bmrifufykczudfxomenr"
 
-[edge_functions.generate-historical-data]
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+port = 54324
+ip_version = "ipv4"
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1:54321"
+openai_api_key = "env(OPENAI_API_KEY)"
+
+[inbucket]
+enabled = true
+port = 54325
+smtp_port = 54326
+pop3_port = 54327
+
+[storage]
+enabled = true
+port = 54328
+file_size_limit = "50MiB"
+image_transformation = { enabled = true }
+
+[auth]
+enabled = true
+port = 54329
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://gläub-thesis.com"]
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+security_update_password_require_reauthentication = false
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+double_confirm_password_change = false
+enable_confirmations = false
+
+[functions.ai-chat]
 verify_jwt = true
+
+[functions.auth-emails]
+verify_jwt = false
+
+[functions.forgot-password]
+verify_jwt = false
+
+[functions.generate-historical-data]
+verify_jwt = true
+
+[functions.generate-ocean-description]
+verify_jwt = true
+
+[functions.generate-personal-recommendations]
+verify_jwt = true
+
+[functions.leave-team]
+verify_jwt = true
+
+[functions.realtime-chat]
+verify_jwt = true
+
+[functions.remove-team-member]
+verify_jwt = true
+
+[functions.reset-password]
+verify_jwt = false
+
+[functions.session-analysis]
+verify_jwt = true
+
+[functions.speech-to-text]
+verify_jwt = true
+
+[functions.test-chat]
+verify_jwt = true
+
+[functions.test-invitation-flow]
+verify_jwt = false
+
+[functions.text-to-speech]
+verify_jwt = true
+
+[functions.send-invitation]
+verify_jwt = true
+
+[functions.invite-manager]
+verify_jwt = true
+
+[functions.employee-invite-manager]
+verify_jwt = true
+
+[functions.accept-invitation]
+verify_jwt = false
+
+[functions.accept-manager-invitation]
+verify_jwt = false
+
+[functions.complete-invitation]
+verify_jwt = false
+
+[functions.unified-invitation]
+verify_jwt = true
+
+[functions.unified-accept-invitation]
+verify_jwt = false
+
+[functions.test-unified-invitation]
+verify_jwt = false
+
+[edge-runtime]
+policy = "per_worker"
+inspector_port = 8083
 
 [edge_functions.ai-chat]
 verify_jwt = true
