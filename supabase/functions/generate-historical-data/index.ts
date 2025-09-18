@@ -100,6 +100,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     const response = {
       period,
+      conversation_summary: conversationSummary,
+      total_conversations: totalConversations,
+      total_duration: totalDuration,
+      avg_duration: avgDuration,
       aggregated_recommendations: {
         skill_building: [
           {
