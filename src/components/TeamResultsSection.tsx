@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   CheckCircle2, 
   Lightbulb, 
@@ -10,7 +11,8 @@ import {
   User,
   RefreshCw,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  ChevronDown
 } from 'lucide-react';
 
 interface TeamMember {
@@ -55,6 +57,13 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
   onRefresh
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Auto-select first member if none is selected and members exist
+  useEffect(() => {
+    if (!selectedMember && teamMembers.length > 0) {
+      onMemberSelect(teamMembers[0]);
+    }
+  }, [teamMembers, selectedMember, onMemberSelect]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -147,36 +156,59 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
           </TabsContent>
 
           <TabsContent value="individual" className="space-y-6 mt-6">
-            {/* Member Selection */}
+            {/* Member Selection Dropdown */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Select Team Member</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {teamMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      selectedMember?.id === member.id
-                        ? 'bg-primary/5 border-primary/20'
-                        : 'hover:bg-muted/50'
-                    }`}
-                    onClick={() => onMemberSelect(member)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary" />
+              <Select
+                value={selectedMember?.id || ''}
+                onValueChange={(value) => {
+                  const member = teamMembers.find(m => m.id === value);
+                  if (member) onMemberSelect(member);
+                }}
+              >
+                <SelectTrigger className="w-full bg-background border border-input z-50">
+                  <SelectValue placeholder="Choose a team member">
+                    {selectedMember && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
+                          <User className="h-3 w-3 text-primary" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">
+                            {selectedMember.display_name || selectedMember.full_name}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {selectedMember.role}
+                          </Badge>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {member.display_name || member.full_name}
-                        </p>
-                        <Badge variant="outline" className="text-xs">
-                          {member.role}
-                        </Badge>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="bg-background border border-input shadow-lg z-50">
+                  {teamMembers.map((member) => (
+                    <SelectItem 
+                      key={member.id} 
+                      value={member.id}
+                      className="cursor-pointer hover:bg-muted focus:bg-muted"
+                    >
+                      <div className="flex items-center gap-3 py-1">
+                        <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
+                          <User className="h-3 w-3 text-primary" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">
+                            {member.display_name || member.full_name}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {member.role}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Selected Member Details */}
