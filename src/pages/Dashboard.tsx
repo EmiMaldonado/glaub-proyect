@@ -697,30 +697,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Tab Navigation - affects Your results, Strengths, and Personal Recommendations */}
-      <div className="flex gap-4 border-b mb-8">
-        <button 
-          className={`pb-2 px-1 border-b-2 transition-colors ${
-            activeTab === 'last' 
-              ? 'border-primary text-primary font-medium' 
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('last')}
-        >
-          Last session
-        </button>
-        <button 
-          className={`pb-2 px-1 border-b-2 transition-colors ${
-            activeTab === 'historical' 
-              ? 'border-primary text-primary font-medium' 
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('historical')}
-        >
-          Historical
-        </button>
-      </div>
-
       {/* Results, Strengths, and Personal Recommendations Container */}
       <div className="space-y-8">
         {/* Your Results Section */}
@@ -731,17 +707,42 @@ const Dashboard = () => {
                 <BarChart3 className="h-5 w-5 text-primary" />
                 Your results
               </CardTitle>
+            </div>
+            {/* Tab Navigation - Only for Your Results section */}
+            <div className="flex gap-4 border-b mt-4">
+              <button 
+                className={`pb-2 px-1 border-b-2 transition-colors ${
+                  activeTab === 'last' 
+                    ? 'border-primary text-primary font-medium' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setActiveTab('last')}
+              >
+                Last session
+              </button>
+              <button 
+                className={`pb-2 px-1 border-b-2 transition-colors ${
+                  activeTab === 'historical' 
+                    ? 'border-primary text-primary font-medium' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setActiveTab('historical')}
+              >
+                Historical
+              </button>
               {activeTab === 'historical' && (
-                <Select value={selectedPeriod} onValueChange={(value: 'last_week' | 'last_month' | 'last_3_months') => setSelectedPeriod(value)}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Select period" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="last_week">Last week</SelectItem>
-                    <SelectItem value="last_month">Last month</SelectItem>
-                    <SelectItem value="last_3_months">Last 3 months</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="ml-auto">
+                  <Select value={selectedPeriod} onValueChange={(value: 'last_week' | 'last_month' | 'last_3_months') => setSelectedPeriod(value)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="last_week">Last week</SelectItem>
+                      <SelectItem value="last_month">Last month</SelectItem>
+                      <SelectItem value="last_3_months">Last 3 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
             </div>
           </CardHeader>
@@ -890,7 +891,7 @@ const Dashboard = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {activeTab === 'last' && lastConversation?.key_insights ? (
+          {lastConversation?.key_insights ? (
             allInsights.filter(insight => insight.conversation_id === lastConversation.id).length > 0 ? (
               <ul className="space-y-3">
                 {allInsights
@@ -913,31 +914,12 @@ const Dashboard = () => {
                 </p>
               </div>
             )
-          ) : activeTab === 'historical' && historicalData?.strengths?.length > 0 ? (
-            <ul className="space-y-3">
-              {historicalData.strengths.map((strength: string, index: number) => (
-                <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
-                  <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
-                  <span className="text-sm leading-relaxed">{strength}</span>
-                </li>
-              ))}
-            </ul>
-          ) : activeTab === 'historical' && loadingHistorical ? (
-            <div className="text-center py-8">
-              <LoadingSpinner />
-              <p className="text-muted-foreground text-sm mt-2">Loading historical strengths...</p>
-            </div>
           ) : (
             <div className="text-center py-8">
               <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">
-                {activeTab === 'historical' ? 'No historical strengths data available' : 'No strengths data available'}
-              </p>
+              <p className="text-muted-foreground font-medium">No strengths data available</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {activeTab === 'historical' 
-                  ? 'Complete more conversations in this period to identify strengths'
-                  : 'Complete a conversation to identify your strengths'
-                }
+                Complete a conversation to identify your strengths
               </p>
             </div>
           )}
@@ -974,14 +956,12 @@ const Dashboard = () => {
         <CardContent>
           <PersonalRecommendations 
             recommendations={{
-              development: activeTab === 'last' && lastConversation?.key_insights
+              development: lastConversation?.key_insights
                 ? allInsights
                     .filter(insight => insight.conversation_id === lastConversation.id)
                     .flatMap(insight => insight.next_steps || [])
                     .slice(0, 3)
-                : activeTab === 'historical' 
-                  ? allInsights.flatMap(insight => insight.next_steps || []).slice(0, 3)
-                  : [],
+                : [],
               wellness: [
                 "Take regular breaks during work to maintain mental clarity",
                 "Practice mindfulness techniques when feeling overwhelmed", 
