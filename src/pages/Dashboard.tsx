@@ -862,8 +862,13 @@ const Dashboard = () => {
 
         {/* Strengths Section */}
         <Card className="shadow-soft">
-        
-        <CardContent>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-primary" />
+              Strengths
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
           {lastConversation?.key_insights ? allInsights.filter(insight => insight.conversation_id === lastConversation.id).length > 0 ? <ul className="space-y-3">
                 {allInsights.filter(insight => insight.conversation_id === lastConversation.id).flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
                       <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
