@@ -728,21 +728,22 @@ const Dashboard = () => {
               >
                 Historical
               </button>
-              {activeTab === 'historical' && (
-                <div className="ml-auto">
-                  <Select value={selectedPeriod} onValueChange={(value: 'last_week' | 'last_month' | 'last_3_months') => setSelectedPeriod(value)}>
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue placeholder="Select period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="last_week">Last week</SelectItem>
-                      <SelectItem value="last_month">Last month</SelectItem>
-                      <SelectItem value="last_3_months">Last 3 months</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
+            {/* Dropdown on its own row */}
+            {activeTab === 'historical' && (
+              <div className="mt-2">
+                <Select value={selectedPeriod} onValueChange={(value: 'last_week' | 'last_month' | 'last_3_months') => setSelectedPeriod(value)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="last_week">Last week</SelectItem>
+                    <SelectItem value="last_month">Last month</SelectItem>
+                    <SelectItem value="last_3_months">Last 3 months</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {activeTab === 'last' ? (
