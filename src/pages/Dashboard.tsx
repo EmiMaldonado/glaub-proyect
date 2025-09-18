@@ -331,14 +331,17 @@ const Dashboard = () => {
     setIsInvitingManager(true);
     try {
       // Use the employee-invite-manager edge function to send email
-      const { data, error } = await supabase.functions.invoke('employee-invite-manager', {
-        body: { managerEmail: managerEmail.trim() }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('employee-invite-manager', {
+        body: {
+          managerEmail: managerEmail.trim()
+        }
       });
-
       if (error) {
         throw error;
       }
-
       toast({
         title: "Request Sent!",
         description: `Your request to join the team has been sent to ${managerEmail}. They will receive an email with your invitation.`
@@ -486,21 +489,17 @@ const Dashboard = () => {
                 Start a new conversation
               </p>
               <div className="flex gap-3 mt-4">
-                {hasPausedConversation ? (
-                  <Button variant="secondary" size="lg" asChild>
+                {hasPausedConversation ? <Button variant="secondary" size="lg" asChild>
                     <Link to="/conversation?continue=true">
                       <MessageCircle className="mr-2 h-5 w-5" />
                       Resume previous conversation
                     </Link>
-                  </Button>
-                ) : (
-                  <Button variant="secondary" size="lg" asChild>
+                  </Button> : <Button variant="secondary" size="lg" asChild>
                     <Link to="/conversation" onClick={handleStartNewConversation}>
                       <Plus className="mr-2 h-5 w-5" />
                       Start new session
                     </Link>
-                  </Button>
-                )}
+                  </Button>}
               </div>
             </div>
             <div className="hidden md:block">
@@ -665,9 +664,7 @@ const Dashboard = () => {
                         </div>
                         <div className="flex gap-2">
                           <Button size="sm" onClick={() => handleAcceptInvitation(invitation)} className="flex-1">
-                            {invitation.invitation_type === 'manager_request' 
-                              ? 'Become Their Manager' 
-                              : 'Accept'}
+                            {invitation.invitation_type === 'manager_request' ? 'Become Their Manager' : 'Accept'}
                           </Button>
                           <Button size="sm" variant="outline" onClick={() => handleDeclineInvitation(invitation)} className="flex-1">
                             Decline
@@ -872,12 +869,7 @@ const Dashboard = () => {
                 <Target className="h-5 w-5 text-success" />
                 Strengths
               </CardTitle>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="text-xs">
-                  <Shield className="mr-1 h-3 w-3" />
-                  Private
-                </Badge>
-              </div>
+              
               <CardDescription className="mt-2">
                 Your main identified strengths
               </CardDescription>
