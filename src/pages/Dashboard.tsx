@@ -46,6 +46,7 @@ const Dashboard = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [currentManager, setCurrentManager] = useState<any>(null);
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  const [userTeams, setUserTeams] = useState<any[]>([]);
   
   useEffect(() => {
     if (user) {
@@ -144,6 +145,19 @@ const Dashboard = () => {
           .eq('id', profile.manager_id)
           .single();
         setCurrentManager(manager);
+      }
+
+      // Load user's team memberships
+      const { data: teamMemberships } = await supabase
+        .from('team_memberships')
+        .select(`
+          id,
+          manager:profiles!manager_id(id, full_name, display_name, team_name)
+        `)
+        .or(`employee_1_id.eq.${profile?.id},employee_2_id.eq.${profile?.id},employee_3_id.eq.${profile?.id},employee_4_id.eq.${profile?.id},employee_5_id.eq.${profile?.id},employee_6_id.eq.${profile?.id},employee_7_id.eq.${profile?.id},employee_8_id.eq.${profile?.id},employee_9_id.eq.${profile?.id},employee_10_id.eq.${profile?.id}`);
+      
+      if (teamMemberships && teamMemberships.length > 0) {
+        setUserTeams(teamMemberships);
       }
 
       // Load pending invitations for this user's email
@@ -629,16 +643,18 @@ const Dashboard = () => {
               <CardTitle className="text-lg">Your teams</CardTitle>
             </CardHeader>
             <CardContent>
-              {currentManager ? (
+              {userTeams.length > 0 ? (
                 <div className="space-y-2">
-                  <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                    <p className="font-medium text-sm">
-                      {`${currentManager.full_name || currentManager.display_name}'s team`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {currentManager.full_name || currentManager.display_name}
-                    </p>
-                  </div>
+                  {userTeams.map((team) => (
+                    <div key={team.id} className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <p className="font-medium text-sm">
+                        {team.manager?.team_name || `${team.manager?.full_name || team.manager?.display_name}'s team`} - {team.manager?.full_name || team.manager?.display_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Manager: {team.manager?.full_name || team.manager?.display_name}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="space-y-2 text-sm text-muted-foreground">
