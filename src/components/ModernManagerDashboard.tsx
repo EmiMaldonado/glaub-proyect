@@ -188,10 +188,6 @@ const ModernManagerDashboard: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <DashboardViewSwitch />
-            <Badge variant="secondary" className="text-sm">
-              <Users className="mr-1 h-3 w-3" />
-              Manager
-            </Badge>
           </div>
         </div>
       </div>
