@@ -15,6 +15,8 @@ import {
   BarChart3,
   User
 } from 'lucide-react';
+import WelcomeMessages from './WelcomeMessages';
+import AutoConfigSummary from './AutoConfigSummary';
 import TeamManagementInterface from './TeamManagementInterface';
 import ManagerInsightsDashboard from './ManagerInsightsDashboard';
 import MeetingHistoryTabs from '@/components/MeetingHistoryTabs';
@@ -151,6 +153,16 @@ const ModernManagerDashboard: React.FC = () => {
         <DashboardBreadcrumbs />
         <DashboardViewSwitch />
       </div>
+
+      {/* Welcome Messages */}
+      <WelcomeMessages
+        userRole="manager"
+        teamName={managerProfile.team_name}
+        isNewManager={teamMembers.length === 0}
+        hasTeamMembers={teamMembers.length > 0}
+        onStartInviting={() => setActiveTab('management')}
+        onConfigureSettings={() => setActiveTab('management')}
+      />
 
       {/* Header */}
       <div className="space-y-2">
@@ -344,6 +356,12 @@ const ModernManagerDashboard: React.FC = () => {
         {/* Team Management Tab */}
         <TabsContent value="management" className="space-y-6">
           <div className="space-y-6">
+            {/* Auto-Configuration Summary */}
+            <AutoConfigSummary
+              userRole="manager"
+              onConfigureManually={() => setActiveTab('management')}
+            />
+            
             {/* Notifications for Manager */}
             <NotificationSystem maxDisplayed={3} />
             

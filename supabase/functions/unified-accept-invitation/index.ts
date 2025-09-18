@@ -306,23 +306,24 @@ serve(async (req: Request) => {
           }
         }
 
-        // Create default sharing preferences (share everything by default)
-        const { error: sharingError } = await supabase
-          .from("sharing_preferences")
-          .insert({
-            user_id: userProfile.user_id,
-            manager_id: invitation.manager_id,
-            share_profile: true,
-            share_insights: true,
-            share_conversations: true,
-            share_ocean_profile: true,
-            share_progress: true,
-            share_strengths: true,
-            share_manager_recommendations: true
+        // Auto-setup sharing preferences with intelligent defaults
+        try {
+          await supabase.rpc('setup_default_sharing_preferences', {
+            target_user_id: userProfile.user_id,
+            target_manager_id: invitation.manager_id,
           });
-
-        if (sharingError && sharingError.code !== '23505') { // Ignore duplicate key errors
-          console.error("Error creating sharing preferences:", sharingError);
+          
+          // Send welcome notification
+          await supabase.rpc('send_welcome_notification', {
+            target_user_id: userProfile.user_id,
+            notification_type: 'joined_team',
+            team_name: managerProfile?.team_name,
+          });
+          
+          console.log('Auto-configuration completed for new team member');
+        } catch (configError) {
+          console.error('Auto-configuration failed (non-critical):', configError);
+          // Don't fail the invitation acceptance for configuration errors
         }
 
       } else if (invitation.invitation_type === 'manager_request') {
@@ -417,23 +418,24 @@ serve(async (req: Request) => {
             })
         ]);
 
-        // Create default sharing preferences
-        const { error: sharingError } = await supabase
-          .from("sharing_preferences")
-          .insert({
-            user_id: userProfile.user_id,
-            manager_id: invitation.manager_id,
-            share_profile: true,
-            share_insights: true,
-            share_conversations: true,
-            share_ocean_profile: true,
-            share_progress: true,
-            share_strengths: true,
-            share_manager_recommendations: true
+        // Auto-setup sharing preferences with intelligent defaults
+        try {
+          await supabase.rpc('setup_default_sharing_preferences', {
+            target_user_id: userProfile.user_id,
+            target_manager_id: invitation.manager_id,
           });
-
-        if (sharingError && sharingError.code !== '23505') { // Ignore duplicate key errors
-          console.error("Error creating sharing preferences:", sharingError);
+          
+          // Send welcome notification
+          await supabase.rpc('send_welcome_notification', {
+            target_user_id: userProfile.user_id,
+            notification_type: 'joined_team',
+            team_name: managerProfile?.team_name,
+          });
+          
+          console.log('Auto-configuration completed for manager request');
+        } catch (configError) {
+          console.error('Auto-configuration failed (non-critical):', configError);
+          // Don't fail the invitation acceptance for configuration errors
         }
       }
 

@@ -804,6 +804,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      send_welcome_notification: {
+        Args: {
+          notification_type: string
+          target_user_id: string
+          team_name?: string
+        }
+        Returns: undefined
+      }
+      setup_default_sharing_preferences: {
+        Args: { target_manager_id: string; target_user_id: string }
+        Returns: undefined
+      }
       validate_reset_token: {
         Args: { token_input: string }
         Returns: string

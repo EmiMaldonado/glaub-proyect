@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { Users, Mail, Clock, CheckCircle, XCircle, Plus, UserMinus, Shield } from 'lucide-react';
+import { useAutoConfig } from '@/hooks/useAutoConfig';
+import TeamLimitsIndicator from './TeamLimitsIndicator';
 
 interface Invitation {
   id: string;
@@ -38,6 +40,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [fetchingData, setFetchingData] = useState(true);
+  const { teamLimits, validateTeamLimits, loadTeamLimits } = useAutoConfig(userProfile?.id);
 
   const isManager = userProfile?.role === 'manager';
 
@@ -91,6 +94,11 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
       return;
     }
 
+    // Validate team limits before sending invitation
+    if (!validateTeamLimits('invite')) {
+      return;
+    }
+
     setLoading(true);
     try {
       console.log('Sending invitation for:', email);
@@ -119,6 +127,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
 
       setEmail('');
       fetchInvitations(); // Refresh invitations list
+      await loadTeamLimits();
     } catch (error: any) {
       console.error('Error in sendInvitation:', error);
       toast({
@@ -148,6 +157,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
       });
 
       fetchTeamMembers(); // Refresh team members list
+      await loadTeamLimits();
     } catch (error: any) {
       console.error('Error removing team member:', error);
       toast({
@@ -213,6 +223,15 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
   // Unified team management view
   return (
     <div className="space-y-6">
+      {/* Team Limits Indicator */}
+      <TeamLimitsIndicator
+        currentMembers={teamLimits.currentMembers}
+        maxMembers={teamLimits.maxMembers}
+        currentTeams={teamLimits.currentTeams}
+        maxTeams={teamLimits.maxTeams}
+        userRole={userProfile?.role}
+      />
+      
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -314,9 +333,12 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendInvitation()}
                 />
-                <Button onClick={sendInvitation} disabled={loading}>
+                <Button 
+                  onClick={sendInvitation} 
+                  disabled={loading || !teamLimits.canInviteMore}
+                >
                   <Plus className="h-4 w-4 mr-2" />
-                  {loading ? 'Sending...' : 'Send Invitation'}
+                  {loading ? 'Sending...' : !teamLimits.canInviteMore ? 'Team Full' : 'Send Invitation'}
                 </Button>
               </div>
             </div>

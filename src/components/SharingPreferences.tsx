@@ -30,11 +30,11 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
 }) => {
   const { user } = useAuth();
   const [preferences, setPreferences] = useState<SharingPreferences>({
-    share_profile: false,
-    share_insights: false,
-    share_conversations: false,
-    share_ocean_profile: false,
-    share_progress: false
+    share_profile: true,
+    share_insights: true,
+    share_conversations: true,
+    share_ocean_profile: true,
+    share_progress: true
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -247,7 +247,7 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
               Data Sharing with {managerName}
             </CardTitle>
             <CardDescription>
-              Control what information you share with your manager
+              Intelligent defaults are enabled for better collaboration. You can adjust these settings anytime.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -263,9 +263,9 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
           <div className="flex items-center gap-3">
             <Shield className="h-5 w-5 text-primary" />
             <div>
-              <Label className="font-medium">Share All Data</Label>
+              <Label className="font-medium">Share All Data (Recommended)</Label>
               <p className="text-sm text-muted-foreground">
-                Enable all sharing options at once
+                Smart defaults enable all sharing for comprehensive insights. Best for collaboration.
               </p>
             </div>
           </div>
