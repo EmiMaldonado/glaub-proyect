@@ -206,8 +206,14 @@ const ChatConversation: React.FC = () => {
           if (existingSession && existingSession.conversation) {
             console.log('📂 Restored existing session');
             updateActivity();
+            
+            // If restored session has no messages, AI should start the conversation
+            if (!existingSession.messages || existingSession.messages.length === 0) {
+              console.log('🤖 Starting AI conversation for restored session with no messages');
+              await sendAIFirstMessage(existingSession.conversation.id);
+            }
           } else {
-            // Just create conversation, don't send AI message
+            // Create new conversation - AI will start automatically
             await createNewConversation();
           }
         }
