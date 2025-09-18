@@ -402,10 +402,10 @@ const ChatConversation: React.FC = () => {
 
       {/* Chat Interface */}
       <div className="flex-1 flex flex-col w-full">
-        <div className="flex-1 overflow-hidden p-4">
+        <div className="flex-1 overflow-hidden">
           <div className="w-full h-full flex flex-col">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4">
               {/* Paused State Banner */}
               {isPaused && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
