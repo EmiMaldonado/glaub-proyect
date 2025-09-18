@@ -459,6 +459,30 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Tab Navigation - affects Your results, Strengths, and Personal Recommendations */}
+      <div className="flex gap-4 border-b mb-8">
+        <button 
+          className={`pb-2 px-1 border-b-2 transition-colors ${
+            activeTab === 'last' 
+              ? 'border-primary text-primary font-medium' 
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+          onClick={() => setActiveTab('last')}
+        >
+          Last session
+        </button>
+        <button 
+          className={`pb-2 px-1 border-b-2 transition-colors ${
+            activeTab === 'historical' 
+              ? 'border-primary text-primary font-medium' 
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+          onClick={() => setActiveTab('historical')}
+        >
+          Historical
+        </button>
+      </div>
+
       {/* Two Column Layout */}
       <div className="grid lg:grid-cols-10 gap-8">
         {/* Left Column - 70% */}
@@ -538,90 +562,6 @@ const Dashboard = () => {
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Your Results Section */}
-          <Card className="shadow-soft">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                Your results
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Tab Navigation */}
-                <div className="flex gap-4 border-b">
-                  <button 
-                    className={`pb-2 px-1 border-b-2 transition-colors ${
-                      activeTab === 'last' 
-                        ? 'border-primary text-primary font-medium' 
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                    }`}
-                    onClick={() => setActiveTab('last')}
-                  >
-                    Last session
-                  </button>
-                  <button 
-                    className={`pb-2 px-1 border-b-2 transition-colors ${
-                      activeTab === 'historical' 
-                        ? 'border-primary text-primary font-medium' 
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                    }`}
-                    onClick={() => setActiveTab('historical')}
-                  >
-                    Historical
-                  </button>
-                </div>
-                
-                {/* Your Last Meeting Subsection */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <History className="h-4 w-4 text-primary" />
-                      <h3 className="font-semibold">Your Last Meeting</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="share-meeting" className="text-sm font-medium">
-                        Share with manager
-                      </Label>
-                      <Switch
-                        id="share-meeting"
-                        checked={sharingPreferences.share_conversations}
-                        disabled={!currentManager}
-                      />
-                    </div>
-                  </div>
-                  
-                  {lastConversation ? (
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Completed on {new Date(lastConversation.created_at).toLocaleDateString()}
-                      </p>
-                      <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-                        <div>
-                          <span className="text-sm text-muted-foreground">Duration:</span>
-                          <p className="font-medium">{lastConversation.duration_minutes || 15} min</p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-muted-foreground">Type:</span>
-                          <p className="font-medium">Complete</p>
-                        </div>
-                        <div>
-                          <span className="text-sm text-muted-foreground">Insights:</span>
-                          <p className="font-medium">{lastConversation.key_insights?.insights?.length || 0} generated</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 bg-muted/30 rounded-lg">
-                      <History className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                      <p className="text-muted-foreground text-sm">No meeting data available</p>
-                    </div>
-                  )}
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -732,6 +672,66 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Full-Width Your Results Section */}
+      <Card className="shadow-soft">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            Your results
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Your Last Meeting Subsection */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold">Your Last Meeting</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="share-meeting" className="text-sm font-medium">
+                    Share with manager
+                  </Label>
+                  <Switch
+                    id="share-meeting"
+                    checked={sharingPreferences.share_conversations}
+                    disabled={!currentManager}
+                  />
+                </div>
+              </div>
+              
+              {lastConversation ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Completed on {new Date(lastConversation.created_at).toLocaleDateString()}
+                  </p>
+                  <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div>
+                      <span className="text-sm text-muted-foreground">Duration:</span>
+                      <p className="font-medium">{lastConversation.duration_minutes || 15} min</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-muted-foreground">Type:</span>
+                      <p className="font-medium">Complete</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-muted-foreground">Insights:</span>
+                      <p className="font-medium">{lastConversation.key_insights?.insights?.length || 0} generated</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 bg-muted/30 rounded-lg">
+                  <History className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-muted-foreground text-sm">No meeting data available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Full-Width Sections */}
       {/* Strengths Section */}
