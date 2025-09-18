@@ -164,9 +164,6 @@ const Dashboard = () => {
             summary: `Based on ${allPersonalityData.length} therapeutic conversations, showing consistent patterns across sessions.`
           };
           setOceanProfile(avgOcean);
-          
-          // Generate AI description for OCEAN profile
-          generateOceanDescription(avgOcean, profile);
         }
 
         // Create personalized summary
@@ -188,6 +185,11 @@ const Dashboard = () => {
           ...lastConv,
           key_insights: lastConvInsights
         });
+        
+        // Generate AI description for OCEAN profile after we have the latest conversation data
+        if (oceanProfile) {
+          generateOceanDescription(oceanProfile, profile, lastConv.id);
+        }
       }
       // Load current manager if user has one
       if (profile?.manager_id) {
@@ -245,8 +247,25 @@ const Dashboard = () => {
     }
   };
 
-  const generateOceanDescription = async (oceanProfile: any, userProfile: any) => {
+  const generateOceanDescription = async (oceanProfile: any, userProfile: any, latestConversationId?: string) => {
     if (!oceanProfile) return;
+    
+    // Check cache first - only regenerate if there's a new conversation
+    const cacheKey = `ocean_description_${user?.id}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        // If we have cached data for the same conversation, use it
+        if (parsed.conversationId === latestConversationId && parsed.description) {
+          setOceanDescription(parsed.description);
+          return;
+        }
+      } catch (e) {
+        console.log('Cache parse error, regenerating...');
+      }
+    }
     
     setIsLoadingDescription(true);
     try {
@@ -261,24 +280,47 @@ const Dashboard = () => {
 
       if (data?.success && data?.description) {
         setOceanDescription(data.description);
+        
+        // Cache the result with conversation ID
+        const cacheData = {
+          description: data.description,
+          conversationId: latestConversationId,
+          timestamp: Date.now()
+        };
+        localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+        
       } else {
         throw new Error(data?.error || 'Failed to generate description');
       }
     } catch (error: any) {
       console.error('Error generating OCEAN description:', error);
       // Keep fallback description if AI fails
-      setOceanDescription("Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities.");
+      const fallbackDescription = "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities.";
+      setOceanDescription(fallbackDescription);
+      
+      // Cache fallback as well to avoid repeated failures
+      const cacheData = {
+        description: fallbackDescription,
+        conversationId: latestConversationId,
+        timestamp: Date.now(),
+        isFallback: true
+      };
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
     } finally {
       setIsLoadingDescription(false);
     }
   };
 
-  // Handle starting new conversation (clears paused conversation)
+  // Handle starting new conversation (clears paused conversation and cache)
   const handleStartNewConversation = async () => {
     if (user && hasPausedConversation) {
       await clearPausedConversation(user.id);
       setHasPausedConversation(false);
     }
+    
+    // Clear OCEAN description cache when starting new conversation
+    const cacheKey = `ocean_description_${user?.id}`;
+    localStorage.removeItem(cacheKey);
   };
   
   const handleSharingPreferencesChange = (preferences: any) => {
