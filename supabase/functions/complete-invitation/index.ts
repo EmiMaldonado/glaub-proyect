@@ -66,24 +66,47 @@ serve(async (req: Request) => {
       throw new Error("Invitation has expired");
     }
 
-    // Get the new user's profile
-    const { data: userProfile, error: profileError } = await supabase
+    // Get the new user's profile - use maybeSingle to handle case where profile doesn't exist
+    const { data: existingProfile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", user_id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error("Error finding user profile:", profileError);
       throw new Error("User profile not found: " + profileError.message);
     }
 
-    if (!userProfile) {
+    let userProfile;
+    if (!existingProfile) {
       console.error("No user profile found for user_id:", user_id);
-      throw new Error("User profile not found");
+      console.log("Creating new profile for user_id:", user_id);
+      
+      // Create a new profile for the user
+      const { data: newProfile, error: createProfileError } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: user_id,
+          role: 'employee',
+          onboarding_completed: false
+        })
+        .select()
+        .single();
+
+      if (createProfileError) {
+        console.error("Error creating user profile:", createProfileError);
+        throw new Error("Failed to create user profile: " + createProfileError.message);
+      }
+
+      console.log("Created new user profile:", { id: newProfile.id, user_id: newProfile.user_id });
+      userProfile = newProfile;
+    } else {
+      console.log("Found existing user profile:", { id: existingProfile.id, user_id: existingProfile.user_id });
+      userProfile = existingProfile;
     }
 
-    console.log("Found user profile:", { id: userProfile.id, user_id: userProfile.user_id });
+    console.log("Using user profile:", { id: userProfile.id, user_id: userProfile.user_id });
 
     if (action === 'accept') {
       console.log("Processing invitation acceptance");
