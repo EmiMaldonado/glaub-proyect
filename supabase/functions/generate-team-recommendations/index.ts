@@ -69,26 +69,35 @@ serve(async (req) => {
     }
 
     // Clear old cache entries for this manager (force regeneration with new logic)
+    console.log('Forcing cache regeneration by clearing existing recommendations');
     await supabase
       .from('manager_recommendations')
       .delete()
       .eq('manager_id', managerId);
 
-    console.log('Cleared existing cache, generating new recommendations with enhanced logic');
+    console.log('Cache cleared, proceeding with fresh generation');
 
     // Prepare team data for AI analysis
     const teamData = [];
     
     for (const member of teamMembers) {
       try {
+        console.log(`Processing member: ${member.display_name || member.full_name} (${member.user_id})`);
+        
         // Fetch conversations and insights for this team member to calculate real OCEAN scores
-        const { data: conversations } = await supabase
+        const { data: conversations, error: convError } = await supabase
           .from('conversations')
           .select('ocean_signals, insights')
           .eq('user_id', member.user_id)
           .not('ocean_signals', 'is', null)
           .order('created_at', { ascending: false })
           .limit(10);
+
+        if (convError) {
+          console.error(`Error fetching conversations for ${member.user_id}:`, convError);
+        }
+
+        console.log(`Found ${conversations?.length || 0} conversations for ${member.display_name || member.full_name}`);
 
         // Calculate OCEAN personality from conversation data
         let personality = {
