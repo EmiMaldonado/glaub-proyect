@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield, BarChart3 } from "lucide-react";
+import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield, BarChart3, Bot } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
@@ -403,8 +403,8 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="hidden md:block">
-              <div className="w-16 h-16 bg-primary-foreground/10 rounded-full flex items-center justify-center">
-                <MessageCircle className="h-8 w-8 text-primary-foreground/60" />
+              <div className="w-32 h-32 bg-primary-foreground/10 rounded-full flex items-center justify-center">
+                <Bot className="h-16 w-16 text-primary-foreground/60" />
               </div>
             </div>
           </div>
