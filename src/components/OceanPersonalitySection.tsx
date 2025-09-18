@@ -56,7 +56,7 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
   }
 
   return (
-    <Card className="w-full">
+    <Card className="w-full h-full min-h-[400px]">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
