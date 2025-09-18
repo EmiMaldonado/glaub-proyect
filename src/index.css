@@ -53,18 +53,18 @@ All colors MUST be HSL.
     --popover-foreground: 240 10% 15%;
     
     /* Admin Brand Colors - Gläub brand colors */
-    --primary: 214 28% 56%;  /* #6889B4 */
-    --primary-foreground: 0 0% 100%;
-    --primary-50: 214 35% 97%;
-    --primary-100: 214 32% 92%;
-    --primary-200: 214 30% 85%;
-    --primary-300: 214 29% 75%;
-    --primary-400: 214 28% 65%;
-    --primary-500: 214 28% 56%;  /* #6889B4 */
-    --primary-600: 214 28% 50%;
-    --primary-700: 214 28% 42%;
-    --primary-800: 214 28% 35%;
-    --primary-900: 214 28% 28%;
+    --primary: 152 20% 78%;  /* #BCD2C8 */
+    --primary-foreground: 152 30% 15%;
+    --primary-50: 152 30% 97%;
+    --primary-100: 152 25% 92%;
+    --primary-200: 152 22% 85%;
+    --primary-300: 152 20% 82%;
+    --primary-400: 152 20% 80%;
+    --primary-500: 152 20% 78%;  /* #BCD2C8 */
+    --primary-600: 152 22% 70%;
+    --primary-700: 152 25% 60%;
+    --primary-800: 152 30% 50%;
+    --primary-900: 152 35% 40%;
     
     /* Secondary - Gläub secondary color */
     --secondary: 154 20% 78%;  /* #A5C7B9 */
@@ -282,18 +282,18 @@ All colors MUST be HSL.
     --popover-foreground: 240 5% 95%;
     
     /* Admin Brand Colors - Gläub dark mode */
-    --primary: 214 28% 65%;  /* Lighter #6889B4 for dark mode */
-    --primary-foreground: 240 10% 8%;
-    --primary-50: 214 100% 5%;
-    --primary-100: 214 95% 10%;
-    --primary-200: 214 90% 18%;
-    --primary-300: 214 85% 25%;
-    --primary-400: 214 80% 40%;
-    --primary-500: 214 85% 60%;
-    --primary-600: 214 90% 70%;
-    --primary-700: 214 95% 80%;
-    --primary-800: 214 100% 85%;
-    --primary-900: 214 100% 92%;
+    --primary: 152 20% 85%;  /* Lighter #BCD2C8 for dark mode */
+    --primary-foreground: 152 30% 10%;
+    --primary-50: 152 100% 5%;
+    --primary-100: 152 95% 10%;
+    --primary-200: 152 90% 18%;
+    --primary-300: 152 85% 25%;
+    --primary-400: 152 80% 40%;
+    --primary-500: 152 85% 60%;
+    --primary-600: 152 90% 70%;
+    --primary-700: 152 95% 80%;
+    --primary-800: 152 100% 85%;
+    --primary-900: 152 100% 92%;
     
     /* Secondary - Gläub secondary dark mode */
     --secondary: 154 15% 25%;  /* Darker #A5C7B9 for dark mode */
