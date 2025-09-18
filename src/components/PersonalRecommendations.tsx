@@ -182,7 +182,7 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Share2 className="h-4 w-4" />
-              <span>Share with manager</span>
+              <span className="font-semibold">Share with manager</span>
             </div>
             <Switch 
               checked={shareSettings.summary || false} 
