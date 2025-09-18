@@ -47,6 +47,7 @@ const Dashboard = () => {
   const [currentManager, setCurrentManager] = useState<any>(null);
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   const [userTeams, setUserTeams] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'last' | 'historical'>('last');
   
   useEffect(() => {
     if (user) {
@@ -552,10 +553,24 @@ const Dashboard = () => {
               <div className="space-y-6">
                 {/* Tab Navigation */}
                 <div className="flex gap-4 border-b">
-                  <button className="pb-2 px-1 border-b-2 border-primary text-primary font-medium">
+                  <button 
+                    className={`pb-2 px-1 border-b-2 transition-colors ${
+                      activeTab === 'last' 
+                        ? 'border-primary text-primary font-medium' 
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setActiveTab('last')}
+                  >
                     Last session
                   </button>
-                  <button className="pb-2 px-1 text-muted-foreground hover:text-foreground">
+                  <button 
+                    className={`pb-2 px-1 border-b-2 transition-colors ${
+                      activeTab === 'historical' 
+                        ? 'border-primary text-primary font-medium' 
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setActiveTab('historical')}
+                  >
                     Historical
                   </button>
                 </div>
@@ -751,7 +766,30 @@ const Dashboard = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {allInsights.length > 0 ? (
+          {activeTab === 'last' && lastConversation?.key_insights ? (
+            allInsights.filter(insight => insight.conversation_id === lastConversation.id).length > 0 ? (
+              <ul className="space-y-3">
+                {allInsights
+                  .filter(insight => insight.conversation_id === lastConversation.id)
+                  .flatMap(insight => insight.insights || [])
+                  .slice(0, 5)
+                  .map((insight: string, index: number) => (
+                    <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
+                      <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
+                      <span className="text-sm leading-relaxed">{insight}</span>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <div className="text-center py-8">
+                <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground font-medium">No strengths data from last session</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Your most recent session didn't generate strength insights
+                </p>
+              </div>
+            )
+          ) : activeTab === 'historical' && allInsights.length > 0 ? (
             <ul className="space-y-3">
               {allInsights.flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => (
                 <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
@@ -802,7 +840,14 @@ const Dashboard = () => {
         <CardContent>
           <PersonalRecommendations 
             recommendations={{
-              development: allInsights.flatMap(insight => insight.next_steps || []).slice(0, 3),
+              development: activeTab === 'last' && lastConversation?.key_insights
+                ? allInsights
+                    .filter(insight => insight.conversation_id === lastConversation.id)
+                    .flatMap(insight => insight.next_steps || [])
+                    .slice(0, 3)
+                : activeTab === 'historical' 
+                  ? allInsights.flatMap(insight => insight.next_steps || []).slice(0, 3)
+                  : [],
               wellness: [
                 "Take regular breaks during work to maintain mental clarity",
                 "Practice mindfulness techniques when feeling overwhelmed", 
