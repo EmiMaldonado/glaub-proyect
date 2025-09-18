@@ -460,7 +460,7 @@ const ChatConversation: React.FC = () => {
             </div>
 
             {/* Input */}
-            <div className="border-t bg-background p-4 space-y-4 flex-1 flex flex-col justify-end">
+            <div className="border-t bg-background p-4 space-y-4">
               <div className="flex space-x-2">
                 <input
                   type="text"
