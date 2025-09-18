@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Lightbulb, Target, TrendingUp, BookOpen, ArrowRight, RefreshCw, ChevronDown, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
 interface RecommendationItem {
   title: string;
   description: string;
@@ -37,6 +38,7 @@ interface PersonalRecommendationsProps {
   className?: string;
   onShareToggle?: (category: string, shared: boolean) => void;
 }
+
 const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
   context,
   period = 'last_week',
@@ -59,6 +61,7 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
     personal_development: false
   });
   const { toast } = useToast();
+
   const generatePersonalizedRecommendations = async () => {
     setIsLoading(true);
     try {
@@ -124,6 +127,7 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
+
   // Don't show anything if there are no conversations and no recommendations
   if (!recommendations && !isLoading && !hasConversations) {
     return null;
@@ -149,16 +153,17 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
       default: return period;
     }
   };
+
   return (
-    <Card className={className}>
-      <CardHeader>
+    <div className={className}>
+      <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-1">
               <Lightbulb className="h-5 w-5 text-primary" />
-              Personal Recommendations
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
+              <h3 className="font-semibold">Personal Recommendations</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
               {context === 'historical' 
                 ? `Consolidated suggestions from your ${getPeriodLabel()} conversation patterns`
                 : 'Tailored suggestions based on your conversation patterns and personal growth areas'
@@ -182,9 +187,9 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
             </Button>
           </div>
         </div>
-      </CardHeader>
+      </div>
       
-      <CardContent className="space-y-4">
+      <div className="space-y-4">
         {isLoading && (
           <div className="flex items-center justify-center py-8">
             <RefreshCw className="h-8 w-8 animate-spin text-primary" />
@@ -285,8 +290,9 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
             </Collapsible>
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
+
 export default PersonalRecommendations;

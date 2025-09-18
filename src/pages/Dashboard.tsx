@@ -795,6 +795,18 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
+                
+                {/* Separator */}
+                <div className="border-t border-muted my-6"></div>
+                
+                {/* Personal Recommendations Subsection */}
+                <div>
+                  <PersonalRecommendations 
+                    context="last_session"
+                    sessionId={lastConversation?.id}
+                    className="border-0 shadow-none p-0" 
+                  />
+                </div>
               </div>
             ) : (
               // Historical Content
@@ -843,6 +855,18 @@ const Dashboard = () => {
                           </div>
                         )}
                       </div>
+                    </div>
+                    
+                    {/* Separator */}
+                    <div className="border-t border-muted my-6"></div>
+                    
+                    {/* Personal Recommendations Subsection */}
+                    <div>
+                      <PersonalRecommendations 
+                        context="historical"
+                        period={selectedPeriod}
+                        className="border-0 shadow-none p-0" 
+                      />
                     </div>
                   </div>
                 ) : (
@@ -926,13 +950,6 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-        {/* Personal Recommendations Section */}
-        <PersonalRecommendations 
-          context={activeTab === 'historical' ? 'historical' : 'last_session'}
-          period={activeTab === 'historical' ? selectedPeriod : undefined}
-          sessionId={activeTab === 'last' && lastConversation?.id ? lastConversation.id : undefined}
-          className="shadow-soft" 
-        />
       </div>
 
       {/* Data Sharing Preferences - Hidden section for backend functionality */}
