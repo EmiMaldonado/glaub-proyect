@@ -93,9 +93,9 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
           <div className="flex gap-8 border-b border-border mb-6">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`pb-2 text-base font-medium border-b-2 transition-colors ${
                 activeTab === 'overview'
-                  ? 'border-primary text-foreground'
+                  ? 'border-[#6889B4] text-[#6889B4]'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -103,9 +103,9 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('individual')}
-              className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`pb-2 text-base font-medium border-b-2 transition-colors ${
                 activeTab === 'individual'
-                  ? 'border-primary text-foreground'
+                  ? 'border-[#6889B4] text-[#6889B4]'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
