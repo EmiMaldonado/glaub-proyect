@@ -612,22 +612,51 @@ const Dashboard = () => {
                   </div>
                 </div>}
 
-              {/* Pending Invitations */}
-              {pendingInvitations.length > 0 && <div className="space-y-3">
+              {/* People Who Want to Join Your Team */}
+              {pendingInvitations.filter(inv => inv.invitation_type === 'manager_request').length > 0 && <div className="space-y-3">
                   <h4 className="font-medium text-sm flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 text-primary" />
-                    Pending Invitations
+                    <UserCheck className="h-4 w-4 text-green-600" />
+                    People Who Want to Join Your Team
                   </h4>
                   <div className="space-y-3">
-                    {pendingInvitations.map(invitation => <div key={invitation.id} className="p-3 border rounded-lg bg-yellow-50 border-yellow-200 space-y-3">
+                    {pendingInvitations.filter(inv => inv.invitation_type === 'manager_request').map(invitation => <div key={invitation.id} className="p-3 border rounded-lg bg-green-50 border-green-200 space-y-3">
                         <div>
                           <p className="font-medium text-sm">
                             From {invitation.manager?.display_name || invitation.manager?.full_name}
                           </p>
-                          <p className="text-sm font-medium text-primary">
-                            {invitation.invitation_type === 'manager_request' 
-                              ? '🏢 They want you to be THEIR MANAGER' 
-                              : '👥 They want you to JOIN THEIR TEAM'}
+                          <p className="text-sm font-medium text-green-700">
+                            🏢 They want you to be THEIR MANAGER
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Expires {new Date(invitation.expires_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleAcceptInvitation(invitation)} className="flex-1">
+                            Accept
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleDeclineInvitation(invitation)} className="flex-1">
+                            Decline
+                          </Button>
+                        </div>
+                      </div>)}
+                  </div>
+                </div>}
+
+              {/* Invitations to Join Their Team */}
+              {pendingInvitations.filter(inv => inv.invitation_type === 'team_member').length > 0 && <div className="space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-blue-600" />
+                    Invitations to Join Their Team
+                  </h4>
+                  <div className="space-y-3">
+                    {pendingInvitations.filter(inv => inv.invitation_type === 'team_member').map(invitation => <div key={invitation.id} className="p-3 border rounded-lg bg-blue-50 border-blue-200 space-y-3">
+                        <div>
+                          <p className="font-medium text-sm">
+                            From {invitation.manager?.display_name || invitation.manager?.full_name}
+                          </p>
+                          <p className="text-sm font-medium text-blue-700">
+                            👥 They want you to JOIN THEIR TEAM
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Expires {new Date(invitation.expires_at).toLocaleDateString()}
