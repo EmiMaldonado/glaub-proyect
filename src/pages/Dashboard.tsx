@@ -918,20 +918,21 @@ const Dashboard = () => {
                   <Shield className="mr-1 h-3 w-3" />
                   Private
                 </Badge>
-                <div className="flex items-center gap-2 ml-2">
-                  <Label htmlFor="share-strengths" className="text-sm font-medium">
-                    Share with manager
-                  </Label>
-                  <Switch
-                    id="share-strengths"
-                    checked={sharingPreferences.share_insights}
-                    disabled={!currentManager}
-                  />
-                </div>
               </div>
               <CardDescription className="mt-2">
                 Your main identified strengths
               </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Share2 className="h-4 w-4" />
+                <span>Share with manager</span>
+              </div>
+              <Switch
+                checked={sharingPreferences.share_insights}
+                disabled={!currentManager}
+                className="scale-75"
+              />
             </div>
           </div>
         </CardHeader>
