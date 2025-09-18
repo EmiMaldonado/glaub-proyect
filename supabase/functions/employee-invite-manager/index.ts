@@ -91,7 +91,7 @@ serve(async (req: Request) => {
     
     // Send invitation email using Resend
     const { error: emailError } = await resend.emails.send({
-      from: "Glaub <onboarding@resend.dev>",
+      from: "Glaub <pm_bounces@pm-bounces.mail.app.supabase.io>",
       to: [managerEmail],
       subject: `${employeeName} invited you to be their manager`,
       html: `

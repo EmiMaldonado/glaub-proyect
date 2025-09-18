@@ -94,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
       const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
       const emailResponse = await resend.emails.send({
-        from: "Glaub <onboarding@resend.dev>",
+        from: "Glaub <pm_bounces@pm-bounces.mail.app.supabase.io>",
         to: [email],
         subject: "Reset your password",
         html: `
