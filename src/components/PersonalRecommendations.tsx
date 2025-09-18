@@ -56,21 +56,56 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
         throw new Error('User not authenticated');
       }
 
-      const { data, error } = await supabase.functions.invoke('generate-personal-recommendations', {
-        body: { userId }
-      });
+      let data, error;
+      
+      if (context === 'historical') {
+        // Call historical data function
+        ({ data, error } = await supabase.functions.invoke('generate-historical-data', {
+          body: { 
+            userId,
+            period: period || 'last_week'
+          }
+        }));
+        
+        if (data?.aggregated_recommendations) {
+          // Transform historical data format to match expected format
+          const transformedRecs = {
+            development: data.aggregated_recommendations.personal_development?.map((item: any) => 
+              typeof item === 'string' ? item : item.description || item.title
+            ) || [],
+            wellness: [], // Historical data doesn't separate wellness, add to development
+            skills: data.aggregated_recommendations.skill_building?.map((item: any) => 
+              typeof item === 'string' ? item : item.description || item.title
+            ) || [],
+            goals: data.aggregated_recommendations.goal_achievement?.map((item: any) => 
+              typeof item === 'string' ? item : item.description || item.title
+            ) || []
+          };
+          setRecommendations(transformedRecs);
+        }
+      } else {
+        // Call last session function
+        ({ data, error } = await supabase.functions.invoke('generate-personal-recommendations', {
+          body: { userId }
+        }));
+        
+        if (data?.recommendations) {
+          setRecommendations(data.recommendations);
+        }
+      }
 
       if (error) {
         console.error('Error generating recommendations:', error);
         throw error;
       }
 
-      if (data?.recommendations) {
-        setRecommendations(data.recommendations);
+      if (data && (data.recommendations || data.aggregated_recommendations)) {
         setHasConversations(true);
         toast({
           title: "Recommendations Updated",
-          description: "Your personal recommendations have been generated based on your latest conversation.",
+          description: context === 'historical' 
+            ? `Your recommendations have been generated based on ${period} data.`
+            : "Your personal recommendations have been generated based on your latest conversation.",
         });
       } else {
         setRecommendations(null);
@@ -82,7 +117,9 @@ const PersonalRecommendations: React.FC<PersonalRecommendationsProps> = ({
       setHasConversations(false);
       toast({
         title: "No Conversation Data",
-        description: "Complete a conversation session to get personalized recommendations.",
+        description: context === 'historical' 
+          ? `No conversation data available for ${period}.`
+          : "Complete a conversation session to get personalized recommendations.",
         variant: "default",
       });
     } finally {
