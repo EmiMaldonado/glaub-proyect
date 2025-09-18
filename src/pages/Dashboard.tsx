@@ -551,7 +551,7 @@ const Dashboard = () => {
                       <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.extraversion || 0}%</div>
                       <div className="text-sm text-muted-foreground font-medium">Extraversion</div>
                     </div>
-                    <div className="p-4 rounded-lg bg-muted/30">
+                    <div className="p-4 rounded-lg">
                       <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.agreeableness || 0}%</div>
                       <div className="text-sm text-muted-foreground font-medium">Agreeableness</div>
                     </div>
