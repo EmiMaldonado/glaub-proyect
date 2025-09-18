@@ -86,7 +86,8 @@ serve(async (req: Request) => {
     }
 
     const employeeName = employeeProfile.display_name || employeeProfile.full_name || 'Your colleague';
-    const acceptUrl = `${supabaseUrl}/functions/v1/accept-manager-invitation?token=${token}`;
+    const baseUrl = "https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev";
+    const acceptUrl = `${baseUrl}/invitation/${token}`;
     
     // Send invitation email using Resend
     const { error: emailError } = await resend.emails.send({
