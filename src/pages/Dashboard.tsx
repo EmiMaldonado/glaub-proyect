@@ -926,63 +926,13 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Personal Recommendations Section */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-warning" />
-                Your Personal Recommendations
-              </CardTitle>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="share-recommendations" className="text-sm font-medium">
-                    Share with manager
-                  </Label>
-                  <Switch
-                    id="share-recommendations"
-                    checked={sharingPreferences.share_progress}
-                    disabled={!currentManager}
-                  />
-                </div>
-              </div>
-              <CardDescription className="mt-2">
-                Tailored suggestions based on your conversation patterns and personal growth areas
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <PersonalRecommendations 
-            recommendations={{
-              development: lastConversation?.key_insights
-                ? allInsights
-                    .filter(insight => insight.conversation_id === lastConversation.id)
-                    .flatMap(insight => insight.next_steps || [])
-                    .slice(0, 3)
-                : [],
-              wellness: [
-                "Take regular breaks during work to maintain mental clarity",
-                "Practice mindfulness techniques when feeling overwhelmed", 
-                "Establish boundaries to protect your energy"
-              ],
-              skills: [
-                "Focus on active listening in your next conversations",
-                "Practice emotional regulation during challenging situations",
-                "Develop your communication skills with open-ended questions"
-              ],
-              goals: [
-                "Set specific, measurable objectives for personal growth",
-                "Create accountability systems for your development plan",
-                "Track progress weekly to maintain momentum"
-              ]
-            }}
-            oceanProfile={oceanProfile}
-            className="border-0 shadow-none p-0"
-          />
-        </CardContent>
-        </Card>
+        {/* Personal Recommendations Section */}
+        <PersonalRecommendations 
+          context={activeTab === 'historical' ? 'historical' : 'last_session'}
+          period={activeTab === 'historical' ? selectedPeriod : undefined}
+          sessionId={activeTab === 'last' && lastConversation?.id ? lastConversation.id : undefined}
+          className="shadow-soft" 
+        />
       </div>
 
       {/* Data Sharing Preferences - Hidden section for backend functionality */}
