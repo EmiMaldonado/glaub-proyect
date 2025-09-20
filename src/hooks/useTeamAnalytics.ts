@@ -49,26 +49,64 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
   }, [managerId, teamMembers]);
 
   const generateAnalyticsData = async () => {
+    console.log('🔄 Starting analytics generation for team:', { managerId, teamCount: teamMembers.length });
     setLoading(true);
     
     try {
       // Get conversations count for team members
       const teamUserIds = teamMembers.map(member => member.user_id);
-      const { data: conversations } = await supabase
+      console.log('👥 Team user IDs:', teamUserIds);
+      
+      const { data: conversations, error: conversationsError } = await supabase
         .from('conversations')
-        .select('id, user_id, status')
+        .select('id, user_id, status, created_at')
         .in('user_id', teamUserIds);
 
+      if (conversationsError) {
+        console.error('❌ Error fetching conversations:', conversationsError);
+      }
+
+      console.log('💬 Found conversations:', conversations?.length || 0, conversations);
+
       // Get insights count for team members
-      const { data: insights } = await supabase
+      const { data: insights, error: insightsError } = await supabase
         .from('key_insights')
         .select('id, conversation_id')
         .in('conversation_id', conversations?.map(c => c.id) || []);
 
-      // Calculate analytics based on actual data
+      if (insightsError) {
+        console.error('❌ Error fetching insights:', insightsError);
+      }
+
+      console.log('💡 Found insights:', insights?.length || 0);
+
+      // Calculate real analytics based on actual data
       const totalSessions = conversations?.length || 0;
       const totalInsights = insights?.length || 0;
       const activeMembers = new Set(conversations?.map(c => c.user_id)).size;
+
+      // Calculate real sessions by member
+      const sessionsByMember = teamMembers.map(member => {
+        const memberSessions = conversations?.filter(c => c.user_id === member.user_id).length || 0;
+        return {
+          name: member.display_name || member.full_name,
+          sessions: memberSessions
+        };
+      });
+
+      console.log('📊 Sessions by member:', sessionsByMember);
+
+      // Calculate realistic trends based on actual data
+      const recentSessions = conversations?.filter(c => {
+        const createdDate = new Date(c.created_at);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return createdDate > weekAgo;
+      }).length || 0;
+
+      const sessionGrowth = totalSessions > 0 ? Math.round((recentSessions / totalSessions) * 100) : 0;
+      const engagementTrend = activeMembers > 0 ? Math.round((totalSessions / activeMembers) * 10) : 0;
+      const insightGeneration = totalSessions > 0 ? Math.round((totalInsights / totalSessions) * 100) : 0;
 
       // Generate team OCEAN profile using AI
       let personalityDistribution = {
@@ -79,10 +117,11 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
         neuroticism: 42
       };
       let aiTeamDescription = '';
+      let usingRealData = false;
 
       if (teamMembers.length > 0) {
         try {
-          console.log('🧠 Calling team OCEAN profile function...');
+          console.log('🧠 Calling team OCEAN profile function with data:', { managerId, teamMembers });
           const { data: oceanData, error: oceanError } = await supabase.functions.invoke('generate-team-ocean-profile', {
             body: {
               managerId,
@@ -90,20 +129,39 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
             }
           });
 
+          console.log('🌊 Ocean function response:', { oceanData, oceanError });
+
           if (oceanError) {
-            console.error('Error generating team OCEAN profile:', oceanError);
+            console.error('❌ Error generating team OCEAN profile:', oceanError);
           } else if (oceanData?.success) {
             personalityDistribution = oceanData.personalityData;
             aiTeamDescription = oceanData.teamDescription || '';
             setTeamDescription(aiTeamDescription);
-            console.log('✅ Team OCEAN profile generated successfully');
+            usingRealData = oceanData.metadata?.personalityDataPoints > 0;
+            console.log('✅ Team OCEAN profile generated successfully:', {
+              dataPoints: oceanData.metadata?.personalityDataPoints,
+              usingRealData
+            });
+          } else {
+            console.warn('⚠️ Ocean function returned no success flag:', oceanData);
           }
         } catch (error) {
-          console.error('Error calling team OCEAN function:', error);
+          console.error('❌ Error calling team OCEAN function:', error);
         }
       }
+
+      // Calculate team health scores based on real data
+      const baseHealthScore = 70;
+      const engagementBonus = Math.min(engagementTrend * 2, 20);
+      const insightBonus = Math.min(insightGeneration / 2, 15);
+      const teamSizeBonus = Math.min(teamMembers.length * 2, 10);
+
+      const overallScore = Math.min(baseHealthScore + engagementBonus + insightBonus + teamSizeBonus, 100);
+      const communicationScore = Math.min(baseHealthScore + (totalSessions > 0 ? 15 : 0) + insightBonus, 100);
+      const developmentScore = Math.min(baseHealthScore + insightBonus + teamSizeBonus, 100);
+      const wellbeingScore = Math.min(baseHealthScore + engagementBonus + (usingRealData ? 10 : 5), 100);
       
-      // Generate analytics data with AI-powered personality insights
+      // Generate analytics data with real data
       const analytics: TeamAnalyticsData = {
         overview: {
           totalMembers: teamMembers.length,
@@ -112,26 +170,24 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
           averageEngagement: activeMembers > 0 ? Math.round((totalSessions / activeMembers) * 10) / 10 : 0
         },
         trends: {
-          sessionGrowth: totalSessions > 0 ? Math.round(Math.random() * 20 + 5) : 0,
-          engagementTrend: activeMembers > 0 ? Math.round(Math.random() * 15 + 8) : 0,
-          insightGeneration: totalInsights > 0 ? Math.round(Math.random() * 25 + 10) : 0
+          sessionGrowth,
+          engagementTrend,
+          insightGeneration
         },
         distribution: {
-          sessionsByMember: teamMembers.map(member => ({
-            name: member.display_name || member.full_name,
-            sessions: Math.floor(Math.random() * 10) + 1
-          })),
+          sessionsByMember,
           personalityDistribution: personalityDistribution
         },
         teamHealth: {
-          overallScore: Math.round(Math.random() * 15 + 80),
-          communicationScore: Math.round(Math.random() * 20 + 75),
-          developmentScore: Math.round(Math.random() * 25 + 70),
-          wellbeingScore: Math.round(Math.random() * 18 + 78)
+          overallScore: Math.round(overallScore),
+          communicationScore: Math.round(communicationScore),
+          developmentScore: Math.round(developmentScore),
+          wellbeingScore: Math.round(wellbeingScore)
         },
         teamDescription: aiTeamDescription
       };
 
+      console.log('📈 Final analytics data:', analytics);
       setAnalyticsData(analytics);
     } catch (error) {
       console.error('Error generating analytics:', error);
@@ -170,5 +226,11 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
     }
   };
 
-  return { analyticsData, loading, refreshAnalytics: generateAnalyticsData, teamDescription };
+  return { 
+    analyticsData, 
+    loading, 
+    refreshAnalytics: generateAnalyticsData, 
+    teamDescription,
+    hasRealData: analyticsData ? analyticsData.overview.totalSessions > 0 : false
+  };
 };

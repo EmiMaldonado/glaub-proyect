@@ -1,6 +1,7 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Brain, Users } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Brain, Users, RefreshCw } from 'lucide-react';
 
 interface PersonalityDistribution {
   openness: number;
@@ -14,12 +15,16 @@ interface OceanPersonalitySectionProps {
   personalityData: PersonalityDistribution;
   teamDescription?: string;
   loading?: boolean;
+  onRefresh?: () => void;
+  hasRealData?: boolean;
 }
 
 const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
   personalityData,
   teamDescription,
-  loading = false
+  loading = false,
+  onRefresh,
+  hasRealData = false
 }) => {
   const oceanTraits = [
     { key: 'openness', label: 'Openness', value: personalityData.openness },
@@ -58,10 +63,31 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
   return (
     <Card className="w-full h-full min-h-[400px]">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" />
-          Team Personality Profile (OCEAN)
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              Team Personality Profile (OCEAN)
+            </CardTitle>
+            <CardDescription className="mt-1">
+              {hasRealData 
+                ? "Based on real team conversation data" 
+                : "Analysis based on available data - encourage team members to complete conversations for more accurate insights"
+              }
+            </CardDescription>
+          </div>
+          {onRefresh && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onRefresh}
+              disabled={loading}
+              className="shrink-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* OCEAN Percentages Grid */}

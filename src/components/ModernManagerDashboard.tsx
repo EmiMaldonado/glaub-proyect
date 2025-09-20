@@ -46,7 +46,7 @@ const ModernManagerDashboard: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   
   // Team analytics hook
-  const { analyticsData, loading: analyticsLoading, teamDescription } = useTeamAnalytics(
+  const { analyticsData, loading: analyticsLoading, teamDescription, refreshAnalytics, hasRealData } = useTeamAnalytics(
     managerProfile?.id || '', 
     teamMembers
   );
@@ -230,6 +230,8 @@ const ModernManagerDashboard: React.FC = () => {
             }
             teamDescription={getTeamDescription()}
             loading={analyticsLoading}
+            onRefresh={refreshAnalytics}
+            hasRealData={hasRealData}
           />
         </div>
 
