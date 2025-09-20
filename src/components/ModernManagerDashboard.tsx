@@ -46,7 +46,7 @@ const ModernManagerDashboard: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   
   // Team analytics hook
-  const { analyticsData, loading: analyticsLoading } = useTeamAnalytics(
+  const { analyticsData, loading: analyticsLoading, teamDescription } = useTeamAnalytics(
     managerProfile?.id || '', 
     teamMembers
   );
@@ -149,7 +149,12 @@ const ModernManagerDashboard: React.FC = () => {
       return "Add team members to generate personality insights and team analysis.";
     }
     
-    // Use AI-generated team description if available
+    // Use AI-generated team description from analytics hook (primary source)
+    if (teamDescription && teamDescription.trim()) {
+      return teamDescription;
+    }
+    
+    // Secondary: Use AI-generated team description from recommendations if available
     if (recommendationsData?.oceanDescription) {
       return recommendationsData.oceanDescription;
     }

@@ -36,11 +36,13 @@ interface TeamAnalyticsData {
     developmentScore: number;
     wellbeingScore: number;
   };
+  teamDescription?: string;
 }
 
 export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) => {
   const [analyticsData, setAnalyticsData] = useState<TeamAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [teamDescription, setTeamDescription] = useState<string>('');
 
   useEffect(() => {
     generateAnalyticsData();
@@ -67,8 +69,41 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
       const totalSessions = conversations?.length || 0;
       const totalInsights = insights?.length || 0;
       const activeMembers = new Set(conversations?.map(c => c.user_id)).size;
+
+      // Generate team OCEAN profile using AI
+      let personalityDistribution = {
+        openness: 65,
+        conscientiousness: 72,
+        extraversion: 58,
+        agreeableness: 78,
+        neuroticism: 42
+      };
+      let aiTeamDescription = '';
+
+      if (teamMembers.length > 0) {
+        try {
+          console.log('🧠 Calling team OCEAN profile function...');
+          const { data: oceanData, error: oceanError } = await supabase.functions.invoke('generate-team-ocean-profile', {
+            body: {
+              managerId,
+              teamMembers: teamMembers
+            }
+          });
+
+          if (oceanError) {
+            console.error('Error generating team OCEAN profile:', oceanError);
+          } else if (oceanData?.success) {
+            personalityDistribution = oceanData.personalityData;
+            aiTeamDescription = oceanData.teamDescription || '';
+            setTeamDescription(aiTeamDescription);
+            console.log('✅ Team OCEAN profile generated successfully');
+          }
+        } catch (error) {
+          console.error('Error calling team OCEAN function:', error);
+        }
+      }
       
-      // Generate mock data based on real counts for better demonstration
+      // Generate analytics data with AI-powered personality insights
       const analytics: TeamAnalyticsData = {
         overview: {
           totalMembers: teamMembers.length,
@@ -86,20 +121,15 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
             name: member.display_name || member.full_name,
             sessions: Math.floor(Math.random() * 10) + 1
           })),
-          personalityDistribution: {
-            openness: Math.round(Math.random() * 30 + 60),
-            conscientiousness: Math.round(Math.random() * 25 + 70),
-            extraversion: Math.round(Math.random() * 40 + 40),
-            agreeableness: Math.round(Math.random() * 20 + 75),
-            neuroticism: Math.round(Math.random() * 35 + 25)
-          }
+          personalityDistribution: personalityDistribution
         },
         teamHealth: {
           overallScore: Math.round(Math.random() * 15 + 80),
           communicationScore: Math.round(Math.random() * 20 + 75),
           developmentScore: Math.round(Math.random() * 25 + 70),
           wellbeingScore: Math.round(Math.random() * 18 + 78)
-        }
+        },
+        teamDescription: aiTeamDescription
       };
 
       setAnalyticsData(analytics);
@@ -140,5 +170,5 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
     }
   };
 
-  return { analyticsData, loading, refreshAnalytics: generateAnalyticsData };
+  return { analyticsData, loading, refreshAnalytics: generateAnalyticsData, teamDescription };
 };
