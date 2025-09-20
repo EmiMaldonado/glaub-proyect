@@ -45,6 +45,8 @@ interface TeamResultsSectionProps {
   onMemberSelect: (member: TeamMember) => void;
   loading?: boolean;
   onRefresh?: () => void;
+  analyticsData?: any;
+  teamDescription?: string;
 }
 
 const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
@@ -54,7 +56,9 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
   recommendations,
   onMemberSelect,
   loading = false,
-  onRefresh
+  onRefresh,
+  analyticsData,
+  teamDescription
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -217,11 +221,64 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
                 <h4 className="font-medium mb-3">
                   Individual Analysis: {selectedMember.display_name || selectedMember.full_name}
                 </h4>
-                <div className="text-center py-8 text-muted-foreground">
-                  <User className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                  <p>Individual member analysis will be displayed here</p>
-                  <p className="text-sm mt-2">Select the "Recommendations" section for detailed insights</p>
-                </div>
+                
+                {analyticsData ? (
+                  <div className="space-y-4">
+                    {/* Member Activity Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-muted/50 rounded-lg text-center">
+                        <div className="text-lg font-semibold text-primary">
+                          {analyticsData.distribution.sessionsByMember.find(
+                            m => m.name === (selectedMember.display_name || selectedMember.full_name)
+                          )?.sessions || 0}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Sessions Completed</div>
+                      </div>
+                      <div className="p-3 bg-muted/50 rounded-lg text-center">
+                        <div className="text-lg font-semibold text-primary">
+                          {selectedMember.role === 'manager' ? 'Manager' : 'Team Member'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Role</div>
+                      </div>
+                    </div>
+
+                    {/* Member OCEAN Profile Contribution */}
+                    <div className="p-4 border rounded-lg">
+                      <h5 className="font-medium mb-2">Personality Contribution to Team</h5>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p>• Contributing to team's {analyticsData.distribution.personalityDistribution.conscientiousness > 70 ? 'organized and structured approach' : 'flexible working style'}</p>
+                        <p>• Supports team's {analyticsData.distribution.personalityDistribution.agreeableness > 65 ? 'collaborative environment' : 'direct communication style'}</p>
+                        <p>• Enhances team's {analyticsData.distribution.personalityDistribution.openness > 60 ? 'innovative thinking' : 'practical problem-solving'}</p>
+                      </div>
+                    </div>
+
+                    {/* Individual Recommendations */}
+                    <div className="p-4 border rounded-lg">
+                      <h5 className="font-medium mb-2">Development Opportunities</h5>
+                      <div className="text-sm text-muted-foreground">
+                        {(() => {
+                          const memberSessions = analyticsData.distribution.sessionsByMember.find(
+                            m => m.name === (selectedMember.display_name || selectedMember.full_name)
+                          )?.sessions || 0;
+                          
+                          if (memberSessions === 0) {
+                            return "Encourage to start participating in team sessions to build engagement and contribute to team dynamics.";
+                          } else if (memberSessions < 5) {
+                            return "Continue building momentum with regular session participation to maximize personal and team growth.";
+                          } else {
+                            return "Excellent engagement! Consider mentoring other team members or taking on leadership opportunities.";
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <User className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                    <p>Loading individual member analysis...</p>
+                    <p className="text-sm mt-2">Team data is being processed</p>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>

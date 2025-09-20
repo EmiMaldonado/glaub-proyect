@@ -167,6 +167,108 @@ const ModernManagerDashboard: React.FC = () => {
     }. The team has completed ${analyticsData.overview.totalSessions} sessions with ${analyticsData.overview.activeMembers} active members.`;
   };
 
+  const getPersonalizedTeamStrengths = () => {
+    if (!analyticsData) return [];
+
+    const strengths = [];
+    const personality = analyticsData.distribution.personalityDistribution;
+    const sessions = analyticsData.overview.totalSessions;
+    const teamHealth = analyticsData.teamHealth;
+
+    // Based on OCEAN personality data
+    if (personality.conscientiousness > 65) {
+      strengths.push({
+        title: "High Conscientiousness",
+        description: `Team shows strong organizational skills and reliability with ${personality.conscientiousness}% conscientiousness score`
+      });
+    }
+
+    if (personality.agreeableness > 70) {
+      strengths.push({
+        title: "Collaborative Team Spirit", 
+        description: `Excellent teamwork and cooperation with ${personality.agreeableness}% agreeableness rating`
+      });
+    }
+
+    if (personality.openness > 60) {
+      strengths.push({
+        title: "Innovation & Adaptability",
+        description: `Team demonstrates creative thinking and openness to new ideas (${personality.openness}% openness)`
+      });
+    }
+
+    // Based on activity data
+    if (sessions > 20) {
+      strengths.push({
+        title: "Active Engagement",
+        description: `Strong participation with ${sessions} completed sessions showing consistent involvement`
+      });
+    }
+
+    if (teamHealth.communicationScore > 85) {
+      strengths.push({
+        title: "Effective Communication",
+        description: `Excellent communication patterns with ${teamHealth.communicationScore}% health score`
+      });
+    }
+
+    // Fallback strengths
+    if (strengths.length === 0) {
+      strengths.push(
+        { title: "Growing Team", description: "Team is actively building foundation and establishing collaboration patterns" },
+        { title: "Learning-Oriented", description: "Focus on development and skill building through ongoing sessions" }
+      );
+    }
+
+    return strengths.slice(0, 4); // Limit to 4 strengths
+  };
+
+  const getPersonalizedRecommendations = () => {
+    if (!analyticsData) return [];
+
+    const recommendations = [];
+    const personality = analyticsData.distribution.personalityDistribution;
+    const sessions = analyticsData.overview.totalSessions;
+
+    if (personality.extraversion < 50) {
+      recommendations.push({
+        title: "Foster Team Interaction",
+        description: "Consider organizing structured team activities to encourage more social interaction and collaboration",
+        priority: 'medium' as const,
+        category: 'communication'
+      });
+    }
+
+    if (personality.neuroticism > 60) {
+      recommendations.push({
+        title: "Stress Management Support",
+        description: "Implement wellness initiatives and provide support for managing work-related stress",
+        priority: 'high' as const,
+        category: 'wellbeing'
+      });
+    }
+
+    if (sessions < 10) {
+      recommendations.push({
+        title: "Increase Team Engagement",
+        description: "Encourage more frequent team sessions to build stronger collaboration patterns",
+        priority: 'high' as const,
+        category: 'productivity'
+      });
+    }
+
+    if (personality.conscientiousness < 60) {
+      recommendations.push({
+        title: "Structure & Organization",
+        description: "Implement clearer processes and frameworks to support team organization and accountability",
+        priority: 'medium' as const,
+        category: 'productivity'
+      });
+    }
+
+    return recommendations.slice(0, 3); // Limit to 3 recommendations
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -249,20 +351,13 @@ const ModernManagerDashboard: React.FC = () => {
       <TeamResultsSection
         teamMembers={teamMembers}
         selectedMember={selectedMember}
-        teamStrengths={
-          recommendationsData?.teamAnalysis.strengths.map(strength => ({
-            title: strength,
-            description: "Team demonstrates consistent performance in this area"
-          })) || [
-            { title: "Collaborative Communication", description: "Team members effectively share ideas and feedback" },
-            { title: "Goal-Oriented Focus", description: "Strong alignment on objectives and deliverables" },
-            { title: "Adaptability", description: "Flexible approach to changing requirements" }
-          ]
-        }
-        recommendations={recommendationsData?.recommendations || []}
+        teamStrengths={getPersonalizedTeamStrengths()}
+        recommendations={recommendationsData?.recommendations || getPersonalizedRecommendations()}
         onMemberSelect={setSelectedMember}
         loading={recommendationsLoading}
         onRefresh={handleRefreshRecommendations}
+        analyticsData={analyticsData}
+        teamDescription={teamDescription}
       />
     </div>
   );
