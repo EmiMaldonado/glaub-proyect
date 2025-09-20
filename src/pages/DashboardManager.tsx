@@ -58,47 +58,54 @@ const DashboardManager = () => {
       const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       setUserProfile(profile);
 
-      // Get team members from team_memberships table CHANGE MADE BY CLAUDE AI
-      const { data: teamMembership } = await supabase
-        .from('team_memberships')
+      // Get team members using the new team_members table
+      const { data: teamMemberData, error: teamError } = await supabase
+        .from('team_members')
         .select(`
           *,
-          employer_1:profiles!employer_id_1(id, user_id, full_name, display_name, email),
-          employer_2:profiles!employer_id_2(id, user_id, full_name, display_name, email),
-          employer_3:profiles!employer_id_3(id, user_id, full_name, display_name, email),
-          employer_4:profiles!employer_id_4(id, user_id, full_name, display_name, email),
-          employer_5:profiles!employer_id_5(id, user_id, full_name, display_name, email),
-          employer_6:profiles!employer_id_6(id, user_id, full_name, display_name, email),
-          employer_7:profiles!employer_id_7(id, user_id, full_name, display_name, email),
-          employer_8:profiles!employer_id_8(id, user_id, full_name, display_name, email),
-          employer_9:profiles!employer_id_9(id, user_id, full_name, display_name, email),
-          employer_10:profiles!employer_id_10(id, user_id, full_name, display_name, email)
+          member:profiles!team_members_member_id_fkey(
+            id, 
+            user_id, 
+            full_name, 
+            display_name, 
+            email,
+            role,
+            created_at
+          )
         `)
-        .eq('manager_id', profile?.id)
-        .single();
+        .eq('team_id', profile?.id)
+        .eq('role', 'employee')
+        .order('joined_at', { ascending: false });
 
-      // Extract all non-null employees from the 10 slots
-      const members = [];
-      if (teamMembership) {
-        for (let i = 1; i <= 10; i++) {
-          const employee = teamMembership[`employer_${i}`];
-          if (employee) {
-            members.push(employee);
-          }
-        }
+      if (teamError) {
+        console.error('Error loading team members:', teamError);
+        // Fallback to profiles table for backward compatibility
+        const { data: fallbackMembers } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('manager_id', profile?.id)
+          .order('created_at', { ascending: false });
+        
+        setTeamMembers(fallbackMembers?.map(member => ({
+          ...member,
+          email: member.email || 'Email not accessible'
+        })) || []);
+      } else {
+        // Extract member profiles from the join
+        const members = (teamMemberData || [])
+          .map(tm => tm.member)
+          .filter(member => member !== null)
+          .map(member => ({
+            ...member,
+            email: member.email || 'Email not accessible'
+          }));
+        
+        setTeamMembers(members);
       }
 
-      // Set team members without trying to access emails from auth.users
-      // Email access requires service role permissions which aren't available in client-side code
-      const membersWithoutEmails = (members || []).map(member => ({
-        ...member,
-        email: 'Email not accessible'
-      }));
-      setTeamMembers(membersWithoutEmails || []);
-
       // Auto-select first team member if available
-      if (membersWithoutEmails && membersWithoutEmails.length > 0) {
-        setSelectedMemberId(membersWithoutEmails[0].id);
+      if (teamMembers && teamMembers.length > 0) {
+        setSelectedMemberId(teamMembers[0].id);
       }
     } catch (error) {
       console.error('Error loading manager data:', error);
@@ -166,7 +173,7 @@ const DashboardManager = () => {
     }
   };
 
-  // CHANGE MADE BY CLAUDE AI
+  // Update invite member to use team_members table
   const handleInviteMember = async () => {
     if (!memberEmail.trim()) {
       toast({
@@ -179,79 +186,33 @@ const DashboardManager = () => {
 
     setIsInviting(true);
     try {
-      // First, find the user by email
-      const { data: targetUser, error: userError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, display_name')
-        .eq('email', memberEmail.trim().toLowerCase())
-        .single();
-
-      if (userError || !targetUser) {
-        toast({
-          title: "User Not Found",
-          description: `No user found with email ${memberEmail}. They need to register first.`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Check if team_memberships record exists for this manager
-      let { data: teamRecord } = await supabase
-        .from('team_memberships')
-        .select('*')
-        .eq('manager_id', userProfile?.id)
-        .single();
-
-      // Create team record if it doesn't exist
-      if (!teamRecord) {
-        const { data: newTeam, error: createError } = await supabase
-          .from('team_memberships')
-          .insert({ manager_id: userProfile?.id })
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        teamRecord = newTeam;
-      }
-
-      // Find first available slot (employer_id_1 through employer_id_10)
-      let availableSlot = null;
-      for (let i = 1; i <= 10; i++) {
-        if (!teamRecord[`employer_id_${i}`]) {
-          availableSlot = i;
-          break;
+      // Use the unified invitation system
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+        body: {
+          email: memberEmail.trim().toLowerCase(),
+          invitationType: 'team_member',
+          teamId: userProfile?.id
         }
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to send invitation');
       }
-
-      if (!availableSlot) {
-        toast({
-          title: "Team Full",
-          description: "You already have 10 team members. Remove someone first.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Add user to the available slot
-      const { error: updateError } = await supabase
-        .from('team_memberships')
-        .update({ [`employer_id_${availableSlot}`]: targetUser.id })
-        .eq('id', teamRecord.id);
-
-      if (updateError) throw updateError;
 
       toast({
-        title: "Team Member Added!",
-        description: `${targetUser.full_name || targetUser.email} has been added to your team.`
+        title: "Invitation Sent!",
+        description: `Team invitation sent to ${memberEmail}`
       });
 
       setMemberEmail('');
       loadManagerData(); // Refresh data
     } catch (error: any) {
-      console.error('Error adding team member:', error);
+      console.error('Error sending invitation:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to add team member",
+        description: error.message || "Failed to send invitation",
         variant: "destructive"
       });
     } finally {
@@ -259,60 +220,40 @@ const DashboardManager = () => {
     }
   };
 
-  // Remove member from team by setting manager_id to null CHANGE MADE BY CLAUDE AI
+  // Remove member using the team_members table and remove-team-member function
   const handleRemoveTeamMember = async (memberId: string) => {
     try {
-      // Find which slot this member is in
-      const { data: teamRecord } = await supabase
-        .from('team_memberships')
-        .select('*')
-        .eq('manager_id', userProfile?.id)
-        .single();
-
-      if (!teamRecord) return;
-
-      // Find the slot number for this member
-      let slotToRemove = null;
-      for (let i = 1; i <= 10; i++) {
-        if (teamRecord[`employer_id_${i}`] === memberId) {
-          slotToRemove = i;
-          break;
+      const { data, error } = await supabase.functions.invoke('remove-team-member', {
+        body: {
+          member_id: memberId,
+          manager_id: userProfile?.id
         }
-      }
-
-      if (!slotToRemove) return;
-
-      // Remove member from the slot
-      const { error } = await supabase
-        .from('team_memberships')
-        .update({ [`employer_id_${slotToRemove}`]: null })
-        .eq('id', teamRecord.id);
+      });
 
       if (error) throw error;
 
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to remove team member');
+      }
+
       toast({
         title: "Team Member Removed",
-        description: "Team member has been removed from your team"
+        description: data.message || "Team member has been removed from your team"
       });
 
       // Reload manager data
       await loadManagerData();
 
-      // Check if no team members left
-      const remainingMembers = teamMembers.filter(m => m.id !== memberId);
-      if (remainingMembers.length === 0) {
-        const { error: roleError } = await supabase
-          .from('profiles')
-          .update({ role: 'employee' })
-          .eq('id', userProfile?.id);
-
-        if (!roleError) {
-          toast({
-            title: "Role Updated",
-            description: "You've been moved back to employee status as you have no team members"
-          });
+      // Check if the manager was demoted (no more team members)
+      if (data.wasLastMember) {
+        toast({
+          title: "Role Updated",
+          description: "You've been moved back to employee status as you have no team members"
+        });
+        // Redirect to regular dashboard after a short delay
+        setTimeout(() => {
           window.location.href = '/dashboard';
-        }
+        }, 2000);
       }
     } catch (error: any) {
       console.error('Error removing team member:', error);

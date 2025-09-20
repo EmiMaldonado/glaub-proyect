@@ -92,14 +92,31 @@ const ModernManagerDashboard: React.FC = () => {
 
       setManagerProfile(profile);
 
-      // Load team members
-      const { data: members, error: membersError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('manager_id', profile.id)
-        .order('created_at', { ascending: false });
+      // Load team members using the team_members table
+      const { data: teamMemberData, error: membersError } = await supabase
+        .from('team_members')
+        .select(`
+          *,
+          member:profiles!team_members_member_id_fkey(
+            id,
+            user_id,
+            full_name,
+            display_name,
+            email,
+            role,
+            created_at
+          )
+        `)
+        .eq('team_id', profile.id)
+        .eq('role', 'employee')
+        .order('joined_at', { ascending: false });
 
       if (membersError) throw membersError;
+
+      // Extract member profiles from the join
+      const members = (teamMemberData || [])
+        .map(tm => tm.member)
+        .filter(member => member !== null);
 
       setTeamMembers(members || []);
 

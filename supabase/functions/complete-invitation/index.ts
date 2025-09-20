@@ -200,37 +200,77 @@ serve(async (req: Request) => {
 
         console.log("Promoted user to manager with team name:", finalTeamName);
 
-        // Create team membership with invited user as manager and inviter as first employee
-        const { data: teamMembership, error: createTeamError } = await supabase
-          .from("team_memberships")
+        // Add both users to team_members table: new manager and inviter as employee
+        const { error: addManagerError } = await supabase
+          .from("team_members")
           .insert({
-            manager_id: userProfile.id,
-            employee_1_id: invitation.manager_id
-          })
-          .select()
-          .single();
+            team_id: userProfile.id,
+            member_id: userProfile.id,
+            role: 'manager'
+          });
 
-        if (createTeamError) {
-          console.error("Error creating team membership:", createTeamError);
-          throw new Error("Failed to create team membership: " + createTeamError.message);
+        if (addManagerError && addManagerError.code !== '23505') { // Ignore duplicate key errors
+          console.error("Error adding manager to team_members:", addManagerError);
+          throw new Error("Failed to add manager to team: " + addManagerError.message);
         }
 
-        console.log("Created team membership with manager as leader and inviter as first employee");
+        // Add inviter as first employee
+        const { error: addEmployeeError } = await supabase
+          .from("team_members")
+          .insert({
+            team_id: userProfile.id,
+            member_id: invitation.manager_id,
+            role: 'employee'
+          });
+
+        if (addEmployeeError && addEmployeeError.code !== '23505') { // Ignore duplicate key errors
+          console.error("Error adding employee to team_members:", addEmployeeError);
+          throw new Error("Failed to add employee to team: " + addEmployeeError.message);
+        }
+
+        // Update inviter's profile to have this manager
+        const { error: updateInviterError } = await supabase
+          .from("profiles")
+          .update({ manager_id: userProfile.id })
+          .eq("id", invitation.manager_id);
+
+        if (updateInviterError) {
+          console.error("Error updating inviter's manager_id:", updateInviterError);
+        }
+
+        console.log("Created team with manager and first employee");
 
         // Set up sharing preferences for the new manager-employee relationship
-        const { error: sharingError } = await supabase
-          .from("sharing_preferences")
-          .insert({
-            user_id: invitation.manager_id,
-            manager_id: userProfile.id,
-            share_profile: true,
-            share_conversations: true,
-            share_insights: true,
-            share_ocean_profile: true,
-            share_progress: true,
-            share_strengths: true,
-            share_manager_recommendations: true
-          });
+        // Get the inviter's user_id for sharing preferences
+        const { data: inviterProfile, error: inviterFetchError } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("id", invitation.manager_id)
+          .single();
+
+        if (inviterFetchError) {
+          console.error("Error fetching inviter profile:", inviterFetchError);
+        } else {
+          const { error: sharingError } = await supabase
+            .from("sharing_preferences")
+            .insert({
+              user_id: inviterProfile.user_id, // Use auth user_id
+              manager_id: userProfile.id, // Use profile_id
+              share_profile: true,
+              share_conversations: true,
+              share_insights: true,
+              share_ocean_profile: true,
+              share_progress: true,
+              share_strengths: true,
+              share_manager_recommendations: true
+            });
+
+          if (sharingError) {
+            console.error("Error setting up sharing preferences:", sharingError);
+          } else {
+            console.log("Set up sharing preferences for new team member");
+          }
+        }
 
         if (sharingError) {
           console.error("Error setting up sharing preferences:", sharingError);
@@ -242,80 +282,69 @@ serve(async (req: Request) => {
         // Handle team_member invitation (existing logic)
         console.log("Processing team member invitation");
         
-        // Get or create team membership record
-        let { data: teamMembership, error: membershipFetchError } = await supabase
-          .from("team_memberships")
+        // Check if user is already a team member
+        const { data: existingMember, error: memberCheckError } = await supabase
+          .from("team_members")
           .select("*")
-          .eq("manager_id", invitation.manager_id)
+          .eq("team_id", invitation.manager_id)
+          .eq("member_id", userProfile.id)
           .maybeSingle();
 
-        if (membershipFetchError && membershipFetchError.code !== 'PGRST116') {
-          console.error("Error fetching team membership:", membershipFetchError);
-          throw new Error("Failed to fetch team membership: " + membershipFetchError.message);
+        if (memberCheckError && memberCheckError.code !== 'PGRST116') {
+          console.error("Error checking existing membership:", memberCheckError);
+          throw new Error("Failed to check team membership: " + memberCheckError.message);
         }
 
-        if (!teamMembership) {
-          // Create new team membership record
-          console.log("Creating new team membership record");
-          const { data: newMembership, error: createError } = await supabase
-            .from("team_memberships")
-            .insert({
-              manager_id: invitation.manager_id,
-              employee_1_id: userProfile.id
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error("Error creating team membership:", createError);
-            throw new Error("Failed to create team membership: " + createError.message);
-          }
-          
-          console.log("Created new team membership with first employee");
+        if (existingMember) {
+          console.log("User is already a member of this team");
         } else {
-          // Find next available employee slot
-          console.log("Adding to existing team membership");
-          const employeeSlots = [
-            'employee_1_id', 'employee_2_id', 'employee_3_id', 'employee_4_id', 'employee_5_id',
-            'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'
-          ];
-          
-          // Check if user is already in the team
-          const isAlreadyMember = employeeSlots.some(slot => teamMembership[slot] === userProfile.id);
-          if (isAlreadyMember) {
-            console.log("User is already a member of this team");
-          } else {
-            // Find first available slot
-            const availableSlot = employeeSlots.find(slot => !teamMembership[slot]);
-            
-            if (!availableSlot) {
-              throw new Error("Team is full (maximum 10 members)");
-            }
-            
-            console.log("Adding user to slot:", availableSlot);
-            const { error: updateError } = await supabase
-              .from("team_memberships")
-              .update({ [availableSlot]: userProfile.id })
-              .eq("id", teamMembership.id);
+          // Check team size limit (max 10 members including manager)
+          const { count: teamSize, error: countError } = await supabase
+            .from("team_members")
+            .select("*", { count: 'exact', head: true })
+            .eq("team_id", invitation.manager_id);
 
-            if (updateError) {
-              console.error("Error updating team membership:", updateError);
-              throw new Error("Failed to add user to team: " + updateError.message);
-            }
+          if (countError) {
+            console.error("Error counting team members:", countError);
+            throw new Error("Failed to check team size: " + countError.message);
           }
+
+          if (teamSize && teamSize >= 10) {
+            throw new Error("Team is full (maximum 10 members)");
+          }
+
+          // Add user to team_members table
+          console.log("Adding user to team_members table");
+          const { error: addMemberError } = await supabase
+            .from("team_members")
+            .insert({
+              team_id: invitation.manager_id,
+              member_id: userProfile.id,
+              role: 'employee'
+            });
+
+          if (addMemberError) {
+            console.error("Error adding team member:", addMemberError);
+            throw new Error("Failed to add user to team: " + addMemberError.message);
+          }
+
+          console.log("Successfully added user to team");
         }
 
-        // Update user role to employee if not already a manager
+        // Update user role to employee and set manager_id if not already a manager
         if (userProfile.role !== 'manager') {
           const { error: updateRoleError } = await supabase
             .from("profiles")
-            .update({ role: 'employee' })
+            .update({ 
+              role: 'employee',
+              manager_id: invitation.manager_id
+            })
             .eq("id", userProfile.id);
 
           if (updateRoleError) {
             console.error("Error updating user role:", updateRoleError);
           } else {
-            console.log("Updated user role to employee");
+            console.log("Updated user role to employee and set manager_id");
           }
         }
 
@@ -351,8 +380,8 @@ serve(async (req: Request) => {
         const { error: sharingError } = await supabase
           .from("sharing_preferences")
           .insert({
-            user_id: userProfile.id,
-            manager_id: invitation.manager_id,
+            user_id: userProfile.user_id, // Use auth user_id, not profile_id
+            manager_id: invitation.manager_id, // Use profile_id for manager
             share_profile: true,
             share_conversations: true,
             share_insights: true,

@@ -152,14 +152,19 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
 
     setInviteLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-invitation', {
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
         body: {
           email: newMemberEmail.trim(),
-          manager_id: managerProfile.id
+          invitationType: 'team_member',
+          teamId: managerProfile.id
         }
       });
 
       if (error) throw error;
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to send invitation');
+      }
 
       toast({
         title: "Invitation sent",
