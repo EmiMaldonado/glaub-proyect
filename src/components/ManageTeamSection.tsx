@@ -5,31 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { 
-  Users, 
-  Mail, 
-  Plus, 
-  UserMinus, 
-  Settings2, 
-  Clock,
-  CheckCircle,
-  XCircle,
-  Send,
-  User,
-  Trash2
-} from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-
+import { Users, Mail, Plus, UserMinus, Settings2, Clock, CheckCircle, XCircle, Send, User, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 interface TeamMember {
   id: string;
   user_id: string;
@@ -39,7 +16,6 @@ interface TeamMember {
   role: string;
   created_at: string;
 }
-
 interface ManagerProfile {
   id: string;
   user_id: string;
@@ -49,7 +25,6 @@ interface ManagerProfile {
   role: string;
   team_name: string;
 }
-
 interface Invitation {
   id: string;
   email: string;
@@ -57,13 +32,11 @@ interface Invitation {
   invited_at: string;
   expires_at: string;
 }
-
 interface ManageTeamSectionProps {
   managerProfile: ManagerProfile;
   teamMembers: TeamMember[];
   onTeamUpdate: () => void;
 }
-
 const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
   managerProfile,
   teamMembers,
@@ -74,26 +47,23 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [updatingName, setUpdatingName] = useState(false);
-
   useEffect(() => {
     loadInvitations();
   }, [managerProfile.id]);
-
   const loadInvitations = async () => {
     try {
-      const { data, error } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('manager_id', managerProfile.id)
-        .order('invited_at', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('invitations').select('*').eq('manager_id', managerProfile.id).order('invited_at', {
+        ascending: false
+      });
       if (error) throw error;
       setInvitations(data || []);
     } catch (error: any) {
       console.error('Error loading invitations:', error);
     }
   };
-
   const handleUpdateTeamName = async () => {
     if (!teamName.trim()) {
       toast({
@@ -103,21 +73,18 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
       });
       return;
     }
-
     setUpdatingName(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ team_name: teamName.trim() })
-        .eq('id', managerProfile.id);
-
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        team_name: teamName.trim()
+      }).eq('id', managerProfile.id);
       if (error) throw error;
-
       toast({
         title: "Team name updated",
         description: `Team name changed to "${teamName.trim()}"`
       });
-      
       onTeamUpdate();
     } catch (error: any) {
       console.error('Error updating team name:', error);
@@ -130,7 +97,6 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
       setUpdatingName(false);
     }
   };
-
   const handleInviteMember = async () => {
     if (!newMemberEmail.trim()) {
       toast({
@@ -140,7 +106,6 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
       });
       return;
     }
-
     if (!newMemberEmail.includes('@')) {
       toast({
         title: "Invalid email",
@@ -149,28 +114,26 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
       });
       return;
     }
-
     setInviteLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('unified-invitation', {
         body: {
           email: newMemberEmail.trim(),
           invitationType: 'team_member',
           teamId: managerProfile.id
         }
       });
-
       if (error) throw error;
-
       if (!data.success) {
         throw new Error(data.error || 'Failed to send invitation');
       }
-
       toast({
         title: "Invitation sent",
-        description: `Team invitation sent to ${newMemberEmail}`,
+        description: `Team invitation sent to ${newMemberEmail}`
       });
-
       setNewMemberEmail('');
       loadInvitations();
     } catch (error: any) {
@@ -184,23 +147,21 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
       setInviteLoading(false);
     }
   };
-
   const handleRemoveMember = async (memberId: string, memberName: string) => {
     try {
-      const { error } = await supabase.functions.invoke('remove-team-member', {
+      const {
+        error
+      } = await supabase.functions.invoke('remove-team-member', {
         body: {
           member_id: memberId,
           manager_id: managerProfile.id
         }
       });
-
       if (error) throw error;
-
       toast({
         title: "Member removed",
         description: `${memberName} has been removed from the team`
       });
-
       onTeamUpdate();
     } catch (error: any) {
       console.error('Error removing team member:', error);
@@ -211,39 +172,29 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
       });
     }
   };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return (
-          <Badge variant="outline" className="text-orange-600 text-xs">
+        return <Badge variant="outline" className="text-orange-600 text-xs">
             <Clock className="w-2 h-2 mr-1" />
             Pending
-          </Badge>
-        );
+          </Badge>;
       case 'accepted':
-        return (
-          <Badge variant="outline" className="text-green-600 text-xs">
+        return <Badge variant="outline" className="text-green-600 text-xs">
             <CheckCircle className="w-2 h-2 mr-1" />
             Accepted
-          </Badge>
-        );
+          </Badge>;
       case 'declined':
-        return (
-          <Badge variant="outline" className="text-destructive text-xs">
+        return <Badge variant="outline" className="text-destructive text-xs">
             <XCircle className="w-2 h-2 mr-1" />
             Declined
-          </Badge>
-        );
+          </Badge>;
       default:
         return <Badge variant="outline" className="text-xs">{status}</Badge>;
     }
   };
-
   const pendingInvitations = invitations.filter(i => i.status === 'pending');
-
-  return (
-    <Card className="h-fit">
+  return <Card className="h-fit">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg flex items-center gap-2">
           <Settings2 className="h-4 w-4" />
@@ -274,17 +225,8 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
         <div className="space-y-2">
           <label className="text-sm font-medium">Team Name</label>
           <div className="flex gap-1">
-            <Input
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              placeholder="Enter team name"
-              className="text-sm"
-            />
-            <Button 
-              onClick={handleUpdateTeamName}
-              disabled={updatingName || teamName === managerProfile.team_name}
-              size="sm"
-            >
+            <Input value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="Enter team name" className="text-sm" />
+            <Button onClick={handleUpdateTeamName} disabled={updatingName || teamName === managerProfile.team_name} size="sm">
               Save
             </Button>
           </div>
@@ -293,25 +235,17 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
         {/* Team Members */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Team Members ({teamMembers.length})</label>
-          {teamMembers.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground text-sm">
+          {teamMembers.length === 0 ? <div className="text-center py-4 text-muted-foreground text-sm">
               No team members yet
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {teamMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-2 border rounded text-sm">
+            </div> : <div className="space-y-2 max-h-40 overflow-y-auto">
+              {teamMembers.map(member => <div key={member.id} className="flex items-center justify-between p-2 border rounded text-sm">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                     <span className="truncate text-xs">{member.display_name || member.full_name}</span>
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive h-6 w-6 p-0"
-                      >
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-6 w-6 p-0">
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </AlertDialogTrigger>
@@ -324,99 +258,43 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleRemoveMember(member.id, member.display_name || member.full_name)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
+                        <AlertDialogAction onClick={() => handleRemoveMember(member.id, member.display_name || member.full_name)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                           Remove
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                </div>
-              ))}
-            </div>
-          )}
+                </div>)}
+            </div>}
         </div>
 
         {/* Pending Invitations */}
-        {pendingInvitations.length > 0 && (
-          <div className="space-y-2">
+        {pendingInvitations.length > 0 && <div className="space-y-2">
             <label className="text-sm font-medium">Pending Invitations ({pendingInvitations.length})</label>
             <div className="space-y-2 max-h-32 overflow-y-auto">
-              {pendingInvitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between p-2 border rounded text-sm">
+              {pendingInvitations.map(invitation => <div key={invitation.id} className="flex items-center justify-between p-2 border rounded text-sm">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                     <span className="truncate text-xs">{invitation.email}</span>
                   </div>
                   {getStatusBadge(invitation.status)}
-                </div>
-              ))}
+                </div>)}
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Invite Members */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Invite New Members</label>
           <div className="flex gap-1">
-            <Input
-              type="email"
-              placeholder="email@company.com"
-              value={newMemberEmail}
-              onChange={(e) => setNewMemberEmail(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleInviteMember()}
-              className="text-sm"
-            />
-            <Button 
-              onClick={handleInviteMember} 
-              disabled={inviteLoading}
-              size="sm"
-            >
+            <Input type="email" placeholder="email@company.com" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleInviteMember()} className="text-sm" />
+            <Button onClick={handleInviteMember} disabled={inviteLoading} size="sm">
               <Send className="h-3 w-3" />
             </Button>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Quick Actions</label>
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={loadInvitations}
-              className="text-xs"
-            >
-              <Users className="h-3 w-3 mr-1" />
-              Refresh Team
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                if (teamMembers.length === 0) {
-                  toast({
-                    title: "No team members",
-                    description: "Invite members to your team first",
-                    variant: "default"
-                  });
-                } else {
-                  toast({
-                    title: "Team Status",
-                    description: `${teamMembers.length} active members, ${pendingInvitations.length} pending invitations`,
-                    variant: "default"
-                  });
-                }
-              }}
-              className="text-xs"
-            >
-              <Settings2 className="h-3 w-3 mr-1" />
-              Team Status
-            </Button>
-          </div>
-        </div>
+        
 
         {/* Team Health Indicator */}
         <div className="space-y-2">
@@ -424,24 +302,16 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
           <div className="p-3 border rounded-lg">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Team Status</span>
-              <Badge 
-                variant={teamMembers.length > 0 ? "default" : "secondary"}
-                className="text-xs"
-              >
+              <Badge variant={teamMembers.length > 0 ? "default" : "secondary"} className="text-xs">
                 {teamMembers.length > 0 ? "Active" : "Building"}
               </Badge>
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
-              {teamMembers.length === 0 
-                ? "Start building your team by inviting members" 
-                : `Your team has ${teamMembers.length} member${teamMembers.length > 1 ? 's' : ''} ready to collaborate`
-              }
+              {teamMembers.length === 0 ? "Start building your team by inviting members" : `Your team has ${teamMembers.length} member${teamMembers.length > 1 ? 's' : ''} ready to collaborate`}
             </div>
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default ManageTeamSection;
