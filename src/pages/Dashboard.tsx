@@ -345,8 +345,8 @@ const Dashboard = () => {
         throw error;
       }
       toast({
-        title: "Manager Request Sent!",
-        description: `You've asked ${managerEmail} to be your manager. If they accept, you'll become their first team member.`
+        title: "Request Sent!",
+        description: `Your request to join the team has been sent to ${managerEmail}. They will receive an email with your invitation.`
       });
       setManagerEmail(''); // Clear the input
     } catch (error: any) {
@@ -671,21 +671,21 @@ const Dashboard = () => {
                   </div>
                 </div>}
 
-              {/* Ask Someone to be Your Manager */}
+              {/* Send a join request to a manager */}
               <div className="space-y-3">
                 <h4 className="font-medium text-sm flex items-center gap-2">
                   <Plus className="h-4 w-4" />
-                  Ask Someone to be Your Manager
+                  Send a join request to a manager
                 </h4>
                 <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
                   <p className="text-xs text-muted-foreground">
-                    Ask someone to become your manager. If they accept, you'll be their first team member.
+                    Send a join request to a manager
                   </p>
                   <div className="space-y-2">
-                    <Input type="email" placeholder="Future manager's email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleInviteManager()} />
+                    <Input type="email" placeholder="Manager's email" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleInviteManager()} />
                   </div>
                   <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full" size="sm">
-                    {isInvitingManager ? 'Sending Request...' : 'Ask to be My Manager'}
+                    {isInvitingManager ? 'Sending...' : 'Send Team Request'}
                   </Button>
                 </div>
               </div>
