@@ -121,6 +121,9 @@ verify_jwt = false
 [functions.complete-invitation]
 verify_jwt = false
 
+[functions.test-complete-invitation]
+verify_jwt = false
+
 [functions.unified-invitation]
 verify_jwt = true
 

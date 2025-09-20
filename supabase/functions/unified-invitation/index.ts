@@ -178,7 +178,7 @@ serve(async (req: Request) => {
         </div>
       `;
     } else { // manager_request
-      acceptUrl = `${supabaseUrl}/functions/v1/accept-manager-invitation?token=${token}`;
+      acceptUrl = `${supabaseUrl}/functions/v1/accept-invitation?token=${token}`;
       emailSubject = `${profile.display_name || profile.full_name} wants you to be their manager on EmpathAI`;
       
       emailContent = `

@@ -1,371 +1,440 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { corsHeaders } from "../_shared/cors.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 serve(async (req: Request) => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  const url = new URL(req.url);
+  const token = url.searchParams.get("token");
+  const action = url.searchParams.get("action") || "view";
+
+  console.log("Accept invitation request:", { token, action, method: req.method });
+
+  if (!token) {
+    return new Response(getErrorHTML("Invalid invitation link"), {
+      headers: { "Content-Type": "text/html" },
+      status: 400,
+    });
   }
 
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
-    console.log("Processing invitation acceptance request");
-    const url = new URL(req.url);
-    const token = url.searchParams.get("token");
-    
-    console.log("Token received:", token ? "✓" : "✗");
-
-    if (!token) {
-      console.error("No token provided");
-      return new Response(
-        `
-        <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: #dc3545;">Invalid Link</h1>
-            <p>No invitation token provided.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
-          </body>
-        </html>
-        `,
-        {
-          headers: { "Content-Type": "text/html" },
-          status: 400,
-        }
-      );
-    }
-
-    // Create Supabase client with service role key (bypasses RLS)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-
-    console.log("Looking up invitation with token:", token);
-
-    // Find the invitation using service role
+    // Get invitation details
     const { data: invitation, error: invitationError } = await supabase
       .from("invitations")
       .select(`
         *,
-        manager:profiles!invitations_manager_id_fkey(*)
+        manager:profiles!invitations_manager_id_fkey(display_name, full_name, team_name)
       `)
       .eq("token", token)
       .eq("status", "pending")
-      .maybeSingle();
+      .single();
 
-    console.log("Invitation lookup result:", { 
-      found: !!invitation, 
-      error: invitationError?.message 
+    if (invitationError || !invitation) {
+      console.error("Invitation not found:", invitationError);
+      return new Response(getErrorHTML("Invitation not found or has expired"), {
+        headers: { "Content-Type": "text/html" },
+        status: 404,
+      });
+    }
+
+    // Check if expired
+    if (new Date() > new Date(invitation.expires_at)) {
+      return new Response(getErrorHTML("This invitation has expired"), {
+        headers: { "Content-Type": "text/html" },
+        status: 410,
+      });
+    }
+
+    const managerName = invitation.manager?.display_name || invitation.manager?.full_name || 'Your colleague';
+    const teamName = invitation.manager?.team_name || `${managerName}'s Team`;
+
+    // Handle POST requests (form submissions)
+    if (req.method === "POST") {
+      const formData = await req.formData();
+      const formAction = formData.get("action");
+      const userEmail = formData.get("email");
+
+      console.log("Processing form submission:", { formAction, userEmail });
+
+      if (!formAction || (formAction === "accept" && !userEmail)) {
+        return new Response(getErrorHTML("Missing required information"), {
+          headers: { "Content-Type": "text/html" },
+          status: 400,
+        });
+      }
+
+      // Find existing user by email
+      let userId = null;
+      if (userEmail) {
+        const { data: users } = await supabase.auth.admin.listUsers();
+        const existingUser = users?.users?.find(u => u.email === userEmail);
+        if (existingUser) {
+          userId = existingUser.id;
+        }
+      }
+
+      // Call complete-invitation function
+      const { data: result, error: completeError } = await supabase.functions.invoke(
+        'complete-invitation',
+        {
+          body: {
+            token: token,
+            action: formAction,
+            user_id: userId,
+          }
+        }
+      );
+
+      if (completeError) {
+        console.error("Error completing invitation:", completeError);
+        return new Response(getErrorHTML(`Error: ${completeError.message}`), {
+          headers: { "Content-Type": "text/html" },
+          status: 400,
+        });
+      }
+
+      // Success response
+      const successMessage = formAction === "accept" 
+        ? `Successfully accepted invitation to join ${teamName}!`
+        : "Successfully declined the invitation.";
+        
+      return new Response(getSuccessHTML(successMessage), {
+        headers: { "Content-Type": "text/html" },
+        status: 200,
+      });
+    }
+
+    // GET request - show invitation details and form
+    const invitationType = invitation.invitation_type === "manager_request" 
+      ? "manager request" 
+      : "team invitation";
+      
+    return new Response(getInvitationHTML(invitation, managerName, teamName, invitationType), {
+      headers: { "Content-Type": "text/html" },
+      status: 200,
     });
 
-    if (invitationError) {
-      console.error("Database error:", invitationError);
-      return new Response(
-        `
-        <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: #dc3545;">Database Error</h1>
-            <p>Error looking up invitation: ${invitationError.message}</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
-          </body>
-        </html>
-        `,
-        {
-          headers: { "Content-Type": "text/html" },
-          status: 500,
-        }
-      );
-    }
-
-    if (!invitation) {
-      console.log("No pending invitation found for token");
-      return new Response(
-        `
-        <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: #dc3545;">Invalid or Used Invitation</h1>
-            <p>This invitation link is invalid or has already been used.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
-          </body>
-        </html>
-        `,
-        {
-          headers: { "Content-Type": "text/html" },
-          status: 400,
-        }
-      );
-    }
-
-    // Check if invitation has expired
-    if (new Date() > new Date(invitation.expires_at)) {
-      console.log("Invitation has expired");
-      return new Response(
-        `
-        <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: #dc3545;">Invitation Expired</h1>
-            <p>This invitation has expired. Please ask your manager to send a new one.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
-          </body>
-        </html>
-        `,
-        {
-          headers: { "Content-Type": "text/html" },
-          status: 400,
-        }
-      );
-    }
-
-    console.log("Checking if user exists for email:", invitation.email);
-
-    // Check if user with this email already exists
-    const { data: existingUser, error: userCheckError } = await supabase.auth.admin.listUsers();
-    
-    if (userCheckError) {
-      console.error("Error checking users:", userCheckError);
-      return new Response(
-        `
-        <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: #dc3545;">Error</h1>
-            <p>Error checking user accounts: ${userCheckError.message}</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
-          </body>
-        </html>
-        `,
-        {
-          headers: { "Content-Type": "text/html" },
-          status: 500,
-        }
-      );
-    }
-    
-    const userExists = existingUser?.users?.find(u => u.email === invitation.email);
-    console.log("User exists:", !!userExists);
-
-    if (userExists) {
-      console.log("Processing invitation for existing user:", userExists.id);
-      
-      // User exists - get their profile and add to team
-      const { data: userProfile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", userExists.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("Error fetching user profile:", profileError);
-        throw new Error(`Profile lookup failed: ${profileError.message}`);
-      }
-
-      if (!userProfile) {
-        console.error("User profile not found for user:", userExists.id);
-        throw new Error("User profile not found");
-      }
-
-      console.log("Adding user to team membership and updating invitation status");
-
-      // Ensure user has employee role (if not manager already)
-      if (userProfile.role !== 'manager') {
-        const { error: updateRoleError } = await supabase
-          .from("profiles")
-          .update({ role: 'employee' })
-          .eq("id", userProfile.id);
-
-        if (updateRoleError) {
-          console.error("Error updating user role:", updateRoleError);
-        }
-      }
-
-      // Add team membership - find next available slot
-      console.log("Finding existing team membership for manager:", invitation.manager_id);
-      
-      // Get or create team membership record
-      let { data: teamMembership, error: membershipFetchError } = await supabase
-        .from("team_memberships")
-        .select("*")
-        .eq("manager_id", invitation.manager_id)
-        .maybeSingle();
-
-      if (membershipFetchError && membershipFetchError.code !== 'PGRST116') {
-        console.error("Error fetching team membership:", membershipFetchError);
-        throw new Error(`Failed to fetch team membership: ${membershipFetchError.message}`);
-      }
-
-      if (!teamMembership) {
-        // Create new team membership record
-        console.log("Creating new team membership record");
-        const { data: newMembership, error: createError } = await supabase
-          .from("team_memberships")
-          .insert({
-            manager_id: invitation.manager_id,
-            employee_1_id: userProfile.id
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error("Error creating team membership:", createError);
-          throw new Error(`Failed to create team membership: ${createError.message}`);
-        }
-        
-        teamMembership = newMembership;
-        console.log("Created new team membership with first employee");
-      } else {
-        // Find next available employee slot
-        console.log("Adding to existing team membership");
-        const employeeSlots = [
-          'employee_1_id', 'employee_2_id', 'employee_3_id', 'employee_4_id', 'employee_5_id',
-          'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'
-        ];
-        
-        // Check if user is already in the team
-        const isAlreadyMember = employeeSlots.some(slot => teamMembership[slot] === userProfile.id);
-        if (isAlreadyMember) {
-          console.log("User is already a member of this team");
-        } else {
-          // Find first available slot
-          const availableSlot = employeeSlots.find(slot => !teamMembership[slot]);
-          
-          if (!availableSlot) {
-            throw new Error("Team is full (maximum 10 members)");
-          }
-          
-          console.log("Adding user to slot:", availableSlot);
-          const { error: updateError } = await supabase
-            .from("team_memberships")
-            .update({ [availableSlot]: userProfile.id })
-            .eq("id", teamMembership.id);
-
-          if (updateError) {
-            console.error("Error updating team membership:", updateError);
-            throw new Error(`Failed to add user to team: ${updateError.message}`);
-          }
-        }
-      }
-
-      // Update invitation status
-      const { error: updateInvitationError } = await supabase
-        .from("invitations")
-        .update({ 
-          status: "accepted", 
-          accepted_at: new Date().toISOString() 
-        })
-        .eq("id", invitation.id);
-
-      if (updateInvitationError) {
-        console.error("Error updating invitation:", updateInvitationError);
-        throw new Error(`Failed to update invitation status: ${updateInvitationError.message}`);
-      }
-
-      // Check manager's current role and promote if needed (with team name)
-      const { data: managerProfile } = await supabase
-        .from("profiles")
-        .select("role, team_name, display_name, full_name")
-        .eq("id", invitation.manager_id)
-        .single();
-
-      if (managerProfile?.role === "employee") {
-        console.log("Promoting manager from employee to manager role");
-        const teamName = managerProfile.team_name || `${managerProfile.display_name || managerProfile.full_name || 'Team'}'s Team`;
-        
-        const { error: promoteManagerError } = await supabase
-          .from("profiles")
-          .update({ 
-            role: "manager",
-            team_name: teamName
-          })
-          .eq("id", invitation.manager_id);
-
-        if (promoteManagerError) {
-          console.error("Error promoting manager:", promoteManagerError);
-        }
-      }
-
-      console.log("Invitation acceptance completed successfully");
-
-      return new Response(
-        `
-        <html>
-          <head>
-            <meta http-equiv="refresh" content="3;url=https://xn--glub-thesis-m8a.com/dashboard">
-          </head>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: #28a745;">Welcome to the Team!</h1>
-            <p>You've successfully joined ${managerProfile?.team_name || `${invitation.manager?.display_name || invitation.manager?.full_name}'s team`} on EmpathAI.</p>
-            <p>You can now log in to your existing account to access team features.</p>
-            <p>Redirecting to dashboard in 3 seconds...</p>
-            <a href="https://xn--glub-thesis-m8a.com/dashboard" 
-               style="background-color: #007bff; color: white; padding: 15px 30px; 
-                      text-decoration: none; border-radius: 5px; display: inline-block; 
-                      font-weight: bold; margin-top: 20px;">
-              Go to Dashboard Now
-            </a>
-          </body>
-        </html>
-        `,
-        {
-          headers: { "Content-Type": "text/html" },
-          status: 200,
-        }
-      );
-    } else {
-      console.log("User doesn't exist, redirecting to signup");
-      // User doesn't exist - redirect to signup with special parameters
-      const signupUrl = `https://xn--glub-thesis-m8a.com/auth?mode=signup&invitation_token=${token}&email=${encodeURIComponent(invitation.email)}`;
-      
-      return new Response(
-        `
-        <html>
-          <head>
-            <meta http-equiv="refresh" content="3;url=${signupUrl}">
-          </head>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1 style="color: #007bff;">Create Your EmpathAI Account</h1>
-            <p>You've been invited to join ${invitation.manager?.team_name || `${invitation.manager?.display_name || invitation.manager?.full_name}'s team`} on EmpathAI.</p>
-            <p>Click the button below to create your account and join the team.</p>
-            <p>Redirecting to signup in 3 seconds...</p>
-            <a href="${signupUrl}" 
-               style="background-color: #28a745; color: white; padding: 15px 30px; 
-                      text-decoration: none; border-radius: 5px; display: inline-block; 
-                      font-weight: bold; margin-top: 20px;">
-              Create Account & Join Team
-            </a>
-          </body>
-        </html>
-        `,
-        {
-          headers: { "Content-Type": "text/html" },
-          status: 200,
-        }
-      );
-    }
-
   } catch (error: any) {
-    console.error("Error in accept-invitation function:", error);
-    return new Response(
-      `
-      <html>
-        <head>
-          <meta http-equiv="refresh" content="5;url=https://xn--glub-thesis-m8a.com/error?message=invitation-error">
-        </head>
-        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-          <h1 style="color: #dc3545;">Error</h1>
-          <p>An error occurred while processing your invitation: ${error.message}</p>
-          <p>Redirecting to error page in 5 seconds...</p>
-          <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
-        </body>
-      </html>
-      `,
-      {
-        headers: { "Content-Type": "text/html" },
-        status: 500,
-      }
-    );
+    console.error("Error in accept-invitation:", error);
+    return new Response(getErrorHTML("An error occurred while processing your invitation"), {
+      headers: { "Content-Type": "text/html" },
+      status: 500,
+    });
   }
 });
+
+function getInvitationHTML(invitation: any, managerName: string, teamName: string, invitationType: string) {
+  const isManagerRequest = invitation.invitation_type === "manager_request";
+  const actionText = isManagerRequest ? "become their manager" : "join their team";
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmpathAI Invitation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+        }
+        .header h1 { font-size: 24px; margin-bottom: 8px; }
+        .header p { opacity: 0.9; font-size: 16px; }
+        .content { padding: 30px; }
+        .invitation-details {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border-left: 4px solid #2563eb;
+        }
+        .invitation-details h3 { color: #1e293b; margin-bottom: 8px; }
+        .invitation-details p { color: #64748b; line-height: 1.5; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { 
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-accept {
+            background: #16a34a;
+            color: white;
+        }
+        .btn-accept:hover {
+            background: #15803d;
+        }
+        .btn-decline {
+            background: #dc2626;
+            color: white;
+        }
+        .btn-decline:hover {
+            background: #b91c1c;
+        }
+        .note {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>EmpathAI Invitation</h1>
+            <p>You've been invited to ${actionText}</p>
+        </div>
+        
+        <div class="content">
+            <div class="invitation-details">
+                <h3>${managerName} has sent you a ${invitationType}</h3>
+                <p>
+                    ${isManagerRequest 
+                      ? `They would like you to become their manager on EmpathAI, an AI-powered therapeutic conversation platform.`
+                      : `They've invited you to join "${teamName}" on EmpathAI, an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being.`
+                    }
+                </p>
+            </div>
+
+            <form method="POST" id="invitationForm">
+                <div class="form-group">
+                    <label for="email">Your Email Address:</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        value="${invitation.email}"
+                        required
+                        placeholder="Enter your email address"
+                    />
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" name="action" value="accept" class="btn btn-accept">
+                        ${isManagerRequest ? 'Accept Manager Role' : 'Join Team'}
+                    </button>
+                    <button type="submit" name="action" value="decline" class="btn btn-decline">
+                        Decline
+                    </button>
+                </div>
+
+                <div class="note">
+                    <strong>Note:</strong> To accept this invitation, make sure you use the same email address (${invitation.email}) when creating your EmpathAI account.
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('invitationForm').addEventListener('submit', function(e) {
+            const submitBtn = e.submitter;
+            const action = submitBtn.value;
+            
+            if (action === 'decline') {
+                if (!confirm('Are you sure you want to decline this invitation?')) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = action === 'accept' ? 'Processing...' : 'Declining...';
+        });
+    </script>
+</body>
+</html>
+  `;
+}
+
+function getSuccessHTML(message: string) {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Success - EmpathAI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            padding: 40px;
+        }
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .success-icon::after {
+            content: '✓';
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        h1 { color: #065f46; margin-bottom: 16px; }
+        p { color: #374151; line-height: 1.5; margin-bottom: 24px; }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon"></div>
+        <h1>Success!</h1>
+        <p>${message}</p>
+        <a href="https://gläub-thesis.com" class="btn">Continue to EmpathAI</a>
+    </div>
+</body>
+</html>
+  `;
+}
+
+function getErrorHTML(message: string) {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - EmpathAI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            padding: 40px;
+        }
+        .error-icon {
+            width: 64px;
+            height: 64px;
+            background: #dc2626;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .error-icon::after {
+            content: '!';
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        h1 { color: #7f1d1d; margin-bottom: 16px; }
+        p { color: #374151; line-height: 1.5; margin-bottom: 24px; }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-icon"></div>
+        <h1>Error</h1>
+        <p>${message}</p>
+        <a href="https://gläub-thesis.com" class="btn">Return to EmpathAI</a>
+    </div>
+</body>
+</html>
+  `;
+}

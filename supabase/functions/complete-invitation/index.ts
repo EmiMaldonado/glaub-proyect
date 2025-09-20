@@ -4,7 +4,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 interface CompleteInvitationRequest {
   token: string;
-  user_id: string;
+  user_id?: string; // Optional for new users coming from email
   action: 'accept' | 'decline';
   team_name?: string;
 }
@@ -23,9 +23,9 @@ serve(async (req: Request) => {
     
     console.log("Complete invitation request received:", { token, user_id, action, team_name });
 
-    if (!token || !user_id || !action) {
-      console.error("Missing required fields:", { token: !!token, user_id: !!user_id, action: !!action });
-      throw new Error("Token, user_id, and action are required");
+    if (!token || !action) {
+      console.error("Missing required fields:", { token: !!token, action: !!action });
+      throw new Error("Token and action are required");
     }
 
     // Validate the action parameter
@@ -83,61 +83,89 @@ serve(async (req: Request) => {
 
     console.log("Found manager profile:", { id: managerProfile.id, display_name: managerProfile.display_name });
 
-    // Validate that the user exists in auth.users first
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(user_id);
-    
-    if (authError || !authUser?.user) {
-      console.error("User does not exist in auth.users:", { user_id, authError });
-      throw new Error("Invalid user - user must be registered and authenticated first");
-    }
+    let authUser;
+    let finalUserId = user_id;
 
-    console.log("Validated auth user:", { id: authUser.user.id, email: authUser.user.email });
-
-    // Get the user's profile - use maybeSingle to handle case where profile doesn't exist
-    const { data: existingProfile, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user_id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error("Error finding user profile:", profileError);
-      throw new Error("User profile lookup failed: " + profileError.message);
-    }
-
-    let userProfile;
-    if (!existingProfile) {
-      console.log("No profile found, creating new profile for authenticated user:", user_id);
+    // If user_id is provided, validate it exists in auth.users
+    if (user_id) {
+      const { data: validatedUser, error: authError } = await supabase.auth.admin.getUserById(user_id);
       
-      // Create profile for the authenticated user
-      const { data: newProfile, error: createProfileError } = await supabase
-        .from("profiles")
-        .insert({
-          user_id: user_id,
-          role: 'employee',
-          onboarding_completed: false,
-          full_name: authUser.user.user_metadata?.full_name,
-          display_name: authUser.user.user_metadata?.display_name,
-          email: authUser.user.email
-        })
-        .select()
-        .single();
+      if (authError || !validatedUser?.user) {
+        console.error("Provided user_id does not exist in auth.users:", { user_id, authError });
+        throw new Error("Invalid user_id - user must be registered first");
+      }
+      
+      authUser = validatedUser;
+      console.log("Validated provided auth user:", { id: authUser.user.id, email: authUser.user.email });
+    } else {
+      // No user_id provided - check if there's an existing auth user with the invitation email
+      const { data: existingUsers } = await supabase.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find(u => u.email === invitation.email);
+      
+      if (existingUser) {
+        authUser = { user: existingUser };
+        finalUserId = existingUser.id;
+        console.log("Found existing auth user by email:", { id: existingUser.id, email: existingUser.email });
+      } else {
+        console.log("No existing auth user found for email:", invitation.email);
+        // For decline action, we don't need a user account
+        if (action === 'decline') {
+          console.log("Declining invitation without user account");
+        } else {
+          throw new Error("To accept this invitation, you must first create an account with the email: " + invitation.email);
+        }
+      }
+    }
 
-      if (createProfileError) {
-        console.error("Error creating user profile:", createProfileError);
-        throw new Error("Failed to create user profile: " + createProfileError.message);
+    let userProfile = null;
+
+    // Only get/create profile if we have a valid user (not for decline without user)
+    if (finalUserId && authUser) {
+      // Get the user's profile - use maybeSingle to handle case where profile doesn't exist
+      const { data: existingProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", finalUserId)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("Error finding user profile:", profileError);
+        throw new Error("User profile lookup failed: " + profileError.message);
       }
 
-      console.log("Created new user profile:", { id: newProfile.id, user_id: newProfile.user_id });
-      userProfile = newProfile;
-    } else {
-      console.log("Found existing user profile:", { id: existingProfile.id, user_id: existingProfile.user_id });
-      userProfile = existingProfile;
+      if (!existingProfile) {
+        console.log("No profile found, creating new profile for authenticated user:", finalUserId);
+        
+        // Create profile for the authenticated user
+        const { data: newProfile, error: createProfileError } = await supabase
+          .from("profiles")
+          .insert({
+            user_id: finalUserId,
+            role: 'employee',
+            onboarding_completed: false,
+            full_name: authUser.user.user_metadata?.full_name,
+            display_name: authUser.user.user_metadata?.display_name,
+            email: authUser.user.email
+          })
+          .select()
+          .single();
+
+        if (createProfileError) {
+          console.error("Error creating user profile:", createProfileError);
+          throw new Error("Failed to create user profile: " + createProfileError.message);
+        }
+
+        console.log("Created new user profile:", { id: newProfile.id, user_id: newProfile.user_id });
+        userProfile = newProfile;
+      } else {
+        console.log("Found existing user profile:", { id: existingProfile.id, user_id: existingProfile.user_id });
+        userProfile = existingProfile;
+      }
+
+      console.log("Using user profile:", { id: userProfile.id, user_id: userProfile.user_id });
     }
 
-    console.log("Using user profile:", { id: userProfile.id, user_id: userProfile.user_id });
-
-    if (action === 'accept') {
+    if (action === 'accept' && userProfile) {
       console.log("Processing invitation acceptance for type:", invitation.invitation_type);
       
       if (invitation.invitation_type === 'manager_request') {
@@ -364,8 +392,9 @@ serve(async (req: Request) => {
 
     console.log("Invitation completed successfully:", { 
       invitationId: invitation.id, 
-      userId: user_id,
-      managerId: invitation.manager_id 
+      userId: finalUserId,
+      managerId: invitation.manager_id,
+      action: action
     });
 
     const responseMessage = action === 'accept' 
