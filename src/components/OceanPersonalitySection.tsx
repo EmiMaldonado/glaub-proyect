@@ -105,7 +105,7 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
         </div>
 
         {/* Team Analysis */}
-        {teamDescription && (
+        {teamDescription ? (
           <div className="pt-4 border-t space-y-6">
             {teamDescription.includes('**Team Profile Summary:**') ? (
               <>
@@ -143,22 +143,61 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
                 })()}
               </>
             ) : (
-              /* Fallback for unstructured analysis */
+              /* Fallback for unstructured analysis or status messages */
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="h-4 w-4 text-primary" />
                   <h3 className="font-medium text-sm">Team Profile Analysis</h3>
                 </div>
-                <p className={`text-sm leading-relaxed ${
-                  teamDescription.toLowerCase().includes('no information available') || 
-                  teamDescription.toLowerCase().includes('no comprehensive information') 
-                    ? 'text-muted-foreground italic' 
-                    : 'text-muted-foreground'
-                }`}>
-                  {teamDescription}
-                </p>
+                
+                {/* Check for specific status messages */}
+                {teamDescription.includes('processing') || teamDescription.includes('generating') ? (
+                  <div className="text-center py-4">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      ⏳ Generating detailed team analysis...
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Personality data is available. AI description is being generated.
+                    </div>
+                  </div>
+                ) : teamDescription.includes('unavailable') || teamDescription.includes('service') ? (
+                  <div className="text-center py-4">
+                    <div className="text-sm text-amber-600 mb-2">
+                      ⚠️ Analysis temporarily unavailable
+                    </div>
+                    <div className="text-xs text-muted-foreground max-w-md mx-auto">
+                      {teamDescription}
+                    </div>
+                    {onRefresh && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={onRefresh}
+                        className="mt-3"
+                      >
+                        Try Again
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {teamDescription}
+                  </p>
+                )}
               </div>
             )}
+          </div>
+        ) : (
+          /* No description available */
+          <div className="pt-4 border-t">
+            <div className="text-center py-6">
+              <div className="text-sm text-muted-foreground mb-2">
+                ⏳ Generating team analysis...
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Team personality metrics are calculated. Detailed analysis is being generated.
+              </div>
+            </div>
           </div>
         )}
       </CardContent>

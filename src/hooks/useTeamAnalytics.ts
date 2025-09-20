@@ -121,33 +121,62 @@ export const useTeamAnalytics = (managerId: string, teamMembers: TeamMember[]) =
 
       if (teamMembers.length > 0) {
         try {
-          console.log('🧠 Calling team OCEAN profile function with data:', { managerId, teamMembers });
-          const { data: oceanData, error: oceanError } = await supabase.functions.invoke('generate-team-ocean-profile', {
-            body: {
-              managerId,
-              teamMembers: teamMembers
-            }
+          console.log('🧠 Calling team OCEAN profile function with data:', {
+            managerId,
+            teamMembers: teamMembers.map(m => ({
+              id: m.id,
+              user_id: m.user_id,
+              full_name: m.full_name,
+              display_name: m.display_name
+            }))
           });
+
+          const { data: oceanData, error: oceanError } = await supabase.functions.invoke(
+            'generate-team-ocean-profile',
+            {
+              body: { managerId, teamMembers }
+            }
+          );
 
           console.log('🌊 Ocean function response:', { oceanData, oceanError });
 
           if (oceanError) {
-            console.error('❌ Error generating team OCEAN profile:', oceanError);
+            console.error('❌ Ocean function error:', oceanError);
+            setTeamDescription('Unable to generate team analysis due to service error. Please try refreshing.');
+            usingRealData = false;
           } else if (oceanData?.success) {
             personalityDistribution = oceanData.personalityData;
             aiTeamDescription = oceanData.teamDescription || '';
-            setTeamDescription(aiTeamDescription);
-            usingRealData = oceanData.metadata?.personalityDataPoints > 0;
-            console.log('✅ Team OCEAN profile generated successfully:', {
-              dataPoints: oceanData.metadata?.personalityDataPoints,
-              usingRealData
-            });
+            
+            if (aiTeamDescription.trim()) {
+              console.log('✅ Team OCEAN profile generated successfully with description:', {
+                dataPoints: oceanData.metadata?.personalityDataPoints || 0,
+                usingRealData: true,
+                descriptionLength: aiTeamDescription.length
+              });
+              setTeamDescription(aiTeamDescription);
+              usingRealData = (oceanData.metadata?.personalityDataPoints || 0) > 0;
+            } else {
+              console.warn('⚠️ Team OCEAN profile generated but description is empty');
+              setTeamDescription('Team analysis service is processing your data. Real personality metrics are available, but the detailed description is still being generated. Please refresh in a moment.');
+              usingRealData = (oceanData.metadata?.personalityDataPoints || 0) > 0;
+            }
           } else {
-            console.warn('⚠️ Ocean function returned no success flag:', oceanData);
+            console.warn('⚠️ Ocean function returned unsuccessful response:', oceanData);
+            const fallbackDescription = oceanData?.teamDescription || 'Unable to generate team analysis at this time. Please ensure team members have completed conversations.';
+            setTeamDescription(fallbackDescription);
+            if (oceanData?.personalityData) {
+              personalityDistribution = oceanData.personalityData;
+            }
+            usingRealData = false;
           }
         } catch (error) {
-          console.error('❌ Error calling team OCEAN function:', error);
+          console.error('❌ Failed to call team OCEAN profile function:', error);
+          setTeamDescription('Team analysis service is temporarily unavailable. Please check your connection and try refreshing the page.');
+          usingRealData = false;
         }
+      } else {
+        setTeamDescription('No team members found. Add team members to generate personality analysis.');
       }
 
       // Calculate team health scores based on real data

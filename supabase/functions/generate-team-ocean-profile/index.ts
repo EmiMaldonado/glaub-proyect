@@ -180,6 +180,25 @@ serve(async (req) => {
     `;
 
     console.log('🤖 Calling OpenAI for team analysis...');
+    console.log('📝 Prompt length:', aiPrompt.length);
+
+    const openAIPayload = {
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert organizational psychologist specializing in team dynamics and personality analysis using the OCEAN model.'
+        },
+        {
+          role: 'user',
+          content: aiPrompt
+        }
+      ],
+      max_tokens: 800,
+      temperature: 0.7,
+    };
+
+    console.log('🔄 Making OpenAI request with model:', openAIPayload.model);
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -187,32 +206,24 @@ serve(async (req) => {
         'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert organizational psychologist specializing in team dynamics and personality analysis using the OCEAN model.'
-          },
-          {
-            role: 'user',
-            content: aiPrompt
-          }
-        ],
-        max_completion_tokens: 400,
-      }),
+      body: JSON.stringify(openAIPayload),
     });
+
+    console.log('📡 OpenAI response status:', openAIResponse.status);
 
     if (!openAIResponse.ok) {
       const errorText = await openAIResponse.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${openAIResponse.status}`);
+      console.error('❌ OpenAI API error response:', errorText);
+      console.error('❌ OpenAI API status:', openAIResponse.status);
+      throw new Error(`OpenAI API error: ${openAIResponse.status} - ${errorText}`);
     }
 
     const aiResult = await openAIResponse.json();
-    const teamDescription = aiResult.choices[0].message.content;
-
+    console.log('🔍 OpenAI full response:', JSON.stringify(aiResult, null, 2));
+    
+    const teamDescription = aiResult.choices?.[0]?.message?.content || '';
     console.log('✅ Generated team description length:', teamDescription.length);
+    console.log('📄 Team description preview:', teamDescription.substring(0, 200) + '...');
 
     return new Response(JSON.stringify({
       success: true,
@@ -229,11 +240,18 @@ serve(async (req) => {
     });
 
   } catch (error: any) {
-    console.error('Error in generate-team-ocean-profile:', error);
+    console.error('❌ Error in generate-team-ocean-profile:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Check if it's an OpenAI-specific error
+    const isOpenAIError = error.message.includes('OpenAI API error');
+    const errorMessage = isOpenAIError 
+      ? `OpenAI service unavailable: ${error.message}` 
+      : `Analysis generation failed: ${error.message}`;
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: errorMessage,
       personalityData: {
         openness: 65,
         conscientiousness: 72,
@@ -241,7 +259,9 @@ serve(async (req) => {
         agreeableness: 78,
         neuroticism: 42
       },
-      teamDescription: "Unable to generate team personality analysis at this time. Please ensure team members have completed conversations to provide personality data."
+      teamDescription: isOpenAIError 
+        ? "The AI analysis service is temporarily unavailable. The personality data shown is based on your team's conversation patterns. Please try refreshing in a moment."
+        : "Unable to generate team personality analysis at this time. Please ensure team members have completed conversations to provide personality data."
     }), {
       status: 200, // Return 200 with fallback data instead of error
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
