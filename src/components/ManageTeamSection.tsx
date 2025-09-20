@@ -251,6 +251,25 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Team Overview */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Team Overview</label>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-lg font-semibold text-primary">{teamMembers.length}</div>
+              <div className="text-xs text-muted-foreground">Members</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-lg font-semibold text-primary">{pendingInvitations.length}</div>
+              <div className="text-xs text-muted-foreground">Pending</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-lg font-semibold text-primary">{teamMembers.length + pendingInvitations.length}</div>
+              <div className="text-xs text-muted-foreground">Total</div>
+            </div>
+          </div>
+        </div>
+
         {/* Team Name */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Team Name</label>
@@ -357,6 +376,67 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
             >
               <Send className="h-3 w-3" />
             </Button>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Quick Actions</label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadInvitations}
+              className="text-xs"
+            >
+              <Users className="h-3 w-3 mr-1" />
+              Refresh Team
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                if (teamMembers.length === 0) {
+                  toast({
+                    title: "No team members",
+                    description: "Invite members to your team first",
+                    variant: "default"
+                  });
+                } else {
+                  toast({
+                    title: "Team Status",
+                    description: `${teamMembers.length} active members, ${pendingInvitations.length} pending invitations`,
+                    variant: "default"
+                  });
+                }
+              }}
+              className="text-xs"
+            >
+              <Settings2 className="h-3 w-3 mr-1" />
+              Team Status
+            </Button>
+          </div>
+        </div>
+
+        {/* Team Health Indicator */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Team Health</label>
+          <div className="p-3 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Team Status</span>
+              <Badge 
+                variant={teamMembers.length > 0 ? "default" : "secondary"}
+                className="text-xs"
+              >
+                {teamMembers.length > 0 ? "Active" : "Building"}
+              </Badge>
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              {teamMembers.length === 0 
+                ? "Start building your team by inviting members" 
+                : `Your team has ${teamMembers.length} member${teamMembers.length > 1 ? 's' : ''} ready to collaborate`
+              }
+            </div>
           </div>
         </div>
       </CardContent>
