@@ -77,11 +77,15 @@ serve(async (req: Request) => {
     }
 
     // Get the member's profile info for response
-    const { data: memberProfile, error: profileError } = await supabase
+    const { data: memberProfile, error: memberProfileError } = await supabase
       .from("profiles")
       .select("full_name, display_name")
       .eq("id", member_id)
       .single();
+
+    if (memberProfileError) {
+      console.warn("Could not fetch member profile for response:", memberProfileError);
+    }
 
     const memberName = memberProfile?.display_name || memberProfile?.full_name || "Unknown member";
 
