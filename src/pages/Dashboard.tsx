@@ -196,13 +196,18 @@ const Dashboard = () => {
         setCurrentManager(manager);
       }
 
-      // Load user's team memberships
+      // Load user's team memberships using the new team_members table
       const {
         data: teamMemberships
-      } = await supabase.from('team_memberships').select(`
+      } = await supabase.from('team_members').select(`
           id,
-          manager:profiles!manager_id(id, full_name, display_name, team_name)
-        `).or(`employee_1_id.eq.${profile?.id},employee_2_id.eq.${profile?.id},employee_3_id.eq.${profile?.id},employee_4_id.eq.${profile?.id},employee_5_id.eq.${profile?.id},employee_6_id.eq.${profile?.id},employee_7_id.eq.${profile?.id},employee_8_id.eq.${profile?.id},employee_9_id.eq.${profile?.id},employee_10_id.eq.${profile?.id}`);
+          team_id,
+          member_id,
+          role,
+          joined_at,
+          manager:profiles!team_members_team_id_fkey(id, full_name, display_name, team_name)
+        `).eq('member_id', profile?.id).eq('role', 'employee');
+      
       if (teamMemberships && teamMemberships.length > 0) {
         setUserTeams(teamMemberships);
       }
