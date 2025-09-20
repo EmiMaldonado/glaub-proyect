@@ -53,14 +53,13 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
     try {
       // Check if user is part of any team (has a manager)
       const { data: teamMembership } = await supabase
-        .from('team_memberships')
+        .from('team_members')
         .select(`
-          manager_id,
-          manager:profiles!manager_id(full_name, display_name)
+          team_id,
+          manager:profiles!team_id(full_name, display_name)
         `)
-        .or(
-          `employee_1_id.eq.${userProfile.id},employee_2_id.eq.${userProfile.id},employee_3_id.eq.${userProfile.id},employee_4_id.eq.${userProfile.id},employee_5_id.eq.${userProfile.id},employee_6_id.eq.${userProfile.id},employee_7_id.eq.${userProfile.id},employee_8_id.eq.${userProfile.id},employee_9_id.eq.${userProfile.id},employee_10_id.eq.${userProfile.id}`
-        )
+        .eq('member_id', userProfile.id)
+        .eq('role', 'employee')
         .maybeSingle();
 
       if (teamMembership) {
@@ -81,19 +80,18 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
     try {
       // Get the user's manager from team memberships
       const { data: teamMembership } = await supabase
-        .from('team_memberships')
-        .select('manager_id')
-        .or(
-          `employee_1_id.eq.${userProfile.id},employee_2_id.eq.${userProfile.id},employee_3_id.eq.${userProfile.id},employee_4_id.eq.${userProfile.id},employee_5_id.eq.${userProfile.id},employee_6_id.eq.${userProfile.id},employee_7_id.eq.${userProfile.id},employee_8_id.eq.${userProfile.id},employee_9_id.eq.${userProfile.id},employee_10_id.eq.${userProfile.id}`
-        )
+        .from('team_members')
+        .select('team_id')
+        .eq('member_id', userProfile.id)
+        .eq('role', 'employee')
         .maybeSingle();
 
-      if (teamMembership) {
+        if (teamMembership) {
         const { data: existingPrefs } = await supabase
           .from('sharing_preferences')
           .select('*')
           .eq('user_id', user.id)
-          .eq('manager_id', teamMembership.manager_id)
+          .eq('manager_id', teamMembership.team_id)
           .maybeSingle();
 
         if (existingPrefs) {
@@ -122,11 +120,10 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
     try {
       // Get the user's manager ID
       const { data: teamMembership } = await supabase
-        .from('team_memberships')
-        .select('manager_id')
-        .or(
-          `employee_1_id.eq.${userProfile.id},employee_2_id.eq.${userProfile.id},employee_3_id.eq.${userProfile.id},employee_4_id.eq.${userProfile.id},employee_5_id.eq.${userProfile.id},employee_6_id.eq.${userProfile.id},employee_7_id.eq.${userProfile.id},employee_8_id.eq.${userProfile.id},employee_9_id.eq.${userProfile.id},employee_10_id.eq.${userProfile.id}`
-        )
+        .from('team_members')
+        .select('team_id')
+        .eq('member_id', userProfile.id)
+        .eq('role', 'employee')
         .single();
 
       if (!teamMembership) {
@@ -138,7 +135,7 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
         .from('sharing_preferences')
         .upsert({
           user_id: user.id,
-          manager_id: teamMembership.manager_id,
+          manager_id: teamMembership.team_id,
           ...preferences,
           share_ocean_profile: true // Always shared
         }, {

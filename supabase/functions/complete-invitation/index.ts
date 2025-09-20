@@ -173,9 +173,10 @@ serve(async (req: Request) => {
         
         // Check if user is already a manager with an active team
         const { data: existingTeamMembers, error: teamCheckError } = await supabase
-          .from("team_memberships")
+          .from("team_members")
           .select("*")
-          .eq("manager_id", userProfile.id)
+          .eq("team_id", userProfile.id)
+          .eq("role", "manager")
           .limit(1);
 
         if (teamCheckError) {
@@ -272,11 +273,6 @@ serve(async (req: Request) => {
           }
         }
 
-        if (sharingError) {
-          console.error("Error setting up sharing preferences:", sharingError);
-        } else {
-          console.log("Set up sharing preferences for new team member");
-        }
 
       } else {
         // Handle team_member invitation (existing logic)
