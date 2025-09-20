@@ -582,6 +582,32 @@ const Dashboard = () => {
                          {oceanDescription || oceanProfile.summary || `Based on your ${stats.completedConversations} conversations, your personality profile shows consistent patterns in how you approach challenges and relationships. Your communication style and decision-making preferences have been analyzed to create this personalized summary of your professional strengths and growth areas.`}
                        </p>}
                   </div>
+
+                  {/* Strengths Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Lightbulb className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">Strengths</h3>
+                    </div>
+                    {lastConversation?.key_insights ? allInsights.filter(insight => insight.conversation_id === lastConversation.id).length > 0 ? <ul className="space-y-3">
+                        {allInsights.filter(insight => insight.conversation_id === lastConversation.id).flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
+                              <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
+                              <span className="text-sm leading-relaxed">{insight}</span>
+                            </li>)}
+                      </ul> : <div className="text-center py-4">
+                        <Target className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">No strengths data from last session</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Your most recent session didn't generate strength insights
+                        </p>
+                      </div> : <div className="text-center py-4">
+                      <Target className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-muted-foreground text-sm">No strengths data available</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Complete a conversation to identify your strengths
+                      </p>
+                    </div>}
+                  </div>
                 </div> : <div className="text-center py-8">
                   <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-muted-foreground font-medium">No personality data available</p>
@@ -891,35 +917,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Strengths Section */}
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="font-semibold flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-primary" />
-              Strengths
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {lastConversation?.key_insights ? allInsights.filter(insight => insight.conversation_id === lastConversation.id).length > 0 ? <ul className="space-y-3">
-                  {allInsights.filter(insight => insight.conversation_id === lastConversation.id).flatMap(insight => insight.insights || []).slice(0, 5).map((insight: string, index: number) => <li key={index} className="flex items-start gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
-                        <div className="w-2 h-2 rounded-full bg-success mt-2 flex-shrink-0" />
-                        <span className="text-sm leading-relaxed">{insight}</span>
-                      </li>)}
-                </ul> : <div className="text-center py-8">
-                  <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-muted-foreground font-medium">No strengths data from last session</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Your most recent session didn't generate strength insights
-                  </p>
-                </div> : <div className="text-center py-8">
-                <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground font-medium">No strengths data available</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Complete a conversation to identify your strengths
-                </p>
-              </div>}
-          </CardContent>
-        </Card>
 
       </div>
 
