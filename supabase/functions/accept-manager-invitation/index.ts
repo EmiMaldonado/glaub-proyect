@@ -233,35 +233,63 @@ serve(async (req: Request) => {
         })
         .eq("id", invitation.manager_id); // The employee who sent the request
 
-      // Create or update team membership
-      let { data: teamMembership } = await supabase
-        .from("team_memberships")
-        .select("*")
-        .eq("manager_id", managerProfile.id)
-        .maybeSingle();
+      // Create team membership using the new team_members table
+      console.log("Setting up team members in team_members table");
+      
+      // First, add the manager themselves to the team
+      const { error: managerInsertError } = await supabase
+        .from("team_members")
+        .insert({
+          team_id: managerProfile.id,
+          member_id: managerProfile.id,
+          role: 'manager'
+        });
 
-      if (!teamMembership) {
-        // Create new team membership
-        await supabase
-          .from("team_memberships")
-          .insert({
-            manager_id: managerProfile.id,
-            employee_1_id: invitation.manager_id
-          });
+      if (managerInsertError) {
+        console.error("Error adding manager to team_members:", managerInsertError);
+        // Continue anyway as manager might already exist
       } else {
-        // Add employee to existing team in first available slot
-        const employeeSlots = [
-          'employee_1_id', 'employee_2_id', 'employee_3_id', 'employee_4_id', 'employee_5_id',
-          'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'
-        ];
-        
-        const availableSlot = employeeSlots.find(slot => !teamMembership[slot]);
-        if (availableSlot) {
-          await supabase
-            .from("team_memberships")
-            .update({ [availableSlot]: invitation.manager_id })
-            .eq("id", teamMembership.id);
-        }
+        console.log("Manager added to team_members successfully");
+      }
+
+      // Then add the employee who requested to be managed
+      const { error: employeeInsertError } = await supabase
+        .from("team_members")
+        .insert({
+          team_id: managerProfile.id,
+          member_id: invitation.manager_id,
+          role: 'employee'
+        });
+
+      if (employeeInsertError) {
+        console.error("Error adding employee to team_members:", employeeInsertError);
+        throw new Error(`Failed to add employee to team: ${employeeInsertError.message}`);
+      } else {
+        console.log("Employee added to team_members successfully");
+      }
+
+      console.log("Team members created in team_members table");
+
+      // Setup sharing preferences for the employee
+      const { error: sharingError } = await supabase
+        .from("sharing_preferences")
+        .insert({
+          user_id: invitation.invited_by.user_id,
+          manager_id: managerProfile.id,
+          share_profile: true,
+          share_conversations: true,
+          share_insights: true,
+          share_ocean_profile: true,
+          share_progress: true,
+          share_strengths: true,
+          share_manager_recommendations: true
+        });
+
+      if (sharingError) {
+        console.error("Error setting up sharing preferences:", sharingError);
+        // Don't fail the whole process for this
+      } else {
+        console.log("Sharing preferences setup completed for employee");
       }
 
       // Update invitation status
@@ -273,32 +301,36 @@ serve(async (req: Request) => {
         })
         .eq("id", invitation.id);
 
-      // Create notifications
-      await supabase
-        .from("notifications")
-        .insert([
-          {
-            user_id: invitation.invited_by.user_id,
-            type: "invitation_accepted",
-            title: "Manager Request Accepted",
-            message: `${invitation.email} has accepted your manager request and is now your manager.`,
-            data: { 
-              manager_email: invitation.email,
-              manager_name: managerProfile.display_name || managerProfile.full_name,
-              invitation_id: invitation.id 
-            }
-          },
-          {
-            user_id: managerUser.id,
-            type: "role_change",
-            title: "You Are Now a Manager",
-            message: `You have become a manager for ${invitation.invited_by?.display_name || invitation.invited_by?.full_name} on EmpathAI.`,
-            data: { 
-              employee_name: invitation.invited_by?.display_name || invitation.invited_by?.full_name,
-              team_name: teamName
-            }
+      // Send welcome notifications
+      try {
+        // Send welcome notification to the new manager
+        await supabase.functions.invoke('send_welcome_notification', {
+          body: {
+            target_user_id: managerUser.id,
+            notification_type: 'new_manager',
+            team_name: teamName
           }
-        ]);
+        });
+        console.log("Welcome notification sent to new manager");
+      } catch (notifyError) {
+        console.error("Error sending manager welcome notification:", notifyError);
+        // Don't fail the process for notification errors
+      }
+
+      try {
+        // Send welcome notification to the employee
+        await supabase.functions.invoke('send_welcome_notification', {
+          body: {
+            target_user_id: invitation.invited_by.user_id,
+            notification_type: 'joined_team',
+            team_name: teamName
+          }
+        });
+        console.log("Welcome notification sent to employee");
+      } catch (notifyError) {
+        console.error("Error sending employee welcome notification:", notifyError);
+        // Don't fail the process for notification errors
+      }
 
       console.log("Manager-employee relationship established successfully");
 
