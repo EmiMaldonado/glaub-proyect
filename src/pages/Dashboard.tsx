@@ -205,7 +205,7 @@ const Dashboard = () => {
           member_id,
           role,
           joined_at,
-          manager:profiles!team_members_team_id_fkey(id, full_name, display_name, team_name)
+          manager:profiles!team_id(id, full_name, display_name, team_name)
         `).eq('member_id', profile?.id).eq('role', 'employee');
       
       if (teamMemberships && teamMemberships.length > 0) {
@@ -694,7 +694,7 @@ const Dashboard = () => {
               {userTeams.length > 0 && <div className="space-y-3">
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <Users className="h-4 w-4 text-primary" />
-                    Your Teams
+                    You belong to team
                   </h4>
                   <div className="space-y-2">
                     {userTeams.map(team => (
