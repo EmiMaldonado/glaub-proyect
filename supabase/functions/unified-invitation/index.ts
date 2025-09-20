@@ -232,39 +232,15 @@ serve(async (req: Request) => {
       `;
     }
 
-    // Use Supabase's built-in email invitation system
-    console.log("Sending invitation email via Supabase Auth...");
-    
-    const { data: authInvitation, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-      email,
-      {
-        redirectTo: acceptUrl,
-        data: {
-          invitation_token: token,
-          invited_by: profile.display_name || profile.full_name || 'Your colleague',
-          invitation_type: invitationType,
-          team_name: profile.team_name || `${profile.display_name || profile.full_name}'s Team`,
-          message: message || null
-        }
-      }
-    );
-
-    if (inviteError) {
-      console.error("Error sending invitation email:", inviteError);
-      // Don't throw error - invitation record was created, just log the email issue
-      console.log("Invitation record created but email failed to send:", invitation.id);
-    } else {
-      console.log("Invitation sent successfully via Supabase auth:", { 
-        invitationId: invitation.id, 
-        authInvitation 
-      });
-    }
-
-    // Create notification for the recipient (if they already have an account)
+    // Check if the user already exists in the system
+    console.log("Checking if user already exists...");
     const { data: existingUserCheck } = await supabase.auth.admin.listUsers();
     const existingUser = existingUserCheck?.users?.find(u => u.email === email);
     
     if (existingUser) {
+      console.log("User already exists, creating notification instead of auth invitation");
+      
+      // User already exists, create notification instead of sending auth invitation
       const { data: recipientProfile } = await supabase
         .from("profiles")
         .select("user_id")
@@ -277,10 +253,10 @@ serve(async (req: Request) => {
         
         if (invitationType === 'team_member') {
           notificationTitle = 'Team Invitation Received';
-          notificationMessage = `${profile.display_name || profile.full_name} has invited you to join their team on EmpathAI.`;
+          notificationMessage = `${profile.display_name || profile.full_name} has invited you to join their team on EmpathAI. Check your dashboard to accept or decline.`;
         } else {
           notificationTitle = 'Manager Request Received';
-          notificationMessage = `${profile.display_name || profile.full_name} has requested you to be their manager on EmpathAI.`;
+          notificationMessage = `${profile.display_name || profile.full_name} has requested you to be their manager on EmpathAI. Check your dashboard to accept or decline.`;
         }
         
         await supabase
@@ -294,9 +270,69 @@ serve(async (req: Request) => {
               invitation_id: invitation.id,
               invitation_token: token,
               invited_by: profile.display_name || profile.full_name,
-              invitation_type: invitationType
+              invitation_type: invitationType,
+              accept_url: acceptUrl
             }
           });
+          
+        console.log("Notification created for existing user:", existingUser.id);
+      } else {
+        console.log("Existing user found but no profile, creating profile notification");
+        // User exists but no profile, still send notification to their user ID
+        let notificationTitle: string;
+        let notificationMessage: string;
+        
+        if (invitationType === 'team_member') {
+          notificationTitle = 'Team Invitation Received';
+          notificationMessage = `${profile.display_name || profile.full_name} has invited you to join their team on EmpathAI. Check your dashboard to accept or decline.`;
+        } else {
+          notificationTitle = 'Manager Request Received';
+          notificationMessage = `${profile.display_name || profile.full_name} has requested you to be their manager on EmpathAI. Check your dashboard to accept or decline.`;
+        }
+        
+        await supabase
+          .from("notifications")
+          .insert({
+            user_id: existingUser.id,
+            type: 'invitation_received',
+            title: notificationTitle,
+            message: notificationMessage,
+            data: {
+              invitation_id: invitation.id,
+              invitation_token: token,
+              invited_by: profile.display_name || profile.full_name,
+              invitation_type: invitationType,
+              accept_url: acceptUrl
+            }
+          });
+      }
+    } else {
+      // User doesn't exist, use Supabase's auth invitation system
+      console.log("User doesn't exist, sending auth invitation...");
+      
+      const { data: authInvitation, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+        email,
+        {
+          redirectTo: acceptUrl,
+          data: {
+            invitation_token: token,
+            invited_by: profile.display_name || profile.full_name || 'Your colleague',
+            invitation_type: invitationType,
+            team_name: profile.team_name || `${profile.display_name || profile.full_name}'s Team`,
+            message: message || null
+          }
+        }
+      );
+
+      if (inviteError) {
+        console.error("Error sending invitation email:", inviteError);
+        // Still throw error for new users since they need the email
+        throw new Error(`Failed to send invitation email: ${inviteError.message}`);
+      } else {
+        console.log("Invitation sent successfully via Supabase auth:", { 
+          invitationId: invitation.id, 
+          authInvitation 
+        });
       }
     }
 
