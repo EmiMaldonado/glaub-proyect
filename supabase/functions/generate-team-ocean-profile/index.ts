@@ -181,6 +181,7 @@ serve(async (req) => {
 
     console.log('🤖 Calling OpenAI for team analysis...');
     console.log('📝 Prompt length:', aiPrompt.length);
+    console.log('🔑 OpenAI key status:', openAIApiKey ? 'Present' : 'Missing');
 
     const openAIPayload = {
       model: 'gpt-4o-mini',
@@ -199,6 +200,7 @@ serve(async (req) => {
     };
 
     console.log('🔄 Making OpenAI request with model:', openAIPayload.model);
+    console.log('💰 Request tokens estimated:', Math.ceil(aiPrompt.length / 4));
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -210,6 +212,7 @@ serve(async (req) => {
     });
 
     console.log('📡 OpenAI response status:', openAIResponse.status);
+    console.log('📡 OpenAI response headers:', Object.fromEntries(openAIResponse.headers.entries()));
 
     if (!openAIResponse.ok) {
       const errorText = await openAIResponse.text();
@@ -219,11 +222,32 @@ serve(async (req) => {
     }
 
     const aiResult = await openAIResponse.json();
-    console.log('🔍 OpenAI full response:', JSON.stringify(aiResult, null, 2));
+    console.log('🔍 OpenAI full response structure:', {
+      hasChoices: !!aiResult.choices,
+      choicesLength: aiResult.choices?.length || 0,
+      firstChoiceStructure: aiResult.choices?.[0] ? Object.keys(aiResult.choices[0]) : 'N/A',
+      usage: aiResult.usage,
+      error: aiResult.error
+    });
     
-    const teamDescription = aiResult.choices?.[0]?.message?.content || '';
+    if (aiResult.error) {
+      console.error('❌ OpenAI returned error in response:', aiResult.error);
+      throw new Error(`OpenAI API error: ${aiResult.error.message || 'Unknown error'}`);
+    }
+
+    if (!aiResult.choices || aiResult.choices.length === 0) {
+      console.error('❌ OpenAI returned no choices in response');
+      throw new Error('OpenAI API returned no choices');
+    }
+
+    const teamDescription = aiResult.choices[0]?.message?.content || '';
     console.log('✅ Generated team description length:', teamDescription.length);
     console.log('📄 Team description preview:', teamDescription.substring(0, 200) + '...');
+    
+    if (teamDescription.length === 0) {
+      console.error('❌ OpenAI returned empty content');
+      console.log('🔍 Full message object:', JSON.stringify(aiResult.choices[0]?.message, null, 2));
+    }
 
     return new Response(JSON.stringify({
       success: true,
