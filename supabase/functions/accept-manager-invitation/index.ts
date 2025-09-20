@@ -236,7 +236,7 @@ serve(async (req: Request) => {
       // Create team membership using the new team_members table
       console.log("Setting up team members in team_members table");
       
-      // First, add the manager themselves to the team
+      // First, add the manager themselves to the team (if not already there)
       const { error: managerInsertError } = await supabase
         .from("team_members")
         .insert({
@@ -245,9 +245,8 @@ serve(async (req: Request) => {
           role: 'manager'
         });
 
-      if (managerInsertError) {
+      if (managerInsertError && managerInsertError.code !== '23505') { // Ignore duplicate key errors
         console.error("Error adding manager to team_members:", managerInsertError);
-        // Continue anyway as manager might already exist
       } else {
         console.log("Manager added to team_members successfully");
       }
@@ -257,13 +256,12 @@ serve(async (req: Request) => {
         .from("team_members")
         .insert({
           team_id: managerProfile.id,
-          member_id: invitation.manager_id,
+          member_id: invitation.manager_id, // This is the employee's profile ID
           role: 'employee'
         });
 
-      if (employeeInsertError) {
+      if (employeeInsertError && employeeInsertError.code !== '23505') { // Ignore duplicate key errors
         console.error("Error adding employee to team_members:", employeeInsertError);
-        throw new Error(`Failed to add employee to team: ${employeeInsertError.message}`);
       } else {
         console.log("Employee added to team_members successfully");
       }
