@@ -78,21 +78,61 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
           ))}
         </div>
 
-        {/* Team Description */}
+        {/* Team Analysis */}
         {teamDescription && (
-          <div className="pt-4 border-t">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="h-4 w-4 text-primary" />
-              <h3 className="font-medium text-sm">Team Profile Description</h3>
-            </div>
-            <p className={`text-sm leading-relaxed ${
-              teamDescription.toLowerCase().includes('no information available') || 
-              teamDescription.toLowerCase().includes('no comprehensive information') 
-                ? 'text-muted-foreground italic' 
-                : 'text-muted-foreground'
-            }`}>
-              {teamDescription}
-            </p>
+          <div className="pt-4 border-t space-y-6">
+            {teamDescription.includes('**Team Profile Summary:**') ? (
+              <>
+                {/* Parse structured analysis */}
+                {(() => {
+                  const sections = teamDescription.split('**Tailored Leadership Strategies:**');
+                  const profileSection = sections[0].replace('**Team Profile Summary:**', '').trim();
+                  const leadershipSection = sections[1]?.trim();
+                  
+                  return (
+                    <>
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Users className="h-4 w-4 text-primary" />
+                          <h3 className="font-medium text-sm">Team Profile Summary</h3>
+                        </div>
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {profileSection}
+                        </p>
+                      </div>
+                      
+                      {leadershipSection && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Brain className="h-4 w-4 text-primary" />
+                            <h3 className="font-medium text-sm">Tailored Leadership Strategies</h3>
+                          </div>
+                          <div className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
+                            {leadershipSection}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            ) : (
+              /* Fallback for unstructured analysis */
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="h-4 w-4 text-primary" />
+                  <h3 className="font-medium text-sm">Team Profile Analysis</h3>
+                </div>
+                <p className={`text-sm leading-relaxed ${
+                  teamDescription.toLowerCase().includes('no information available') || 
+                  teamDescription.toLowerCase().includes('no comprehensive information') 
+                    ? 'text-muted-foreground italic' 
+                    : 'text-muted-foreground'
+                }`}>
+                  {teamDescription}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

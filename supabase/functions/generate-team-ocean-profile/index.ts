@@ -168,14 +168,15 @@ serve(async (req) => {
     - Agreeableness: ${teamPersonality.agreeableness}%
     - Neuroticism: ${teamPersonality.neuroticism}%
 
-    Provide a comprehensive team personality analysis (200-250 words) that:
-    1. Describes the team's collective personality strengths
-    2. Identifies potential collaboration patterns
-    3. Suggests leadership approaches that would work well
-    4. Highlights any notable personality traits that could impact team dynamics
-    5. Provides actionable insights for team optimization
+    Provide exactly two sections in your response:
 
-    Write in a professional, insightful tone suitable for a manager dashboard.
+    **Team Profile Summary:**
+    Write one comprehensive paragraph describing the overall character of this team. What are its collective strengths? What are its potential blind spots or conflicts? How does the mix of different roles (technical, creative, business, strategic) create a unique dynamic? Specifically address how this professional diversity influences group motivation—for example, does it foster innovation through different perspectives, or could it lead to misalignment if not managed correctly?
+
+    **Tailored Leadership Strategies:**
+    Based on the team's profile, provide concrete leadership strategies that would be most effective for this specific group. Answer: How should a leader communicate to motivate such a diverse team? What type of environment and processes should be established to ensure all personality types and roles feel valued and productive? How can a leader bridge the motivational gaps between, for example, a data-driven scientist and a results-oriented salesperson? Provide actionable recommendations.
+
+    Format your response with clear section headers and write in a professional, insightful tone suitable for a manager dashboard.
     `;
 
     console.log('🤖 Calling OpenAI for team analysis...');
