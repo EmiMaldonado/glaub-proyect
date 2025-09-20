@@ -55,16 +55,22 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
       const { data: teamMembership } = await supabase
         .from('team_members')
         .select(`
-          team_id,
-          manager:profiles!team_id(full_name, display_name)
+          team_id
         `)
         .eq('member_id', userProfile.id)
         .eq('role', 'employee')
         .maybeSingle();
 
       if (teamMembership) {
+        // Get manager details
+        const { data: managerProfile } = await supabase
+          .from('profiles')
+          .select('full_name, display_name')
+          .eq('id', teamMembership.team_id)
+          .single();
+
         setHasManager(true);
-        setManagerName(teamMembership.manager?.display_name || teamMembership.manager?.full_name || 'Your Manager');
+        setManagerName(managerProfile?.display_name || managerProfile?.full_name || 'Your Manager');
       } else {
         setHasManager(false);
       }
