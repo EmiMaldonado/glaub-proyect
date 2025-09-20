@@ -690,23 +690,49 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Show example teams if no actual teams */}
+              {/* Show user's actual teams */}
+              {userTeams.length > 0 && <div className="space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Your Teams
+                  </h4>
+                  <div className="space-y-2">
+                    {userTeams.map(team => (
+                      <div key={team.id} className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm">
+                              {team.manager?.team_name || `${team.manager?.display_name || team.manager?.full_name}'s Team`}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Manager: {team.manager?.display_name || team.manager?.full_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Joined: {new Date(team.joined_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {team.role}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>}
+
+              {/* Show message when no teams */}
               {userTeams.length === 0 && pendingInvitations.length === 0 && <div className="space-y-3">
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    Example Teams
+                    No Teams Yet
                   </h4>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="p-3 bg-muted/30 rounded-lg">
-                      <p>Emilia team - Emilia Maldonado</p>
-                    </div>
-                    <div className="p-3 bg-muted/30 rounded-lg">
-                      <p>Juan team - Juan Maldonado</p>
-                    </div>
-                    <div className="p-3 bg-muted/30 rounded-lg">
-                      <p>Equipo ventas - Estela Paez</p>
-                    </div>
-                    <p className="text-xs text-center pt-2">Example teams - request to join one above</p>
+                  <div className="p-4 bg-muted/30 rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      You're not part of any team yet.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Send a join request to a manager to get started!
+                    </p>
                   </div>
                 </div>}
             </CardContent>
