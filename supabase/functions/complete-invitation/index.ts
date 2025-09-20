@@ -41,10 +41,7 @@ serve(async (req: Request) => {
     // Find the invitation
     const { data: invitation, error: invitationError } = await supabase
       .from("invitations")
-      .select(`
-        *,
-        manager:profiles!invitations_manager_id_fkey(*)
-      `)
+      .select("*")
       .eq("token", token)
       .eq("status", "pending")
       .single();
@@ -71,6 +68,20 @@ serve(async (req: Request) => {
       console.error("Invitation expired:", { expires_at: invitation.expires_at, now: new Date().toISOString() });
       throw new Error("Invitation has expired");
     }
+
+    // Get manager profile for reference
+    const { data: managerProfile, error: managerError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", invitation.manager_id)
+      .single();
+
+    if (managerError) {
+      console.error("Error finding manager profile:", managerError);
+      throw new Error("Manager profile not found: " + managerError.message);
+    }
+
+    console.log("Found manager profile:", { id: managerProfile.id, display_name: managerProfile.display_name });
 
     // Validate that the user exists in auth.users first
     const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(user_id);
@@ -366,7 +377,7 @@ serve(async (req: Request) => {
         success: true, 
         message: responseMessage,
         action: action,
-        manager_name: invitation.manager?.display_name || invitation.manager?.full_name
+        manager_name: managerProfile?.display_name || managerProfile?.full_name
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -375,12 +386,31 @@ serve(async (req: Request) => {
     );
 
   } catch (error: any) {
-    console.error("Error in complete-invitation function:", error);
+    console.error("Error in complete-invitation function:", {
+      error: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // Return more specific error status codes
+    let statusCode = 400;
+    if (error.message.includes("expired")) {
+      statusCode = 410; // Gone
+    } else if (error.message.includes("not found") || error.message.includes("Invalid")) {
+      statusCode = 404; // Not Found
+    } else if (error.message.includes("already")) {
+      statusCode = 409; // Conflict
+    }
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        success: false,
+        code: error.code || 'INVITATION_ERROR'
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
+        status: statusCode,
       }
     );
   }
