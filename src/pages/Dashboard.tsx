@@ -197,6 +197,7 @@ const Dashboard = () => {
       }
 
       // Load user's team memberships using the new team_members table
+      // Load user team memberships
       const {
         data: teamMemberships
       } = await supabase.from('team_members').select(`
@@ -204,12 +205,26 @@ const Dashboard = () => {
           team_id,
           member_id,
           role,
-          joined_at,
-          manager:profiles!team_id(id, full_name, display_name, team_name)
+          joined_at
         `).eq('member_id', profile?.id).eq('role', 'employee');
       
       if (teamMemberships && teamMemberships.length > 0) {
-        setUserTeams(teamMemberships);
+        // Get manager details for each team
+        const teamsWithManagers = await Promise.all(
+          teamMemberships.map(async (membership) => {
+            const { data: manager } = await supabase
+              .from('profiles')
+              .select('id, full_name, display_name, team_name')
+              .eq('id', membership.team_id)
+              .single();
+            
+            return {
+              ...membership,
+              manager
+            };
+          })
+        );
+        setUserTeams(teamsWithManagers);
       }
 
       // Load pending invitations for this user's email
