@@ -92,20 +92,20 @@ const ChatConversation: React.FC = () => {
         .delete()
         .eq('user_id', user.id);
       
-      // Count existing conversations to get the next number
+      // Count ALL existing conversations (voice + chat) for unified session numbering
       const { count } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+        .eq('user_id', user?.id);
 
       const conversationNumber = (count || 0) + 1;
-
-      // Create new conversation
+      
+      // Create new conversation with unified numbering
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          title: `Conversation ${conversationNumber}`,
+          title: `Chat Conversation ${conversationNumber}`,
           status: 'active'
         })
         .select()
@@ -131,28 +131,68 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Send AI's first message to start the conversation
+  // Send AI's first message to start the conversation with enhanced session context
   const sendAIFirstMessage = async (conversationId: string) => {
     try {
-      // Check if user has any previous completed conversations to determine if this is their first session ever
-      const { data: previousCompletedConversations } = await supabase
+      // Get comprehensive session history for proper continuity
+      const { data: allConversations } = await supabase
         .from('conversations')
-        .select('id, insights, ocean_signals, ended_at')
+        .select('id, title, status, ended_at, insights, ocean_signals')
         .eq('user_id', user?.id)
-        .eq('status', 'completed')
-        .order('ended_at', { ascending: false })
-        .limit(3);
+        .order('created_at', { ascending: false });
 
-      let isFirstSessionEver = !previousCompletedConversations || previousCompletedConversations.length === 0;
+      const completedConversations = allConversations?.filter(c => c.status === 'completed') || [];
+      const totalSessionCount = (allConversations?.length || 0) + 1; // Include current session
+      const isFirstSessionEver = completedConversations.length === 0;
+
+      // Analyze conversation history for cross-mode awareness
+      const voiceConversations = completedConversations.filter(c => 
+        c.title?.toLowerCase().includes('voice') || 
+        c.title?.toLowerCase().includes('session')
+      );
+      const chatConversations = completedConversations.filter(c => 
+        c.title?.toLowerCase().includes('conversation') && 
+        !c.title?.toLowerCase().includes('voice')
+      );
+
+      const hasUsedVoice = voiceConversations.length > 0;
+      const hasUsedChat = chatConversations.length > 0;
       
+      let sessionContext;
+      
+      if (isFirstSessionEver) {
+        sessionContext = {
+          isFirstSession: true,
+          sessionNumber: 1,
+          totalSessions: 1,
+          modalityExperience: 'new_user'
+        };
+      } else {
+        sessionContext = {
+          isFirstSession: false,
+          sessionNumber: totalSessionCount,
+          totalSessions: totalSessionCount,
+          completedSessions: completedConversations.length,
+          hasUsedVoice,
+          hasUsedChat,
+          modalityExperience: hasUsedVoice && hasUsedChat ? 'cross_modal' : 
+                             hasUsedVoice ? 'voice_to_chat' : 'chat_only'
+        };
+      }
+
+      // Create context-aware initial message
       let initialMessage;
       
       if (isFirstSessionEver) {
-        // First session ever - use the standard Glai introduction
         initialMessage = "Start the first conversation with this user using the standard Glai introduction and personality discovery protocol.";
       } else {
-        // Returning user - recall previous conversations and ask about new topics
-        initialMessage = "This is a returning user. Greet them warmly, recall what you discussed in previous sessions, and ask if there are other topics they'd like to explore today.";
+        const modalityContext = sessionContext.modalityExperience === 'voice_to_chat' 
+          ? ` The user has previously used voice conversations with you (${voiceConversations.length} voice sessions) and is now trying chat mode for the first time.`
+          : sessionContext.modalityExperience === 'cross_modal'
+          ? ` The user has experience with both voice and chat modes.`
+          : ` The user has used chat mode before.`;
+
+        initialMessage = `This is session ${sessionContext.sessionNumber} with this returning user (${completedConversations.length} completed sessions).${modalityContext} Welcome them back warmly, acknowledge their previous sessions, and ask if there are new topics they'd like to explore today in chat mode.`;
       }
 
       const response = await supabase.functions.invoke('ai-chat', {
@@ -161,6 +201,7 @@ const ChatConversation: React.FC = () => {
           conversationId: conversationId,
           userId: user?.id,
           isFirstMessage: isFirstSessionEver,
+          sessionContext,
           aiInitiated: true
         }
       });
@@ -175,7 +216,7 @@ const ChatConversation: React.FC = () => {
         throw new Error(response.data.error);
       }
 
-      console.log('✅ AI conversation started successfully', response.data?.debug);
+      console.log('✅ AI conversation started with session context:', sessionContext);
 
     } catch (error) {
       console.error('Error starting AI conversation:', error);
