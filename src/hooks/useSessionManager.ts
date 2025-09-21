@@ -228,27 +228,56 @@ export const useSessionManager = () => {
     updateActivity();
   }, [saveSessionToLocal, updateActivity]);
 
-  // Pause current session
+  // Pause current session with audio control
   const pauseSession = useCallback(async () => {
     if (!sessionState.conversation || sessionState.messages.length === 0) return false;
 
     try {
+      console.log('🔄 pauseSession: Starting pause with audio stop');
+      
+      // CRITICAL: Stop all voice audio FIRST before any other operations
+      const { stopAllVoiceAudio } = await import('./useTextToSpeech');
+      stopAllVoiceAudio();
+      console.log('🔇 pauseSession: Voice audio stopped');
+
+      // Update database and conversation status
+      await supabase
+        .from('conversations')
+        .update({
+          status: 'paused',
+          session_data: {
+            messages: sessionState.messages as any,
+            lastActivity: new Date().toISOString(),
+            pauseReason: 'manual',
+            pausedAt: new Date().toISOString()
+          } as any
+        })
+        .eq('id', sessionState.conversation.id);
+
       await saveSessionToDatabase(sessionState);
       
-      toast({
-        title: "Session Paused",
-        description: "Your conversation is now paused. You can resume anytime.",
-      });
-      
+      // Update local state synchronously
       setSessionState(prev => ({
         ...prev,
         isPaused: true,
         lastActivity: new Date().toISOString()
       }));
       
+      console.log('✅ pauseSession: Successfully paused session');
+      
+      toast({
+        title: "🔄 Session Paused",
+        description: "Voice stopped and conversation paused. You can resume anytime.",
+      });
+      
       return true;
     } catch (error) {
-      console.error('Error pausing session:', error);
+      console.error('❌ Error pausing session:', error);
+      toast({
+        title: "Error",
+        description: "Could not pause session properly",
+        variant: "destructive",
+      });
       return false;
     }
   }, [sessionState, saveSessionToDatabase]);

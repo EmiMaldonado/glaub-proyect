@@ -68,9 +68,25 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
     setShowLeaveModal(true);
   };
 
-  const handleConfirmLeave = () => {
+  const handleConfirmLeave = async () => {
+    console.log('🔄 handleConfirmLeave: Starting leave with audio cleanup');
+    
+    // Stop all voice audio IMMEDIATELY
+    try {
+      const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
+      stopAllVoiceAudio();
+      console.log('🔇 handleConfirmLeave: Voice audio stopped');
+    } catch (error) {
+      console.error('Error stopping voice audio:', error);
+    }
+    
+    // Stop any current audio playback in this component
+    stopAudio();
+    
+    // Clean up recording resources
     cleanupRecording();
     setShowLeaveModal(false);
+    
     // Use onStopSession to properly pause the conversation
     if (onStopSession) {
       onStopSession();
@@ -79,8 +95,22 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
     }
   };
 
-  const handleDeleteSession = () => {
-    // Exit without saving - just clean up and leave
+  const handleDeleteSession = async () => {
+    console.log('🗑️ handleDeleteSession: Starting delete with audio cleanup');
+    
+    // Stop all voice audio IMMEDIATELY 
+    try {
+      const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
+      stopAllVoiceAudio();
+      console.log('🔇 handleDeleteSession: Voice audio stopped');
+    } catch (error) {
+      console.error('Error stopping voice audio:', error);
+    }
+    
+    // Stop any current audio playback in this component
+    stopAudio();
+    
+    // Clean up recording resources
     cleanupRecording();
     setShowLeaveModal(false);
     onBack();
@@ -366,9 +396,27 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
     }
   }, [conversationId, userId, onTranscriptionUpdate, isProcessing, currentAudio]);
 
-  // Cleanup on unmount or when leaving
+  // Comprehensive cleanup on unmount or when leaving
   useEffect(() => {
-    return cleanupRecording;
+    return () => {
+      console.log('🧹 NewVoiceInterface: Component unmounting - cleaning up');
+      
+      // Stop all voice audio
+      try {
+        import('@/hooks/useTextToSpeech').then(({ stopAllVoiceAudio }) => {
+          stopAllVoiceAudio();
+          console.log('🔇 NewVoiceInterface unmount: Voice audio stopped');
+        });
+      } catch (error) {
+        console.error('Error stopping voice audio on unmount:', error);
+      }
+      
+      // Stop local audio
+      stopAudio();
+      
+      // Clean up recording
+      cleanupRecording();
+    };
   }, [cleanupRecording]);
 
   // Text-to-speech for AI responses - ensures only one audio plays at a time

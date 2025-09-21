@@ -54,7 +54,7 @@ const ChatConversation: React.FC = () => {
 
   const { generateResumeMessage, refetchConversationState } = useConversationState();
   
-  // Enhanced auto-pause system with unified state management
+  // Enhanced auto-pause system with unified state management and audio control
   const { pauseConversationWithContext } = useAutoPause({
     conversation,
     messages,
@@ -70,7 +70,8 @@ const ChatConversation: React.FC = () => {
         syncWithDatabaseState(conversationId);
         refetchConversationState(user.id);
       }
-    }
+    },
+    pauseSessionFunction: pauseSession // CRITICAL: Connect to session manager
   });
   
   const [textInput, setTextInput] = useState('');
@@ -456,16 +457,24 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle pause session with unified state management
+  // Handle pause session with audio control and unified state management
   const handlePauseSession = async () => {
     if (!conversation || !user) return;
 
     try {
-      const success = await pauseConversationWithContext('manual');
+      console.log('🔄 handlePauseSession: Starting pause with audio stop');
+      
+      // Stop all voice audio IMMEDIATELY
+      const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
+      stopAllVoiceAudio();
+      console.log('🔇 handlePauseSession: Voice audio stopped');
+      
+      // Use the session manager's pause function directly (already has audio control)
+      const success = await pauseSession();
       if (success) {
         toast({
-          title: "Conversation Paused",
-          description: "Your conversation has been paused and saved successfully",
+          title: "🔄 Conversation Paused",
+          description: "Voice stopped and conversation paused successfully",
         });
         navigate('/dashboard');
       } else {
@@ -476,7 +485,7 @@ const ChatConversation: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Pause error:', error);
+      console.error('❌ Pause error:', error);
       toast({
         title: "Error",
         description: "An error occurred while pausing the conversation",

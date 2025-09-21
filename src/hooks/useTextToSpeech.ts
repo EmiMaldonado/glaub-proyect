@@ -1,7 +1,23 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from './use-toast';
 import { ERROR_MESSAGES } from '@/utils/errorMessages';
+
+// Global audio control for stopping all voice playback
+let globalAudioStop: (() => void) | null = null;
+
+export const stopAllVoiceAudio = () => {
+  console.log('🔇 stopAllVoiceAudio called');
+  if (globalAudioStop) {
+    globalAudioStop();
+  }
+  
+  // Also cancel any ongoing speech synthesis
+  if (speechSynthesis.speaking) {
+    speechSynthesis.cancel();
+    console.log('🔇 speechSynthesis cancelled');
+  }
+};
 
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -78,12 +94,23 @@ export const useTextToSpeech = () => {
   }, []);
 
   const stop = useCallback(() => {
+    console.log('🔇 useTextToSpeech stop called');
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
       setIsSpeaking(false);
     }
   }, []);
+
+  // Register global stop function
+  useEffect(() => {
+    globalAudioStop = stop;
+    return () => {
+      if (globalAudioStop === stop) {
+        globalAudioStop = null;
+      }
+    };
+  }, [stop]);
 
   return {
     speak,

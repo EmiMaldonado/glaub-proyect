@@ -45,21 +45,32 @@ const VoiceConversation: React.FC = () => {
   // Session manager
   const { pauseSession } = useSessionManager();
 
-  // Handle stop session (user-initiated) - must be defined before timer
+  // Handle stop session (user-initiated) with immediate audio control
   const handleStopSession = async () => {
     try {
-      await pauseSession();
+      console.log('🔄 handleStopSession: Starting pause with audio stop');
       
-      toast({
-        title: "🔄 Session Paused",
-        description: "You can continue this conversation later from the dashboard",
-      });
-      navigate('/dashboard');
+      // Stop all voice audio IMMEDIATELY
+      const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
+      stopAllVoiceAudio();
+      console.log('🔇 handleStopSession: Voice audio stopped');
+      
+      // Then pause the session
+      const success = await pauseSession();
+      if (success) {
+        toast({
+          title: "🔄 Session Paused",
+          description: "Voice stopped and conversation paused. You can continue later from the dashboard",
+        });
+        navigate('/dashboard');
+      } else {
+        throw new Error('Failed to pause session');
+      }
     } catch (error) {
-      console.error('Error pausing session:', error);
+      console.error('❌ Error pausing session:', error);
       toast({
         title: "Error",
-        description: "Could not pause the session",
+        description: "Could not pause the session properly",
         variant: "destructive",
       });
     }
@@ -359,10 +370,17 @@ const VoiceConversation: React.FC = () => {
   };
 
   // Handle end session (explicit finish - timer expiry or user finish button)
-  async function handleEndSession() {
+  const handleEndSession = async () => {
     if (!conversation) return;
 
     try {
+      console.log('🏁 handleEndSession: Starting completion with audio stop');
+      
+      // Stop all voice audio IMMEDIATELY
+      const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
+      stopAllVoiceAudio();
+      console.log('🔇 handleEndSession: Voice audio stopped');
+      
       pauseTimer();
       
       // Calculate actual duration based on timer
@@ -381,29 +399,49 @@ const VoiceConversation: React.FC = () => {
         .eq('id', conversation.id);
 
       if (shouldGenerateInsights) {
-        console.log('✅ Voice session completed with insights generation');
-        toast({
-          title: "✅ Session Completed",
-          description: "Your voice session has been saved and analyzed",
-        });
-      } else {
-        console.log('⚠️ Voice session completed but too short for insights');
-        toast({
-          title: "✅ Session Completed",
-          description: `Voice session was too brief (${actualDuration} min) to generate meaningful insights`,
-        });
-      }
+        console.log('✅ Session meets criteria for insights generation');
+        
+        const sessionData = {
+          messages: sessionTranscripts,
+          duration: actualDuration,
+          userId: user?.id,
+          conversationId: conversation.id
+        };
 
-      navigate(`/session-summary?conversation_id=${conversation.id}`);
+        toast({
+          title: "🎯 Session Complete!",
+          description: `Session completed (${actualDuration} min). Generating insights...`,
+        });
+
+        // Generate insights via edge function
+        const response = await supabase.functions.invoke('session-analysis', {
+          body: sessionData
+        });
+
+        if (response.data) {
+          navigate(`/session-summary?id=${conversation.id}`);
+        } else {
+          console.log('⚠️ Insights generation failed, going to dashboard');
+          navigate('/dashboard');
+        }
+      } else {
+        console.log(`⚠️ Session too short for insights: ${actualDuration} min, ${sessionTranscripts.length} messages`);
+        toast({
+          title: "Session Complete",
+          description: `Session was too brief (${actualDuration} min) for detailed insights`,
+        });
+        navigate('/dashboard');
+      }
     } catch (error) {
-      console.error('Error ending session:', error);
+      console.error('❌ Error ending session:', error);
       toast({
-        title: "Error",
-        description: "Could not end the session",
+        title: "Session Ended",
+        description: "Session completed but there was an issue processing it",
         variant: "destructive",
       });
+      navigate('/dashboard');
     }
-  }
+  };
 
   // Handle back navigation
   const handleBack = () => {

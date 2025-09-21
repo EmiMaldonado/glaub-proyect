@@ -52,6 +52,7 @@ interface UseAutoPauseOptions {
   onNavigateToSummary?: () => void;
   updateSessionState?: (updater: (prev: any) => any) => void;
   onConversationPaused?: (conversationId: string) => void;
+  pauseSessionFunction?: () => Promise<boolean>; // NEW: Direct connection to useSessionManager.pauseSession
 }
 
 export const useAutoPause = ({
@@ -61,22 +62,50 @@ export const useAutoPause = ({
   onPause,
   onNavigateToSummary,
   updateSessionState,
-  onConversationPaused
+  onConversationPaused,
+  pauseSessionFunction
 }: UseAutoPauseOptions) => {
   const pauseTriggeredRef = useRef(false);
   const lastSaveRef = useRef<string>('');
+  const isUnmountingRef = useRef(false);
 
-  // Enhanced pause function with rich context preservation
+  // Enhanced pause function with audio control and session manager integration
   const pauseConversationWithContext = useCallback(async (
     pauseReason: 'manual' | 'auto' | 'network' | 'visibility' = 'manual'
   ) => {
-    if (!conversation || !userId || pauseTriggeredRef.current) {
+    if (!conversation || !userId || pauseTriggeredRef.current || isUnmountingRef.current) {
+      console.log('🚫 pauseConversationWithContext blocked:', { 
+        conversation: !!conversation, 
+        userId: !!userId, 
+        pauseTriggered: pauseTriggeredRef.current,
+        isUnmounting: isUnmountingRef.current 
+      });
       return false;
     }
 
     pauseTriggeredRef.current = true;
+    console.log(`🔄 pauseConversationWithContext: Starting ${pauseReason} pause`);
 
     try {
+      // CRITICAL: Stop all voice audio FIRST
+      const { stopAllVoiceAudio } = await import('./useTextToSpeech');
+      stopAllVoiceAudio();
+      console.log('🔇 pauseConversationWithContext: Voice audio stopped');
+
+      // Use the connected pauseSession function if available (preferred)
+      if (pauseSessionFunction) {
+        console.log('🔗 Using connected pauseSession function');
+        const success = await pauseSessionFunction();
+        if (success) {
+          console.log('✅ Connected pauseSession succeeded');
+          onPause();
+          return true;
+        } else {
+          console.log('❌ Connected pauseSession failed, falling back to database update');
+        }
+      }
+
+      // Fallback: Direct database update (legacy behavior)
       // Extract context from messages for intelligent resume
       const lastUserMessages = messages
         .filter(m => m.role === 'user')
@@ -175,26 +204,47 @@ export const useAutoPause = ({
     }
   }, [conversation, userId, messages, onPause, updateSessionState, onConversationPaused]);
 
-  // Auto-pause event handlers
+  // Cleanup flag management
+  useEffect(() => {
+    isUnmountingRef.current = false;
+    return () => {
+      isUnmountingRef.current = true;
+      console.log('🧹 useAutoPause: Component unmounting');
+    };
+  }, []);
+
+  // Auto-pause event handlers with comprehensive audio control
   useEffect(() => {
     if (!conversation || conversation.status !== 'active') return;
 
+    console.log('🔧 useAutoPause: Setting up event listeners');
+
     // Visibility change (tab switching, minimizing)
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        pauseConversationWithContext('visibility');
+    const handleVisibilityChange = async () => {
+      if (document.hidden && !isUnmountingRef.current) {
+        console.log('👁️ Visibility change detected - pausing conversation');
+        await pauseConversationWithContext('visibility');
       }
     };
 
     // Network connectivity loss
-    const handleOffline = () => {
-      pauseConversationWithContext('network');
+    const handleOffline = async () => {
+      if (!isUnmountingRef.current) {
+        console.log('📶 Network offline detected - pausing conversation');
+        await pauseConversationWithContext('network');
+      }
     };
 
     // Page unload/refresh
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (messages.length > 0) {
-        // Synchronous pause attempt
+    const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
+      if (messages.length > 0 && !isUnmountingRef.current) {
+        console.log('🚪 Page unload detected - attempting emergency pause');
+        
+        // Stop audio immediately (synchronous)
+        const { stopAllVoiceAudio } = await import('./useTextToSpeech');
+        stopAllVoiceAudio();
+        
+        // Attempt pause (may not complete due to page unload)
         pauseConversationWithContext('auto');
         
         const message = 'You have an active conversation. Are you sure you want to leave?';
@@ -204,8 +254,11 @@ export const useAutoPause = ({
     };
 
     // Mobile-specific: page hide (when app goes to background)
-    const handlePageHide = () => {
-      pauseConversationWithContext('auto');
+    const handlePageHide = async () => {
+      if (!isUnmountingRef.current) {
+        console.log('📱 Page hide detected - pausing conversation');
+        await pauseConversationWithContext('auto');
+      }
     };
 
     // Set up event listeners
@@ -214,7 +267,10 @@ export const useAutoPause = ({
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('pagehide', handlePageHide);
 
+    console.log('✅ useAutoPause: Event listeners registered');
+
     return () => {
+      console.log('🧹 useAutoPause: Cleaning up event listeners');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeunload', handleBeforeUnload);
