@@ -116,8 +116,7 @@ const ChatConversation: React.FC = () => {
       // Start new session
       startNewSession(newConversation as Conversation);
 
-      // AI automatically starts the conversation with OCEAN profiling questions
-      await sendAIFirstMessage(newConversation.id);
+      // In chat mode, let the user start the conversation
 
     } catch (error) {
       console.error('Error creating conversation:', error);
