@@ -99,7 +99,7 @@ const VoiceConversation: React.FC = () => {
 
           if (response.data) {
             console.log('✅ Session analysis completed successfully');
-            navigate(`/session-summary?id=${conversation.id}`);
+            navigate(`/session-summary?conversation_id=${conversation.id}`);
           } else {
             console.log('⚠️ Session analysis returned no data');
             navigate('/dashboard');

@@ -583,9 +583,58 @@ const ChatConversation: React.FC = () => {
     console.log('🏁 handleEndSession: Attempting to complete chat session');
     
     try {
+      // Calculate actual duration based on conversation start time
+      const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
+      
+      // Check minimum duration requirement for insights (1 minute)
+      const shouldGenerateInsights = actualDuration >= 1 && userMessageCount >= 5;
+
       const success = await completeSession();
-      if (success) {
-        console.log('✅ handleEndSession: Session completed, navigating to dashboard');
+      
+      if (success && shouldGenerateInsights) {
+        console.log('✅ Session meets criteria for insights generation');
+        
+        toast({
+          title: "🎯 Session Complete!",
+          description: `Session completed (${actualDuration} min). Generating insights...`,
+        });
+
+        try {
+          // Generate insights via edge function
+          const response = await supabase.functions.invoke('session-analysis', {
+            body: {
+              conversationId: conversation.id,
+              userId: user?.id
+            }
+          });
+
+          if (response.error) {
+            console.error('❌ Session analysis failed:', response.error);
+            throw new Error(response.error.message);
+          }
+
+          if (response.data) {
+            console.log('✅ Session analysis completed successfully');
+            navigate(`/session-summary?conversation_id=${conversation.id}`);
+          } else {
+            console.log('⚠️ Session analysis returned no data');
+            navigate('/dashboard');
+          }
+        } catch (analysisError) {
+          console.error('❌ Session analysis failed:', analysisError);
+          toast({
+            title: "Session Completed",
+            description: "Session saved but analysis failed. Check dashboard for insights.",
+            variant: "default",
+          });
+          navigate('/dashboard');
+        }
+      } else if (success) {
+        console.log(`⚠️ Session too short for insights: ${actualDuration} min, ${userMessageCount} messages`);
+        toast({
+          title: "Session Complete",
+          description: `Session completed but was too brief (${actualDuration} min) for detailed insights`,
+        });
         navigate('/dashboard');
       } else {
         throw new Error('Failed to complete session');
