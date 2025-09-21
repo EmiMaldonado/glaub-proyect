@@ -86,6 +86,8 @@ const ChatConversation: React.FC = () => {
     try {
       setIsLoading(true);
       
+      console.log('🚀 Creating new conversation for user:', user.id);
+      
       // Clear any existing paused conversation first (only one paused conversation allowed)
       await supabase
         .from('paused_conversations')
@@ -111,16 +113,32 @@ const ChatConversation: React.FC = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error creating conversation:', error);
+        throw error;
+      }
+
+      console.log('✅ New conversation created successfully:', newConversation);
+      
+      // CRITICAL: Verify that the conversation has an ID
+      if (!newConversation?.id) {
+        console.error('❌ Conversation created but ID is missing:', newConversation);
+        throw new Error('Conversation created but ID is missing');
+      }
+      
+      console.log('🔑 Conversation ID confirmed:', newConversation.id);
       
       // Start new session
       startNewSession(newConversation as Conversation);
+
+      // Verify session state was updated correctly
+      console.log('📊 Session state after startNewSession - conversation ID:', newConversation.id);
 
       // AI automatically starts the conversation with OCEAN profiling questions
       await sendAIFirstMessage(newConversation.id);
 
     } catch (error) {
-      console.error('Error creating conversation:', error);
+      console.error('❌ Error creating conversation:', error);
       toast({
         title: "Error",
         description: "Could not create new conversation",
@@ -134,6 +152,8 @@ const ChatConversation: React.FC = () => {
   // Send AI's first message to start the conversation with enhanced session context
   const sendAIFirstMessage = async (conversationId: string) => {
     try {
+      console.log('🤖 Sending AI first message for conversation:', conversationId);
+      
       // Get comprehensive session history for proper continuity
       const { data: allConversations } = await supabase
         .from('conversations')
@@ -228,15 +248,48 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle sending user messages - includes logic for first message
+  // Handle sending user messages - FIXED VERSION with proper validation
   const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim() || !conversation || isLoading || isPaused) return;
+    // CRITICAL: Add comprehensive validation
+    if (!messageText.trim()) {
+      console.log('❌ Cannot send empty message');
+      return;
+    }
+
+    if (!conversation) {
+      console.log('❌ Cannot send message: No conversation object');
+      toast({
+        title: "Error",
+        description: "No active conversation. Please try refreshing the page.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!conversation.id) {
+      console.log('❌ Cannot send message: Conversation ID is missing', conversation);
+      toast({
+        title: "Error",
+        description: "Invalid conversation state. Please start a new conversation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isLoading || isPaused) {
+      console.log('❌ Cannot send message: Loading or paused', { isLoading, isPaused });
+      return;
+    }
+
+    console.log('📤 Sending message with conversation ID:', conversation.id);
+    console.log('📝 Message content:', messageText.trim());
 
     setIsLoading(true);
     updateActivity(); // Update last activity
 
     // Check if this is the first message in the conversation
     const isFirstMessage = messages.length === 0;
+    console.log('🔍 Is first message:', isFirstMessage, 'Current message count:', messages.length);
     
     // Add user message immediately for instant feedback
     const userMessage: Message = {
@@ -246,26 +299,34 @@ const ChatConversation: React.FC = () => {
       created_at: new Date().toISOString(),
     };
     
+    console.log('💬 Adding user message to session:', userMessage.id);
     addMessageToSession(userMessage);
     setTextInput(''); // Clear input immediately
 
     try {
+      console.log('🚀 Calling ai-chat function with:', {
+        conversationId: conversation.id,
+        userId: user?.id,
+        messageLength: messageText.trim().length,
+        isFirstMessage
+      });
+
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
           message: messageText.trim(),
-          conversationId: conversation.id,
+          conversationId: conversation.id, // This should now always be valid
           userId: user?.id,
           isFirstMessage: isFirstMessage
         }
       });
 
       if (response.error) {
-        console.error('Supabase function error:', response.error);
+        console.error('❌ Supabase function error:', response.error);
         throw new Error(response.error.message || 'Failed to send message');
       }
 
       if (response.data?.error) {
-        console.error('AI chat function error:', response.data.error);
+        console.error('❌ AI chat function error:', response.data.error);
         throw new Error(response.data.error);
       }
 
@@ -273,7 +334,7 @@ const ChatConversation: React.FC = () => {
       console.log('✅ Message sent successfully', response.data?.debug);
 
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('❌ Error sending message:', error);
       
       toast({
         title: "Error",
@@ -342,6 +403,7 @@ const ChatConversation: React.FC = () => {
         },
         (payload) => {
           const newMessage = payload.new as Message;
+          console.log('📨 Received real-time message:', newMessage.role, newMessage.id);
           // Only add AI messages via real-time, user messages are added immediately
           if (newMessage.role === 'assistant') {
             addMessageToSession(newMessage);
@@ -350,8 +412,11 @@ const ChatConversation: React.FC = () => {
       )
       .subscribe();
 
+    console.log('🔔 Real-time subscription active for conversation:', conversation.id);
+
     return () => {
       supabase.removeChannel(channel);
+      console.log('🔕 Real-time subscription cleaned up');
     };
   }, [conversation, addMessageToSession]);
 
@@ -444,6 +509,7 @@ const ChatConversation: React.FC = () => {
       await createNewConversation();
     }
   };
+
   // Handle continue paused conversation (legacy system - for backward compatibility)
   const handleContinuePausedConversation = async () => {
     if (!user) return;
@@ -812,102 +878,3 @@ const ChatConversation: React.FC = () => {
                   </div>
                 </div>
               ))}
-              
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted px-4 py-3 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <LoadingSpinner />
-                      <span className="text-sm text-muted-foreground">Writing...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="border-t bg-background p-4 space-y-4">
-              <div className="flex space-x-2 items-end w-full">
-                <textarea
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && !isLoading && !isPaused) {
-                      e.preventDefault();
-                      handleSendMessage(textInput);
-                    }
-                  }}
-                  placeholder={isPaused ? "Session is paused..." : "Write your message..."}
-                  className="flex-1 resize-none px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring min-h-[40px] max-h-[150px] overflow-y-auto leading-5"
-                  disabled={isLoading || isPaused}
-                  style={{
-                    height: 'auto',
-                    minHeight: '40px',
-                    maxHeight: '150px'
-                  }}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = 'auto';
-                    target.style.height = Math.min(target.scrollHeight, 150) + 'px';
-                  }}
-                />
-                <Button
-                  onClick={() => handleSendMessage(textInput)}
-                  disabled={!textInput.trim() || isLoading || isPaused}
-                  className="shrink-0"
-                >
-                  Send
-                </Button>
-              </div>
-              
-              {/* Session Controls */}
-              <div className="flex items-center justify-center space-x-2">
-                {!isPaused ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePauseSession}
-                    disabled={!conversation}
-                  >
-                    <Pause className="h-4 w-4 mr-2" />
-                    Pause
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleResumeSession}
-                    disabled={!conversation}
-                    className="border-amber-300 text-amber-700 hover:bg-amber-50"
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Resume
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNewConversation}
-                >
-                  New Chat
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleEndSession}
-                  disabled={!conversation || messages.filter(msg => msg.role === 'user').length < 5}
-                >
-                  End Session ({messages.filter(msg => msg.role === 'user').length}/5 messages)
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ChatConversation;
