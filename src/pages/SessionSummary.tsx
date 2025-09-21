@@ -36,6 +36,17 @@ const SessionSummary = () => {
                         location.state?.conversationId;
 
   useEffect(() => {
+    // Ensure user is authenticated
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to view your session analysis",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     if (!conversationId) {
       toast({
         title: "Error",
@@ -47,7 +58,7 @@ const SessionSummary = () => {
     }
 
     generateInsights();
-  }, [conversationId]);
+  }, [conversationId, user, navigate]);
 
   const generateInsights = async () => {
     if (!user || !conversationId) return;
@@ -147,9 +158,9 @@ const SessionSummary = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Session Analysis</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Your Personal AI Analysis</h1>
           <p className="text-muted-foreground">
-            Processing your conversation to generate personalized insights
+            Glai, your AI coach, is analyzing your conversation using advanced psychology research to provide personalized insights about your personality, communication style, and tailored recommendations for your personal growth.
           </p>
         </div>
 
@@ -163,8 +174,13 @@ const SessionSummary = () => {
                 </div>
               </div>
               <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold mb-2">Analyzing your conversation</h2>
-                <p className="text-muted-foreground">{currentStep}</p>
+                <h2 className="text-xl font-semibold mb-3">Understanding Your Conversation</h2>
+                <p className="text-muted-foreground mb-4">{currentStep}</p>
+                <div className="max-w-md mx-auto text-sm text-muted-foreground space-y-2">
+                  <p>🧠 <strong>What we're doing:</strong> Our AI is analyzing your conversation to understand your personality traits, communication style, and provide personalized insights.</p>
+                  <p>🔒 <strong>Your privacy matters:</strong> This analysis is completely private and only visible to you.</p>
+                  <p>📊 <strong>OCEAN Analysis:</strong> We use the scientifically-backed Big Five personality model to provide accurate insights.</p>
+                </div>
               </div>
               <div className="space-y-2">
                 <Progress value={progress} className="h-2" />
@@ -214,46 +230,64 @@ const SessionSummary = () => {
             <Card>
               <CardHeader>
                 <CardTitle>OCEAN Personality Profile</CardTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Based on the Big Five personality model, the gold standard in psychology research. These insights help you understand your natural tendencies and growth opportunities.
+                </p>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-6">
                   {insights?.personality_notes?.summary}
                 </p>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Openness</span>
-                      <span className="text-sm font-medium">{insights?.personality_notes?.openness || 0}%</span>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Openness to Experience</span>
+                        <p className="text-xs text-muted-foreground">Creativity, curiosity, and willingness to try new things</p>
+                      </div>
+                      <span className="text-sm font-bold">{insights?.personality_notes?.openness || 0}%</span>
                     </div>
-                    <Progress value={insights?.personality_notes?.openness || 0} className="h-2" />
+                    <Progress value={insights?.personality_notes?.openness || 0} className="h-3" />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Conscientiousness</span>
-                      <span className="text-sm font-medium">{insights?.personality_notes?.conscientiousness || 0}%</span>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Conscientiousness</span>
+                        <p className="text-xs text-muted-foreground">Organization, discipline, and goal-directed behavior</p>
+                      </div>
+                      <span className="text-sm font-bold">{insights?.personality_notes?.conscientiousness || 0}%</span>
                     </div>
-                    <Progress value={insights?.personality_notes?.conscientiousness || 0} className="h-2" />
+                    <Progress value={insights?.personality_notes?.conscientiousness || 0} className="h-3" />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Extraversion</span>
-                      <span className="text-sm font-medium">{insights?.personality_notes?.extraversion || 0}%</span>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Extraversion</span>
+                        <p className="text-xs text-muted-foreground">Energy from social interactions and external stimulation</p>
+                      </div>
+                      <span className="text-sm font-bold">{insights?.personality_notes?.extraversion || 0}%</span>
                     </div>
-                    <Progress value={insights?.personality_notes?.extraversion || 0} className="h-2" />
+                    <Progress value={insights?.personality_notes?.extraversion || 0} className="h-3" />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Agreeableness</span>
-                      <span className="text-sm font-medium">{insights?.personality_notes?.agreeableness || 0}%</span>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Agreeableness</span>
+                        <p className="text-xs text-muted-foreground">Cooperation, trust, and concern for others</p>
+                      </div>
+                      <span className="text-sm font-bold">{insights?.personality_notes?.agreeableness || 0}%</span>
                     </div>
-                    <Progress value={insights?.personality_notes?.agreeableness || 0} className="h-2" />
+                    <Progress value={insights?.personality_notes?.agreeableness || 0} className="h-3" />
                   </div>
-                  <div className="space-y-2 col-span-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Emotional Stability</span>
-                      <span className="text-sm font-medium">{100 - (insights?.personality_notes?.neuroticism || 0)}%</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Emotional Stability</span>
+                        <p className="text-xs text-muted-foreground">Calmness, resilience, and emotional regulation</p>
+                      </div>
+                      <span className="text-sm font-bold">{100 - (insights?.personality_notes?.neuroticism || 0)}%</span>
                     </div>
-                    <Progress value={100 - (insights?.personality_notes?.neuroticism || 0)} className="h-2" />
+                    <Progress value={100 - (insights?.personality_notes?.neuroticism || 0)} className="h-3" />
                   </div>
                 </div>
               </CardContent>
