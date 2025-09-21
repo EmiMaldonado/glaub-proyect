@@ -4,8 +4,30 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '@/utils/errorMessages';
 
+// Tipo para el perfil basado en tu tabla profiles
+interface Profile {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  role: string | null;
+  organization: string | null;
+  created_at: string;
+  updated_at: string;
+  manager_id: string | null;
+  team_name: string | null;
+  email: string | null;
+  age: number | null;
+  gender: string | null;
+  job_position: string | null;
+  onboarding_completed: boolean | null;
+  job_level: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
+  profile: Profile | null; // ✅ NUEVO: Agregar profile
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -14,6 +36,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: any }>;
   resendConfirmation: (email: string) => Promise<{ error: any }>;
   refreshSession: () => Promise<{ session: Session | null; error: any }>;
+  fetchProfile: () => Promise<void>; // ✅ NUEVO: Función para actualizar perfil
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,23 +51,120 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null); // ✅ NUEVO: Estado del perfil
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // ✅ NUEVA FUNCIÓN: Obtener o crear perfil
+  const fetchOrCreateProfile = async (userId: string, userEmail: string, userData?: any) => {
+    try {
+      console.log('Fetching profile for user:', userId);
+      
+      // Intentar obtener perfil existente
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (existingProfile) {
+        console.log('Profile found:', existingProfile);
+        setProfile(existingProfile);
+        return existingProfile;
+      }
+
+      // Si no existe perfil y no hay error crítico, crear uno
+      if (fetchError && fetchError.code === 'PGRST116') {
+        console.log('Profile not found, creating new one...');
+        
+        const newProfile = {
+          user_id: userId,
+          email: userEmail,
+          full_name: userData?.full_name || '',
+          display_name: userData?.display_name || userData?.full_name?.split(' ')[0] || '',
+          role: 'employee',
+          onboarding_completed: false,
+        };
+
+        const { data: createdProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([newProfile])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          toast({
+            title: "Profile creation failed",
+            description: "Could not create user profile. Some features may not work properly.",
+            variant: "destructive",
+          });
+          return null;
+        }
+
+        console.log('Profile created successfully:', createdProfile);
+        setProfile(createdProfile);
+        return createdProfile;
+      }
+
+      // Si hay otro tipo de error
+      if (fetchError) {
+        console.error('Error fetching profile:', fetchError);
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Unexpected error in fetchOrCreateProfile:', error);
+      return null;
+    }
+  };
+
+  // ✅ NUEVA FUNCIÓN: Actualizar perfil manualmente
+  const fetchProfile = async () => {
+    if (!user?.id) return;
+    await fetchOrCreateProfile(user.id, user.email || '', user.user_metadata);
+  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => { // ✅ CAMBIO: hacer async para manejar perfil
+        console.log('Auth state changed:', event, session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
+
+        // ✅ NUEVO: Manejar perfil según el estado de auth
+        if (session?.user) {
+          // Obtener o crear perfil cuando el usuario se autentica
+          await fetchOrCreateProfile(
+            session.user.id, 
+            session.user.email || '', 
+            session.user.user_metadata
+          );
+        } else {
+          // Limpiar perfil cuando se desautentica
+          setProfile(null);
+        }
+        
         setLoading(false);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // ✅ NUEVO: También obtener perfil para sesión existente
+      if (session?.user) {
+        await fetchOrCreateProfile(
+          session.user.id, 
+          session.user.email || '', 
+          session.user.user_metadata
+        );
+      }
+      
       setLoading(false);
     });
 
@@ -80,6 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } else {
         toast(SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS);
+        // ✅ El perfil se cargará automáticamente por el onAuthStateChange
       }
       
       return { error };
@@ -138,6 +259,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         console.log('Signup successful, user created:', data.user?.id);
         
+        // ✅ El perfil se creará automáticamente por el onAuthStateChange
+        // cuando el usuario confirme el email y se autentique
+        
         // Check if email confirmation is required
         if (data.user && !data.user.email_confirmed_at) {
           toast({
@@ -175,6 +299,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Resetear estados de React
       setUser(null);
+      setProfile(null); // ✅ NUEVO: Limpiar perfil también
       setSession(null);
       
       toast({
@@ -188,6 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.clear();
       sessionStorage.clear();
       setUser(null);
+      setProfile(null); // ✅ NUEVO: Limpiar perfil también
       setSession(null);
       
       toast({
@@ -292,6 +418,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.session) {
         setSession(data.session);
         setUser(data.session.user);
+        
+        // ✅ NUEVO: También actualizar perfil cuando se refresca la sesión
+        if (data.session.user) {
+          await fetchOrCreateProfile(
+            data.session.user.id, 
+            data.session.user.email || '', 
+            data.session.user.user_metadata
+          );
+        }
       }
       return { session: data.session, error };
     } catch (error) {
@@ -302,6 +437,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     user,
+    profile, // ✅ NUEVO: Exponer perfil
     session,
     loading,
     signIn,
@@ -310,6 +446,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     resendConfirmation,
     refreshSession,
+    fetchProfile, // ✅ NUEVO: Exponer función para actualizar perfil
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
