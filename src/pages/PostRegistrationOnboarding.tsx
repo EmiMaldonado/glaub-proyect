@@ -101,11 +101,7 @@ const PostRegistrationOnboarding = () => {
   const validateForm = (): boolean => {
     const newErrors: OnboardingErrors = {};
 
-    // Job position is required
-    if (!formData.job_position.trim()) {
-      newErrors.job_position = 'Job position is required';
-    }
-
+    // All fields are optional - only validate format if provided
     // Job level validation (optional but if provided, must be valid)
     if (formData.job_level && !jobLevels.some(level => level.value === formData.job_level)) {
       newErrors.job_level = 'Please select a valid job level';
@@ -240,11 +236,11 @@ const PostRegistrationOnboarding = () => {
 
         <CardContent className="space-y-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Job Position - Required */}
+            {/* Job Position - Optional */}
             <div className="space-y-2">
               <Label htmlFor="job_position" className="flex items-center gap-2 text-sm font-medium">
                 <Briefcase className="h-4 w-4 text-primary" />
-                Job Position / Role *
+                Job Position / Role (Optional)
               </Label>
               <div className="relative">
                 <Input
