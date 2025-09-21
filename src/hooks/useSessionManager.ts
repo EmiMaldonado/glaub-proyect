@@ -230,7 +230,7 @@ export const useSessionManager = () => {
 
   // Pause current session with audio control
   const pauseSession = useCallback(async () => {
-    if (!sessionState.conversation || sessionState.messages.length === 0) return false;
+    if (!sessionState.conversation) return false;
 
     try {
       console.log('🔄 pauseSession: Starting pause with audio stop');
