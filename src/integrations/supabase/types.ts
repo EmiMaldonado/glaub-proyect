@@ -758,6 +758,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_invitation_by_token: {
+        Args: { invitation_token: string }
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invitation_type: string
+          invited_by_id: string
+          manager_id: string
+          status: string
+        }[]
+      }
       get_user_manager_id: {
         Args: { user_profile_id: string }
         Returns: string
