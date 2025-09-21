@@ -134,12 +134,33 @@ const ChatConversation: React.FC = () => {
   // Send AI's first message to start the conversation
   const sendAIFirstMessage = async (conversationId: string) => {
     try {
+      // Check if user has any previous completed conversations to determine if this is their first session ever
+      const { data: previousCompletedConversations } = await supabase
+        .from('conversations')
+        .select('id, insights, ocean_signals, ended_at')
+        .eq('user_id', user?.id)
+        .eq('status', 'completed')
+        .order('ended_at', { ascending: false })
+        .limit(3);
+
+      let isFirstSessionEver = !previousCompletedConversations || previousCompletedConversations.length === 0;
+      
+      let initialMessage;
+      
+      if (isFirstSessionEver) {
+        // First session ever - use the standard Glai introduction
+        initialMessage = "Start the first conversation with this user using the standard Glai introduction and personality discovery protocol.";
+      } else {
+        // Returning user - recall previous conversations and ask about new topics
+        initialMessage = "This is a returning user. Greet them warmly, recall what you discussed in previous sessions, and ask if there are other topics they'd like to explore today.";
+      }
+
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
-          message: "__AI_START_CONVERSATION__", // Special trigger for AI to start
+          message: initialMessage,
           conversationId: conversationId,
           userId: user?.id,
-          isFirstMessage: true,
+          isFirstMessage: isFirstSessionEver,
           aiInitiated: true
         }
       });
