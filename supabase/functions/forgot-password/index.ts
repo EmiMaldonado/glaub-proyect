@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
+import React from 'npm:react@18.3.1';
+import { renderAsync } from 'npm:@react-email/components@0.0.22';
+import { PasswordResetEmail } from './_templates/password-reset-email.tsx';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +25,9 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 const handler = async (req: Request): Promise<Response> => {
+  const startTime = Date.now();
+  console.log(`🚀 Password reset request started at ${new Date().toISOString()}`);
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -31,6 +37,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { email }: ForgotPasswordRequest = await req.json();
 
     if (!email) {
+      console.error("❌ Email validation failed: No email provided");
       return new Response(
         JSON.stringify({ error: "Email is required" }),
         {
@@ -40,92 +47,153 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // For security, we always return success regardless of whether the user exists
-    // This prevents email enumeration attacks
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error("❌ Email validation failed: Invalid format");
+      return new Response(
+        JSON.stringify({ error: "Valid email address is required" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log(`📧 Processing password reset for: ${email.substring(0, 3)}***@${email.split('@')[1]}`);
     
     let userExists = false;
     let userId = null;
 
+    // OPTIMIZATION: Use efficient user lookup instead of listing all users
     try {
-      // Check if a profile exists for this email by looking at auth users
-      // We'll use a more secure approach by directly querying for auth users
-      const { data: users, error: listError } = await supabase.auth.admin.listUsers();
+      const lookupStart = Date.now();
       
-      if (!listError && users && users.users) {
-        const foundUser = users.users.find(user => user.email === email);
-        if (foundUser) {
+      // First check profiles table (much faster than listing all auth users)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('email', email)
+        .single();
+
+      if (!profileError && profile) {
+        userExists = true;
+        userId = profile.user_id;
+        console.log(`✅ User found via profiles table in ${Date.now() - lookupStart}ms`);
+      } else {
+        // Fallback: Direct auth user lookup (still more efficient than listUsers)
+        const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(email);
+        if (!authError && authUser?.user) {
           userExists = true;
-          userId = foundUser.id;
+          userId = authUser.user.id;
+          console.log(`✅ User found via auth lookup in ${Date.now() - lookupStart}ms`);
+        } else {
+          console.log(`ℹ️ User not found (security: continuing anyway) in ${Date.now() - lookupStart}ms`);
         }
       }
     } catch (error) {
-      console.log("Error checking user existence:", error);
+      console.error("⚠️ Error during user lookup:", error);
       // Continue anyway for security
     }
 
-    // Generate a secure token regardless of user existence
-    const { data: token, error: tokenError } = await supabase.rpc('generate_reset_token');
+    // Generate token with timeout
+    const tokenStart = Date.now();
+    const tokenPromise = supabase.rpc('generate_reset_token');
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Token generation timeout')), 5000)
+    );
     
-    if (tokenError || !token) {
-      console.error("Error generating reset token:", tokenError);
-      throw new Error("Failed to generate reset token");
+    let token: string;
+    try {
+      const { data, error: tokenError } = await Promise.race([tokenPromise, timeoutPromise]) as any;
+      
+      if (tokenError || !data) {
+        console.error("❌ Token generation failed:", tokenError);
+        throw new Error("Failed to generate reset token");
+      }
+      token = data;
+      console.log(`🔑 Token generated in ${Date.now() - tokenStart}ms`);
+    } catch (error) {
+      console.error("❌ Token generation error or timeout:", error);
+      throw new Error("Token generation failed");
     }
 
-    // Only store token if user exists
+    // Store token only if user exists (with timeout)
     if (userExists && userId) {
-      const { error: storeError } = await supabase
+      const storeStart = Date.now();
+      const storePromise = supabase
         .from('password_reset_tokens')
         .insert({
           user_id: userId,
           token: token,
-          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour from now
+          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
           is_used: false
         });
+      
+      const storeTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Token storage timeout')), 5000)
+      );
 
-      if (storeError) {
-        console.error("Error storing reset token:", storeError);
-        // Don't throw error here for security
+      try {
+        await Promise.race([storePromise, storeTimeoutPromise]);
+        console.log(`💾 Token stored in ${Date.now() - storeStart}ms`);
+      } catch (error) {
+        console.error("⚠️ Token storage failed or timeout:", error);
+        // Continue for security (don't fail the whole operation)
       }
     }
 
-    // Always try to send email (even if user doesn't exist, for security)
+    // Send email with custom template and timeout
+    const emailStart = Date.now();
+    const baseUrl = Deno.env.get("SITE_URL") || "https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev";
+    const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+    
     try {
-      const baseUrl = Deno.env.get("SITE_URL") || "https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev";
-      const resetUrl = `${baseUrl}/reset-password?token=${token}`;
-      
-      console.log("Generating reset URL:", resetUrl);
+      // Render custom email template
+      const templateStart = Date.now();
+      const html = await renderAsync(
+        React.createElement(PasswordResetEmail, {
+          resetUrl,
+          expirationTime: "1 hora",
+        })
+      );
+      console.log(`🎨 Email template rendered in ${Date.now() - templateStart}ms`);
 
-      const emailResponse = await resend.emails.send({
-        from: "Glaub <onboarding@resend.dev>",
+      // Send email with timeout
+      const sendStart = Date.now();
+      const emailPromise = resend.emails.send({
+        from: "Gläub <onboarding@resend.dev>",
         to: [email],
-        subject: "Reset your password",
-        html: `
-          <h2>Restablecer Contraseña</h2>
-          <p>Has solicitado restablecer tu contraseña. Haz clic en el enlace de abajo para crear una nueva contraseña:</p>
-          <p><a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Restablecer Contraseña</a></p>
-          <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
-          <p><a href="${resetUrl}">${resetUrl}</a></p>
-          <p>Este enlace expirará en 1 hora.</p>
-          <p>Si no solicitaste este restablecimiento de contraseña, ignora este email.</p>
-        `,
+        subject: "Restablecer Contraseña - Gläub",
+        html,
       });
+      
+      const emailTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email sending timeout')), 10000)
+      );
 
-      if (emailResponse.error) {
-        console.error("Error sending email:", emailResponse.error);
-        // Don't throw for security reasons
+      const emailResponse = await Promise.race([emailPromise, emailTimeoutPromise]) as any;
+
+      if (emailResponse?.error) {
+        console.error("❌ Email sending failed:", emailResponse.error);
       } else {
-        console.log("Password reset email sent successfully via Resend");
+        console.log(`📨 Email sent successfully in ${Date.now() - sendStart}ms`);
+        console.log(`📊 Email ID: ${emailResponse?.data?.id || 'unknown'}`);
       }
     } catch (emailError) {
-      console.error("Email sending failed:", emailError);
-      // Don't throw for security reasons
+      console.error("❌ Email template or sending failed:", emailError);
+      // Continue for security (don't fail the whole operation)
     }
+
+    const totalTime = Date.now() - startTime;
+    console.log(`🏁 Password reset completed in ${totalTime}ms`);
 
     // Always return success for security
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "If an account with that email exists, a reset link has been sent." 
+        message: "If an account with that email exists, a reset link has been sent.",
+        processingTime: totalTime
       }),
       {
         status: 200,
@@ -134,9 +202,13 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error("Error in forgot-password function:", error);
+    const totalTime = Date.now() - startTime;
+    console.error(`💥 Fatal error in forgot-password function (${totalTime}ms):`, error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ 
+        error: "Internal server error",
+        processingTime: totalTime
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
