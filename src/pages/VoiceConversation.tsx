@@ -363,7 +363,7 @@ const VoiceConversation: React.FC = () => {
     stopSession();
   };
 
-  // Handle end session
+  // Handle end session (explicit finish - timer expiry or user finish button)
   async function handleEndSession() {
     if (!conversation) return;
 
@@ -373,6 +373,9 @@ const VoiceConversation: React.FC = () => {
       // Calculate actual duration based on timer
       const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
       
+      // Check minimum duration requirement for insights (1 minute)
+      const shouldGenerateInsights = actualDuration >= 1 && sessionTranscripts.length > 2;
+
       await supabase
         .from('conversations')
         .update({ 
@@ -382,10 +385,19 @@ const VoiceConversation: React.FC = () => {
         })
         .eq('id', conversation.id);
 
-      toast({
-        title: "✅ Session Completed",
-        description: "The voice session has been saved",
-      });
+      if (shouldGenerateInsights) {
+        console.log('✅ Voice session completed with insights generation');
+        toast({
+          title: "✅ Session Completed",
+          description: "Your voice session has been saved and analyzed",
+        });
+      } else {
+        console.log('⚠️ Voice session completed but too short for insights');
+        toast({
+          title: "✅ Session Completed",
+          description: `Voice session was too brief (${actualDuration} min) to generate meaningful insights`,
+        });
+      }
 
       navigate(`/session-summary?conversation_id=${conversation.id}`);
     } catch (error) {

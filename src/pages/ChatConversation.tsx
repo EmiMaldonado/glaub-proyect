@@ -44,6 +44,7 @@ const ChatConversation: React.FC = () => {
     addMessageToSession,
     pauseSession,
     resumePausedSession,
+    completeSession,
     endSession,
     updateActivity,
     loadSessionFromLocal,
@@ -491,11 +492,11 @@ const ChatConversation: React.FC = () => {
     resumePausedSession();
   };
 
-  // Handle end session
+  // Handle end session (explicit finish conversation)
   const handleEndSession = async () => {
     if (!conversation) return;
 
-    const success = await endSession();
+    const success = await completeSession();
     if (success) {
       navigate(`/session-summary?conversation_id=${conversation.id}`);
     }

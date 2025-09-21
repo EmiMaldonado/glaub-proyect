@@ -272,14 +272,17 @@ export const useSessionManager = () => {
     return true;
   }, [sessionState.isPaused, updateActivity]);
 
-  // End session
-  const endSession = useCallback(async () => {
+  // Complete session (for explicit finish actions)
+  const completeSession = useCallback(async () => {
     if (!sessionState.conversation) return false;
 
     try {
       const durationMinutes = Math.floor(
         (Date.now() - new Date(sessionState.sessionStartTime).getTime()) / 60000
       );
+
+      // Check minimum duration requirement for insights (1 minute)
+      const shouldGenerateInsights = durationMinutes >= 1 && sessionState.messages.length > 2;
 
       await supabase
         .from('conversations')
@@ -289,6 +292,21 @@ export const useSessionManager = () => {
           duration_minutes: durationMinutes
         })
         .eq('id', sessionState.conversation.id);
+
+      // Generate insights only if conversation meets minimum requirements
+      if (shouldGenerateInsights) {
+        console.log('✅ Session completed with insights generation');
+        toast({
+          title: "Session Completed",
+          description: "Your conversation has been saved and analyzed successfully",
+        });
+      } else {
+        console.log('⚠️ Session completed but too short for insights');
+        toast({
+          title: "Session Completed", 
+          description: `Session was too brief (${durationMinutes} min) to generate meaningful insights`,
+        });
+      }
 
       // Clear paused conversation if exists
       await supabase
@@ -304,17 +322,18 @@ export const useSessionManager = () => {
         isPaused: false
       }));
 
-      toast({
-        title: "Session Completed",
-        description: "Your conversation has been saved successfully",
-      });
-
       return true;
     } catch (error) {
-      console.error('Error ending session:', error);
+      console.error('Error completing session:', error);
       return false;
     }
   }, [sessionState, user, clearLocalSession]);
+
+  // End session (for pause scenarios - renamed for clarity)
+  const endSession = useCallback(async () => {
+    console.log('⚠️ endSession called - this should only be used for pauses now');
+    return await pauseSession();
+  }, [pauseSession]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -425,7 +444,8 @@ export const useSessionManager = () => {
     addMessageToSession,
     pauseSession,
     resumePausedSession,
-    endSession,
+    completeSession,
+    endSession, // Deprecated: use completeSession or pauseSession directly
     updateActivity,
     clearLocalSession,
     syncWithDatabaseState,

@@ -67,6 +67,8 @@ const EmployeeDashboard: React.FC = () => {
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [manager, setManager] = useState<ManagerProfile | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [completedConversationsCount, setCompletedConversationsCount] = useState(0);
+  const [insightsCount, setInsightsCount] = useState(0);
   const [sharingPrefs, setSharingPrefs] = useState<EmployeeSharingPreferences>({
     share_ocean_profile: false,
     share_conversations: false,
@@ -115,6 +117,30 @@ const EmployeeDashboard: React.FC = () => {
           setManager(managerData);
         }
       }
+
+      // Get ONLY completed conversations count
+      const { count: completedCount } = await supabase
+        .from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'completed');
+
+      setCompletedConversationsCount(completedCount || 0);
+
+      // Get insights count (only from completed conversations)
+      const { count: insightsCount } = await supabase
+        .from('key_insights')
+        .select('*', { count: 'exact', head: true })
+        .in('conversation_id', 
+          await supabase
+            .from('conversations')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('status', 'completed')
+            .then(({ data }) => data?.map(c => c.id) || [])
+        );
+
+      setInsightsCount(insightsCount || 0);
 
       // Get sharing preferences
       const { data: sharingData, error: sharingError } = await supabase
@@ -292,16 +318,16 @@ const EmployeeDashboard: React.FC = () => {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Quick Stats */}
+              {/* Quick Stats - Only show completed conversations */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
+                  <CardTitle className="text-sm font-medium">Completed Sessions</CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">12</div>
+                  <div className="text-2xl font-bold">{completedConversationsCount}</div>
                   <p className="text-xs text-muted-foreground">
-                    +2 from last week
+                    {completedConversationsCount === 0 ? 'Complete your first session' : 'Sessions finished with insights'}
                   </p>
                 </CardContent>
               </Card>
@@ -312,9 +338,9 @@ const EmployeeDashboard: React.FC = () => {
                   <Lightbulb className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">8</div>
+                  <div className="text-2xl font-bold">{insightsCount}</div>
                   <p className="text-xs text-muted-foreground">
-                    +3 from last week
+                    {insightsCount === 0 ? 'Complete longer sessions (1+ min) for insights' : 'Total insights generated'}
                   </p>
                 </CardContent>
               </Card>
@@ -325,9 +351,9 @@ const EmployeeDashboard: React.FC = () => {
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">78%</div>
+                  <div className="text-2xl font-bold">{completedConversationsCount > 0 ? '78%' : '--'}</div>
                   <p className="text-xs text-muted-foreground">
-                    +5% from last week
+                    {completedConversationsCount > 0 ? 'Personal growth trajectory' : 'Available after multiple sessions'}
                   </p>
                 </CardContent>
               </Card>

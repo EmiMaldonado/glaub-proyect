@@ -410,21 +410,34 @@ const Conversation: React.FC = () => {
     setConversationSummary(summary);
     
     if (conversation) {
+      const durationMinutes = Math.floor(sessionTime / 60);
+      
+      // Check minimum duration requirement for insights (1 minute)
+      const shouldGenerateInsights = durationMinutes >= 1 && messages.length > 2;
+
       await supabase
         .from('conversations')
         .update({ 
           status: 'completed',
           ended_at: new Date().toISOString(),
-          duration_minutes: Math.floor(sessionTime / 60)
+          duration_minutes: durationMinutes
         })
         .eq('id', conversation.id);
+
+      if (shouldGenerateInsights) {
+        console.log('✅ Session completed with insights generation');
+        toast({
+          title: "✅ Session Completed",
+          description: "Review the summary and generated insights",
+        });
+      } else {
+        console.log('⚠️ Session completed but too short for insights');
+        toast({
+          title: "✅ Session Completed", 
+          description: `Session was too brief (${durationMinutes} min) to generate meaningful insights`,
+        });
+      }
     }
-    
-    console.log('Session ended');
-    toast({
-      title: "✅ Session Completed",
-      description: "Review the summary and generated insights",
-    });
   };
 
   const handleEndSessionRequest = () => {
