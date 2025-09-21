@@ -36,7 +36,7 @@ const DashboardViewSwitch: React.FC = () => {
           "flex items-center gap-2 px-3 py-2 text-sm transition-all",
           isOnPersonalDashboard 
             ? "bg-background shadow-sm" 
-            : "text-primary-800 hover:text-primary-600 hover:bg-primary/10"
+            : "text-slate-700 hover:text-slate-600 hover:bg-primary/10"
         )}
         data-testid="personal-view-button"
       >
@@ -52,7 +52,7 @@ const DashboardViewSwitch: React.FC = () => {
           "flex items-center gap-2 px-3 py-2 text-sm transition-all",
           isOnManagerDashboard 
             ? "bg-background shadow-sm"
-            : "text-primary-800 hover:text-primary-600 hover:bg-primary/10"
+            : "text-slate-700 hover:text-slate-600 hover:bg-primary/10"
         )}
         data-testid="manager-view-button"
       >
