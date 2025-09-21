@@ -14,9 +14,9 @@ interface VoiceInterfaceProps {
   onExtendSession?: () => void;
   onStopSession?: () => void;
   onBack: () => void;
-  progressPercentage: number;
-  formattedTime: string;
-  formattedTimeRemaining: string;
+  progressPercentage?: number;
+  formattedTime?: string;
+  formattedTimeRemaining?: string;
   extensionsUsed?: number;
   currentAIResponse?: string;
   canFinishSession?: boolean;
@@ -41,9 +41,9 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   onExtendSession,
   onStopSession,
   onBack,
-  progressPercentage,
-  formattedTime,
-  formattedTimeRemaining,
+  progressPercentage = 0,
+  formattedTime = "00:00",
+  formattedTimeRemaining = "05:00",
   extensionsUsed = 0,
   currentAIResponse,
   canFinishSession = false
@@ -649,23 +649,25 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         </div>
       </header>
 
-      {/* Progress Section */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="bg-gray-100 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-[#24476e] font-medium">Progress</span>
-            <span className="text-sm text-[#24476e]">
-              {formattedTime} / {formattedTimeRemaining} remaining | Extensions: {extensionsUsed}
-            </span>
-          </div>
-          <div className="w-full bg-gray-300 rounded-full h-2">
-            <div 
-              className="bg-[#24476e] h-2 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-            />
+      {/* Progress Section - only show when timer is active */}
+      {onExtendSession && (
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="bg-gray-100 rounded-lg p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-[#24476e] font-medium">Progress</span>
+              <span className="text-sm text-[#24476e]">
+                {formattedTime} / {formattedTimeRemaining} remaining | Extensions: {extensionsUsed}
+              </span>
+            </div>
+            <div className="w-full bg-gray-300 rounded-full h-2">
+              <div 
+                className="bg-[#24476e] h-2 rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
@@ -728,15 +730,16 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
               {/* Session Control Buttons */}
               <div className="flex items-center space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onExtendSession}
-                  disabled={!onExtendSession}
-                  className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white"
-                >
-                  +5 min
-                </Button>
+                {onExtendSession && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={onExtendSession}
+                    className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white"
+                  >
+                    +5 min
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   size="sm" 

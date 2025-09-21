@@ -7,7 +7,7 @@ import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useSessionManager } from '@/hooks/useSessionManager';
 import NewVoiceInterface from '@/components/NewVoiceInterface';
 import VoiceErrorBoundary from '@/components/VoiceErrorBoundary';
-import { useConversationTimer } from '@/hooks/useConversationTimer';
+
 
 interface Message {
   id: string;
@@ -45,30 +45,6 @@ const VoiceConversation: React.FC = () => {
   // Session manager
   const { pauseSession } = useSessionManager();
 
-  // Session timer
-  const {
-    sessionTime,
-    formattedTime,
-    formattedTimeRemaining,
-    progressPercentage,
-    isActive: isTimerActive,
-    extensionsUsed,
-    currentMaxDuration,
-    start: startTimer,
-    pause: pauseTimer,
-    reset: resetTimer,
-    extendSession,
-    stopSession
-  } = useConversationTimer({
-    maxDurationMinutes: 5,
-    onTimeWarning: () => {
-      toast({
-        title: "⏰ Time Almost Up",
-        description: "You have 1 minute of conversation remaining",
-      });
-    },
-    onTimeUp: () => handleEndSession() // Auto-timeout should complete session and go to analysis
-  });
 
   // Handle end session (explicit finish - timer expiry or user finish button)
   const handleEndSession = async () => {
@@ -82,7 +58,7 @@ const VoiceConversation: React.FC = () => {
       stopAllVoiceAudio();
       console.log('🔇 handleEndSession: Voice audio stopped');
       
-      pauseTimer();
+      
       
       // Calculate actual duration based on timer
       const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
@@ -222,7 +198,7 @@ const VoiceConversation: React.FC = () => {
     setIsLoading(false);
     setConversation(null);
     setCurrentAIResponse('');
-    resetTimer();
+    
   };
 
   // Resume existing paused conversation
@@ -481,11 +457,6 @@ const VoiceConversation: React.FC = () => {
   const handleTranscriptionUpdate = async (text: string, isUser: boolean) => {
     if (!conversation || !text.trim()) return;
 
-    // Start timer when user first speaks (sends their first message)
-    if (isUser && !isTimerActive) {
-      startTimer();
-      console.log('🕒 Timer started on first user message');
-    }
 
     try {
       // Save transcription as message to database
@@ -528,10 +499,6 @@ const VoiceConversation: React.FC = () => {
     setIsSpeaking(speaking);
   };
 
-  // Handle extend session
-  const handleExtendSession = () => {
-    extendSession();
-  };
 
   // Handle back navigation
   const handleBack = () => {
@@ -610,15 +577,10 @@ const VoiceConversation: React.FC = () => {
         conversationId={conversation?.id}
         userId={user?.id}
         onEndSession={handleEndSession}
-        onExtendSession={handleExtendSession}
         onStopSession={handleStopSession}
         onBack={handleBack}
-        progressPercentage={isTimerActive ? progressPercentage : 0}
-        formattedTime={isTimerActive ? formattedTime : "00:00"}
-        formattedTimeRemaining={isTimerActive ? formattedTimeRemaining : "05:00"}
-        extensionsUsed={extensionsUsed}
         currentAIResponse={currentAIResponse}
-        canFinishSession={isTimerActive && (sessionTime >= 60)}
+        canFinishSession={true}
       />
     </VoiceErrorBoundary>
   );

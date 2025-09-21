@@ -304,7 +304,7 @@ export const useAutoPause = ({
     // Visibility change (tab switching, minimizing) - WITH DELAY
     const handleVisibilityChange = async () => {
       if (document.hidden && !isUnmountingRef.current) {
-        console.log('👁️ Visibility change detected - starting 30 second delay before pause');
+        console.log('👁️ Visibility change detected - starting 5 second delay before pause');
         
         // Clear any existing timeout
         if (visibilityTimeoutRef.current) {
@@ -314,16 +314,16 @@ export const useAutoPause = ({
         // Show toast to warn user
         toast({
           title: "Tab Hidden",
-          description: "Conversation will pause in 30 seconds if you don't return",
+          description: "Conversation will pause in 5 seconds if you don't return",
         });
         
-        // Set 30 second delay before pausing
+        // Set 5 second delay before pausing
         visibilityTimeoutRef.current = setTimeout(async () => {
           if (document.hidden && !isUnmountingRef.current) {
-            console.log('👁️ Tab still hidden after 30 seconds - pausing conversation');
+            console.log('👁️ Tab still hidden after 5 seconds - pausing conversation');
             await pauseConversationWithContext('visibility');
           }
-        }, 30000); // 30 seconds delay
+        }, 5000); // 5 seconds delay
         
       } else if (!document.hidden && visibilityTimeoutRef.current) {
         // User returned - cancel the pause
@@ -341,7 +341,7 @@ export const useAutoPause = ({
     // Network connectivity loss - WITH DELAY
     const handleOffline = async () => {
       if (!isUnmountingRef.current) {
-        console.log('📶 Network offline detected - starting 60 second delay before pause');
+        console.log('📶 Network offline detected - starting 5 second delay before pause');
         
         // Clear any existing timeout
         if (offlineTimeoutRef.current) {
@@ -351,17 +351,17 @@ export const useAutoPause = ({
         // Show toast to warn user
         toast({
           title: "Connection Lost",
-          description: "Conversation will pause in 60 seconds if connection isn't restored",
+          description: "Conversation will pause in 5 seconds if connection isn't restored",
           variant: "destructive",
         });
         
-        // Set 60 second delay before pausing
+        // Set 5 second delay before pausing
         offlineTimeoutRef.current = setTimeout(async () => {
           if (!navigator.onLine && !isUnmountingRef.current) {
-            console.log('📶 Still offline after 60 seconds - pausing conversation');
+            console.log('📶 Still offline after 5 seconds - pausing conversation');
             await pauseConversationWithContext('network');
           }
-        }, 60000); // 60 seconds delay
+        }, 5000); // 5 seconds delay
       }
     };
 
@@ -404,20 +404,20 @@ export const useAutoPause = ({
     // Mobile-specific: page hide (when app goes to background) - WITH DELAY
     const handlePageHide = async () => {
       if (!isUnmountingRef.current) {
-        console.log('📱 Page hide detected - starting 45 second delay before pause');
+        console.log('📱 Page hide detected - starting 5 second delay before pause');
         
         // Clear any existing timeout
         if (pageHideTimeoutRef.current) {
           clearTimeout(pageHideTimeoutRef.current);
         }
         
-        // Set 45 second delay before pausing
+        // Set 5 second delay before pausing
         pageHideTimeoutRef.current = setTimeout(async () => {
           if (!isUnmountingRef.current) {
-            console.log('📱 Page still hidden after 45 seconds - pausing conversation');
+            console.log('📱 Page still hidden after 5 seconds - pausing conversation');
             await pauseConversationWithContext('auto');
           }
-        }, 45000); // 45 seconds delay
+        }, 5000); // 5 seconds delay
       }
     };
 
