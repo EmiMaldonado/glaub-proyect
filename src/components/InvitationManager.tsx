@@ -494,24 +494,81 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
         </Card>
       )}
 
-      {/* Info Card */}
-      <Card className="bg-muted/50">
-        <CardContent className="pt-6">
-          <div className="space-y-3">
-            <h4 className="font-medium flex items-center gap-2">
-              <ArrowRight className="h-4 w-4" />
-              How It Works
-            </h4>
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p><strong>Step 1:</strong> Employee requests someone to be their manager</p>
-              <p><strong>Step 2:</strong> Person accepts request and becomes manager</p>
-              <p><strong>Step 3:</strong> Manager can add more team members</p>
+    // Replace the Info Card section in InvitationManager.tsx with this:
+
+{/* Received Invitations OR Info Card */}
+{receivedInvitations.length > 0 ? (
+  <Card className="border-primary/20 bg-primary/5">
+    <CardContent className="pt-6">
+      <div className="space-y-4">
+        <h4 className="font-medium flex items-center gap-2 text-primary">
+          <AlertCircle className="h-4 w-4" />
+          Manager Requests Received ({receivedInvitations.length})
+        </h4>
+        
+        {receivedInvitations.map((invitation) => {
+          const typeInfo = getInvitationTypeDisplay(invitation.invitation_type);
+          
+          return (
+            <div key={invitation.id} className="p-4 border rounded-lg bg-background shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {typeInfo.icon}
+                  <span className="font-medium">{typeInfo.label}</span>
+                  {getStatusBadge(invitation.status)}
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {new Date(invitation.invited_at).toLocaleDateString()}
+                </span>
+              </div>
+              
+              <p className="text-sm text-muted-foreground mb-3">
+                Someone wants you to be their manager
+              </p>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleAcceptManagerRequest(invitation)}
+                  disabled={loading}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Accept & Become Manager
+                </Button>
+                <Button
+                  onClick={() => handleDeclineManagerRequest(invitation)}
+                  disabled={loading}
+                  variant="outline"
+                  size="sm"
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Decline
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
+          );
+        })}
+      </div>
+    </CardContent>
+  </Card>
+) : (
+  /* Info Card - only show when no invitations */
+  <Card className="bg-muted/50">
+    <CardContent className="pt-6">
+      <div className="space-y-3">
+        <h4 className="font-medium flex items-center gap-2">
+          <ArrowRight className="h-4 w-4" />
+          How It Works
+        </h4>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p><strong>Step 1:</strong> Employee requests someone to be their manager</p>
+          <p><strong>Step 2:</strong> Person accepts request and becomes manager</p>
+          <p><strong>Step 3:</strong> Manager can add more team members</p>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+)}
 
 export default InvitationManager;
