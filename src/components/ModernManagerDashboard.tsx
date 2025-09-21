@@ -15,6 +15,7 @@ import DashboardViewSwitch from "@/components/DashboardViewSwitch";
 import ManageTeamSection from './ManageTeamSection';
 import { useTeamAnalytics } from '@/hooks/useTeamAnalytics';
 import { useTeamRecommendations } from '@/hooks/useTeamRecommendations';
+import { useTeamDataCache } from '@/hooks/useTeamDataCache';
 import OceanPersonalitySection from './OceanPersonalitySection';
 import TeamResultsSection from './TeamResultsSection';
 
@@ -54,6 +55,36 @@ const ModernManagerDashboard: React.FC = () => {
   // Team recommendations hook
   const { data: recommendationsData, loading: recommendationsLoading, generateRecommendations, clearCache } = useTeamRecommendations();
 
+  // Cache hooks for personality and team results data
+  const personalityCacheKey = `personality-${managerProfile?.id || ''}`;
+  const teamResultsCacheKey = `team-results-${managerProfile?.id || ''}`;
+  
+  const {
+    cachedData: personalityCache,
+    isStale: personalityCacheStale,
+    setCacheData: setPersonalityCache,
+    invalidateCache: invalidatePersonalityCache,
+    isCacheValid: isPersonalityCacheValid
+  } = useTeamDataCache({
+    managerId: managerProfile?.id || '',
+    teamMembers,
+    cacheKey: personalityCacheKey,
+    ttl: 30 * 60 * 1000 // 30 minutes
+  });
+
+  const {
+    cachedData: teamResultsCache,
+    isStale: teamResultsCacheStale,
+    setCacheData: setTeamResultsCache,
+    invalidateCache: invalidateTeamResultsCache,
+    isCacheValid: isTeamResultsCacheValid
+  } = useTeamDataCache({
+    managerId: managerProfile?.id || '',
+    teamMembers,
+    cacheKey: teamResultsCacheKey,
+    ttl: 30 * 60 * 1000 // 30 minutes
+  });
+
   useEffect(() => {
     if (user) {
       loadManagerData();
@@ -65,6 +96,32 @@ const ModernManagerDashboard: React.FC = () => {
       generateRecommendations(managerProfile.id, teamMembers);
     }
   }, [managerProfile, teamMembers, generateRecommendations]);
+
+  // Cache personality data when analytics data changes
+  useEffect(() => {
+    if (analyticsData && teamDescription && managerProfile && !isPersonalityCacheValid) {
+      setPersonalityCache(personalityCacheKey, {
+        personalityData: analyticsData.distribution.personalityDistribution,
+        teamDescription,
+        teamStrengths: getPersonalizedTeamStrengths(),
+        recommendations: getPersonalizedRecommendations(),
+        analyticsData
+      });
+    }
+  }, [analyticsData, teamDescription, managerProfile, isPersonalityCacheValid, personalityCacheKey, setPersonalityCache]);
+
+  // Cache team results data when recommendations data changes
+  useEffect(() => {
+    if (recommendationsData && analyticsData && managerProfile && !isTeamResultsCacheValid) {
+      setTeamResultsCache(teamResultsCacheKey, {
+        personalityData: analyticsData.distribution.personalityDistribution,
+        teamDescription: teamDescription || '',
+        teamStrengths: getPersonalizedTeamStrengths(),
+        recommendations: recommendationsData.recommendations || getPersonalizedRecommendations(),
+        analyticsData
+      });
+    }
+  }, [recommendationsData, analyticsData, teamDescription, managerProfile, isTeamResultsCacheValid, teamResultsCacheKey, setTeamResultsCache]);
 
   const loadManagerData = async () => {
     if (!user) return;
@@ -133,18 +190,34 @@ const ModernManagerDashboard: React.FC = () => {
   };
 
   const handleTeamUpdate = () => {
+    // Invalidate caches when team changes
+    invalidatePersonalityCache();
+    invalidateTeamResultsCache();
     loadManagerData();
   };
 
   const handleRefreshRecommendations = () => {
     if (managerProfile) {
+      // Clear recommendation cache and invalidate team results cache
       clearCache(managerProfile.id).then(() => {
+        invalidateTeamResultsCache();
         generateRecommendations(managerProfile.id, teamMembers);
       });
     }
   };
 
+  const handleRefreshAnalytics = () => {
+    // Invalidate personality cache and refresh analytics
+    invalidatePersonalityCache();
+    refreshAnalytics();
+  };
+
   const getTeamDescription = () => {
+    // Use cached data if available and valid
+    if (isPersonalityCacheValid && personalityCache?.teamDescription) {
+      return personalityCache.teamDescription;
+    }
+    
     if (!analyticsData || teamMembers.length === 0) {
       return "Add team members to generate personality insights and team analysis.";
     }
@@ -168,6 +241,11 @@ const ModernManagerDashboard: React.FC = () => {
   };
 
   const getPersonalizedTeamStrengths = () => {
+    // Use cached data if available and valid
+    if (isTeamResultsCacheValid && teamResultsCache?.teamStrengths) {
+      return teamResultsCache.teamStrengths;
+    }
+    
     if (!analyticsData) return [];
 
     const strengths = [];
@@ -224,6 +302,11 @@ const ModernManagerDashboard: React.FC = () => {
   };
 
   const getPersonalizedRecommendations = () => {
+    // Use cached data if available and valid
+    if (isTeamResultsCacheValid && teamResultsCache?.recommendations) {
+      return teamResultsCache.recommendations;
+    }
+    
     if (!analyticsData) return [];
 
     const recommendations = [];
@@ -322,18 +405,21 @@ const ModernManagerDashboard: React.FC = () => {
         <div className="lg:col-span-7">
           <OceanPersonalitySection
             personalityData={
-              analyticsData?.distribution.personalityDistribution || {
-                openness: 0,
-                conscientiousness: 0,
-                extraversion: 0,
-                agreeableness: 0,
-                neuroticism: 0,
-              }
+              isPersonalityCacheValid && personalityCache?.personalityData 
+                ? personalityCache.personalityData
+                : analyticsData?.distribution.personalityDistribution || {
+                    openness: 0,
+                    conscientiousness: 0,
+                    extraversion: 0,
+                    agreeableness: 0,
+                    neuroticism: 0,
+                  }
             }
             teamDescription={getTeamDescription()}
-            loading={analyticsLoading}
-            onRefresh={refreshAnalytics}
+            loading={analyticsLoading && !isPersonalityCacheValid}
+            onRefresh={handleRefreshAnalytics}
             hasRealData={hasRealData}
+            cacheStatus={isPersonalityCacheValid ? 'cached' : 'fresh'}
           />
         </div>
 
@@ -352,12 +438,21 @@ const ModernManagerDashboard: React.FC = () => {
         teamMembers={teamMembers}
         selectedMember={selectedMember}
         teamStrengths={getPersonalizedTeamStrengths()}
-        recommendations={recommendationsData?.recommendations || getPersonalizedRecommendations()}
+        recommendations={
+          isTeamResultsCacheValid && teamResultsCache?.recommendations 
+            ? teamResultsCache.recommendations 
+            : recommendationsData?.recommendations || getPersonalizedRecommendations()
+        }
         onMemberSelect={setSelectedMember}
-        loading={recommendationsLoading}
+        loading={recommendationsLoading && !isTeamResultsCacheValid}
         onRefresh={handleRefreshRecommendations}
-        analyticsData={analyticsData}
+        analyticsData={
+          isTeamResultsCacheValid && teamResultsCache?.analyticsData 
+            ? teamResultsCache.analyticsData 
+            : analyticsData
+        }
         teamDescription={teamDescription}
+        cacheStatus={isTeamResultsCacheValid ? 'cached' : 'fresh'}
       />
     </div>
   );

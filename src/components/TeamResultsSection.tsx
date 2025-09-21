@@ -47,6 +47,7 @@ interface TeamResultsSectionProps {
   onRefresh?: () => void;
   analyticsData?: any;
   teamDescription?: string;
+  cacheStatus?: 'cached' | 'fresh';
 }
 
 const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
@@ -58,7 +59,8 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
   loading = false,
   onRefresh,
   analyticsData,
-  teamDescription
+  teamDescription,
+  cacheStatus = 'fresh'
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -92,7 +94,14 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl">Team Results</CardTitle>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-xl">Team Results</CardTitle>
+            {cacheStatus === 'cached' && (
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                📋 Cached
+              </span>
+            )}
+          </div>
           {onRefresh && (
             <Button onClick={onRefresh} variant="outline" size="sm" disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />

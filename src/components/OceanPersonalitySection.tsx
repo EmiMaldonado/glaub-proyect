@@ -17,6 +17,7 @@ interface OceanPersonalitySectionProps {
   loading?: boolean;
   onRefresh?: () => void;
   hasRealData?: boolean;
+  cacheStatus?: 'cached' | 'fresh';
 }
 
 const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
@@ -24,7 +25,8 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
   teamDescription,
   loading = false,
   onRefresh,
-  hasRealData = false
+  hasRealData = false,
+  cacheStatus = 'fresh'
 }) => {
   const oceanTraits = [
     { key: 'openness', label: 'Openness', value: personalityData.openness },
@@ -69,11 +71,18 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
               <Brain className="h-5 w-5 text-primary" />
               Team Personality Profile (OCEAN)
             </CardTitle>
-            <CardDescription className="mt-1">
-              {hasRealData 
-                ? "Based on real team conversation data" 
-                : "Analysis based on available data - encourage team members to complete conversations for more accurate insights"
-              }
+            <CardDescription className="mt-1 flex items-center gap-2">
+              <span>
+                {hasRealData 
+                  ? "Based on real team conversation data" 
+                  : "Analysis based on available data - encourage team members to complete conversations for more accurate insights"
+                }
+              </span>
+              {cacheStatus === 'cached' && (
+                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                  📋 Cached
+                </span>
+              )}
             </CardDescription>
           </div>
           {onRefresh && (
