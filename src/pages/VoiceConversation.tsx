@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import { useSessionManager } from '@/hooks/useSessionManager';
 import NewVoiceInterface from '@/components/NewVoiceInterface';
 import VoiceErrorBoundary from '@/components/VoiceErrorBoundary';
 import { useConversationTimer } from '@/hooks/useConversationTimer';
@@ -65,6 +66,9 @@ const VoiceConversation: React.FC = () => {
     },
     onTimeUp: handleEndSession
   });
+
+  // Session manager
+  const { pauseSession } = useSessionManager();
 
   // Reset all state for new conversation
   const resetConversationState = () => {
@@ -336,32 +340,24 @@ const VoiceConversation: React.FC = () => {
 
   // Handle stop session (user-initiated)
   const handleStopSession = async () => {
-    // Set conversation status to paused instead of completed
-    if (conversation) {
-      try {
-        await supabase
-          .from('conversations')
-          .update({ 
-            status: 'paused',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', conversation.id);
-
-        toast({
-          title: "🔄 Session Paused",
-          description: "You can continue this conversation later from the dashboard",
-        });
-        navigate('/dashboard');
-      } catch (error) {
-        console.error('Error pausing session:', error);
-        toast({
-          title: "Error",
-          description: "Could not pause the session",
-          variant: "destructive",
-        });
-      }
+    // Use session manager's pauseSession method instead of manual database update
+    try {
+      await pauseSession(); // This properly pauses and saves the session
+      stopSession(); // Stop the timer
+      
+      toast({
+        title: "🔄 Session Paused",
+        description: "You can continue this conversation later from the dashboard",
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error pausing session:', error);
+      toast({
+        title: "Error",
+        description: "Could not pause the session",
+        variant: "destructive",
+      });
     }
-    stopSession();
   };
 
   // Handle end session (explicit finish - timer expiry or user finish button)
