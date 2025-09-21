@@ -18,6 +18,7 @@ import { useDataRecovery } from "@/hooks/useDataRecovery";
 import SharingPreferences from "@/components/SharingPreferences";
 import SharedDataIndicator from "@/components/SharedDataIndicator";
 import PersonalRecommendations from "@/components/PersonalRecommendations";
+import ProfileStatusInsights from "@/components/ProfileStatusInsights";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
@@ -674,13 +675,13 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground mt-1">
                           Your most recent session didn't generate strength insights
                         </p>
-                      </div> : <div className="text-center py-4">
-                      <Target className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                      <p className="text-muted-foreground text-sm">No strengths data available</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Complete a conversation to identify your strengths
-                      </p>
-                    </div>}
+                      </div> : <ProfileStatusInsights 
+                        profile={userProfile} 
+                        stats={stats} 
+                        oceanProfile={oceanProfile}
+                        conversations={stats.totalConversations}
+                        onStartConversation={() => navigate('/conversation')}
+                      />}
                   </div>
                 </div> : <div className="text-center py-8">
                   <Target className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
