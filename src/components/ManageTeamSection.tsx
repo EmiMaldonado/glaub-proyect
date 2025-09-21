@@ -205,18 +205,14 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
         {/* Team Overview */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Team Overview</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="text-lg font-semibold text-primary">{teamMembers.length}</div>
               <div className="text-xs text-muted-foreground">Members</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="text-lg font-semibold text-primary">{pendingInvitations.length}</div>
-              <div className="text-xs text-muted-foreground">Pending</div>
-            </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-lg font-semibold text-primary">{teamMembers.length + pendingInvitations.length}</div>
-              <div className="text-xs text-muted-foreground">Total</div>
+              <div className="text-xs text-muted-foreground">Pending Invitations</div>
             </div>
           </div>
         </div>
