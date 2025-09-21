@@ -285,7 +285,7 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Initialize conversation on mount - AI always starts
+  // Initialize conversation on mount - check for active session first
   useEffect(() => {
     if (!user) return;
     
@@ -301,9 +301,13 @@ const ChatConversation: React.FC = () => {
         } else if (resumeId) {
           // Handle new resume system
           await handleResumeById(resumeId);
+        } else if (hasActiveSession && conversation) {
+          // Continue existing active session - maintain session continuity
+          console.log('📋 Continuing active chat session:', conversation.id);
+          setIsInitializing(false);
+          return;
         } else {
-          // Always create new conversation - no session restoration in chat mode
-          // This ensures AI always starts fresh conversations like in voice chat
+          // Create new conversation only when no active session exists
           console.log('🤖 Creating new chat conversation - AI will start automatically');
           await createNewConversation();
         }
@@ -320,7 +324,7 @@ const ChatConversation: React.FC = () => {
     };
 
     initializeConversation();
-  }, [user, continueConversation]);
+  }, [user, continueConversation, hasActiveSession, conversation]);
 
   // Real-time message updates
   useEffect(() => {
