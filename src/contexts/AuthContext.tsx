@@ -34,6 +34,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (newPassword: string, token?: string) => Promise<{ error: any }>; // ✅ ACTUALIZADO: Agregar token opcional
   resendConfirmation: (email: string) => Promise<{ error: any }>;
   refreshSession: () => Promise<{ session: Session | null; error: any }>;
   fetchProfile: () => Promise<void>; // ✅ NUEVO: Función para actualizar perfil
@@ -326,12 +327,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     try {
+      // ✅ Usar tu función Edge personalizada para generar el token
       const { data, error } = await supabase.functions.invoke('forgot-password', {
         body: { email }
       });
       
       if (error) {
-        console.error('Forgot password error:', error);
+        console.error('Reset password error:', error);
         toast({
           title: "Error",
           description: "Failed to send reset email. Please try again.",
@@ -346,10 +348,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       return { error };
     } catch (error) {
-      console.error('Forgot password error:', error);
+      console.error('Reset password error:', error);
       toast({
         title: "Unexpected error",
         description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return { error };
+    }
+  };
+
+  // ✅ FUNCIÓN ACTUALIZADA: Para usar tu Edge function de reset-password
+  const updatePassword = async (newPassword: string, token?: string) => {
+    try {
+      // Si se proporciona un token, usar tu función Edge personalizada
+      if (token) {
+        const { data, error } = await supabase.functions.invoke('reset-password', {
+          body: { 
+            token: token,
+            new_password: newPassword 
+          }
+        });
+
+        if (error) {
+          console.error('Reset password with token error:', error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to update password. Please try again.",
+            variant: "destructive",
+          });
+          return { error };
+        }
+
+        toast({
+          title: "Password updated",
+          description: data.message || "Your password has been successfully updated.",
+        });
+        return { error: null };
+      } else {
+        // Usar el método nativo para usuarios ya autenticados
+        const { data, error } = await supabase.auth.updateUser({
+          password: newPassword
+        });
+        
+        if (error) {
+          console.error('Update password error:', error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to update password. Please try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Password updated",
+            description: "Your password has been successfully updated.",
+          });
+        }
+        
+        return { error };
+      }
+    } catch (error: any) {
+      console.error('Update password error:', error);
+      toast({
+        title: "Unexpected error",
+        description: "An unexpected error occurred while updating password",
         variant: "destructive",
       });
       return { error };
@@ -444,6 +506,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     resetPassword,
+    updatePassword, // ✅ NUEVO: Exponer función para actualizar password
     resendConfirmation,
     refreshSession,
     fetchProfile, // ✅ NUEVO: Exponer función para actualizar perfil
