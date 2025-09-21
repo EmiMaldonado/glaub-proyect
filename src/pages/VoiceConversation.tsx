@@ -45,6 +45,105 @@ const VoiceConversation: React.FC = () => {
   // Session manager
   const { pauseSession } = useSessionManager();
 
+  // Session timer
+  const {
+    sessionTime,
+    formattedTime,
+    formattedTimeRemaining,
+    progressPercentage,
+    isActive: isTimerActive,
+    extensionsUsed,
+    currentMaxDuration,
+    start: startTimer,
+    pause: pauseTimer,
+    reset: resetTimer,
+    extendSession,
+    stopSession
+  } = useConversationTimer({
+    maxDurationMinutes: 5,
+    onTimeWarning: () => {
+      toast({
+        title: "⏰ Time Almost Up",
+        description: "You have 1 minute of conversation remaining",
+      });
+    },
+    onTimeUp: () => handleEndSession() // Auto-timeout should complete session and go to analysis
+  });
+
+  // Handle end session (explicit finish - timer expiry or user finish button)
+  const handleEndSession = async () => {
+    if (!conversation) return;
+
+    try {
+      console.log('🏁 handleEndSession: Starting completion with audio stop');
+      
+      // Stop all voice audio IMMEDIATELY
+      const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
+      stopAllVoiceAudio();
+      console.log('🔇 handleEndSession: Voice audio stopped');
+      
+      pauseTimer();
+      
+      // Calculate actual duration based on timer
+      const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
+      
+      // Check minimum duration requirement for insights (1 minute)
+      const shouldGenerateInsights = actualDuration >= 1 && sessionTranscripts.length > 2;
+
+      await supabase
+        .from('conversations')
+        .update({ 
+          status: 'completed',
+          ended_at: new Date().toISOString(),
+          duration_minutes: actualDuration
+        })
+        .eq('id', conversation.id);
+
+      if (shouldGenerateInsights) {
+        console.log('✅ Session meets criteria for insights generation');
+        
+        const sessionData = {
+          messages: sessionTranscripts,
+          duration: actualDuration,
+          userId: user?.id,
+          conversationId: conversation.id
+        };
+
+        toast({
+          title: "🎯 Session Complete!",
+          description: `Session completed (${actualDuration} min). Generating insights...`,
+        });
+
+        // Generate insights via edge function
+        const response = await supabase.functions.invoke('session-analysis', {
+          body: sessionData
+        });
+
+        if (response.data) {
+          navigate(`/session-summary?id=${conversation.id}`);
+        } else {
+          console.log('⚠️ Insights generation failed, going to dashboard');
+          navigate('/dashboard');
+        }
+      } else {
+        console.log(`⚠️ Session too short for insights: ${actualDuration} min, ${sessionTranscripts.length} messages`);
+        toast({
+          title: "Session Complete",
+          description: `Session was too brief (${actualDuration} min) for detailed insights`,
+        });
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('❌ Error ending session:', error);
+      toast({
+        title: "Session Ended",
+        description: "Session completed but there was an issue processing it",
+        variant: "destructive",
+      });
+      navigate('/dashboard');
+    }
+  };
+
   // Handle stop session (user-initiated) with immediate audio control
   const handleStopSession = async () => {
     console.log('🔄 handleStopSession: Starting pause with guaranteed navigation');
@@ -102,30 +201,6 @@ const VoiceConversation: React.FC = () => {
     }
   };
 
-  // Session timer
-  const {
-    sessionTime,
-    formattedTime,
-    formattedTimeRemaining,
-    progressPercentage,
-    isActive: isTimerActive,
-    extensionsUsed,
-    currentMaxDuration,
-    start: startTimer,
-    pause: pauseTimer,
-    reset: resetTimer,
-    extendSession,
-    stopSession
-  } = useConversationTimer({
-    maxDurationMinutes: 5,
-    onTimeWarning: () => {
-      toast({
-        title: "⏰ Time Almost Up",
-        description: "You have 1 minute of conversation remaining",
-      });
-    },
-    onTimeUp: handleStopSession // Use pause instead of complete for timer expiry
-  });
 
   // Reset all state for new conversation
   const resetConversationState = () => {
@@ -444,80 +519,6 @@ const VoiceConversation: React.FC = () => {
   // Handle extend session
   const handleExtendSession = () => {
     extendSession();
-  };
-
-  // Handle end session (explicit finish - timer expiry or user finish button)
-  const handleEndSession = async () => {
-    if (!conversation) return;
-
-    try {
-      console.log('🏁 handleEndSession: Starting completion with audio stop');
-      
-      // Stop all voice audio IMMEDIATELY
-      const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
-      stopAllVoiceAudio();
-      console.log('🔇 handleEndSession: Voice audio stopped');
-      
-      pauseTimer();
-      
-      // Calculate actual duration based on timer
-      const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
-      
-      // Check minimum duration requirement for insights (1 minute)
-      const shouldGenerateInsights = actualDuration >= 1 && sessionTranscripts.length > 2;
-
-      await supabase
-        .from('conversations')
-        .update({ 
-          status: 'completed',
-          ended_at: new Date().toISOString(),
-          duration_minutes: actualDuration
-        })
-        .eq('id', conversation.id);
-
-      if (shouldGenerateInsights) {
-        console.log('✅ Session meets criteria for insights generation');
-        
-        const sessionData = {
-          messages: sessionTranscripts,
-          duration: actualDuration,
-          userId: user?.id,
-          conversationId: conversation.id
-        };
-
-        toast({
-          title: "🎯 Session Complete!",
-          description: `Session completed (${actualDuration} min). Generating insights...`,
-        });
-
-        // Generate insights via edge function
-        const response = await supabase.functions.invoke('session-analysis', {
-          body: sessionData
-        });
-
-        if (response.data) {
-          navigate(`/session-summary?id=${conversation.id}`);
-        } else {
-          console.log('⚠️ Insights generation failed, going to dashboard');
-          navigate('/dashboard');
-        }
-      } else {
-        console.log(`⚠️ Session too short for insights: ${actualDuration} min, ${sessionTranscripts.length} messages`);
-        toast({
-          title: "Session Complete",
-          description: `Session was too brief (${actualDuration} min) for detailed insights`,
-        });
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      console.error('❌ Error ending session:', error);
-      toast({
-        title: "Session Ended",
-        description: "Session completed but there was an issue processing it",
-        variant: "destructive",
-      });
-      navigate('/dashboard');
-    }
   };
 
   // Handle back navigation
