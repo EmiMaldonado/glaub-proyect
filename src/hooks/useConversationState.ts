@@ -17,191 +17,262 @@ interface Conversation {
   duration_minutes: number;
   max_duration_minutes: number;
   started_at: string;
+  session_data?: any;
   insights?: any;
   ocean_signals?: any;
 }
 
 interface ConversationState {
-  conversation: Conversation | null;
-  messages: Message[];
-  isLoading: boolean;
-  isInitializing: boolean;
+  hasActiveConversation: boolean;
+  hasPausedConversation: boolean;
+  pausedConversationId: string | null;
+  conversationContext?: string;
+  pausedAt?: string;
+  lastTopic?: string;
 }
 
 export const useConversationState = () => {
-  const [state, setState] = useState<ConversationState>({
-    conversation: null,
-    messages: [],
-    isLoading: false,
-    isInitializing: false
+  const [conversationState, setConversationState] = useState<ConversationState>({
+    hasActiveConversation: false,
+    hasPausedConversation: false,
+    pausedConversationId: null
   });
 
-  // Reset all conversation state
-  const resetState = useCallback(() => {
-    setState({
-      conversation: null,
-      messages: [],
-      isLoading: false,
-      isInitializing: false
-    });
-  }, []);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Update conversation
-  const setConversation = useCallback((conversation: Conversation | null) => {
-    setState(prev => ({ ...prev, conversation }));
-  }, []);
-
-  // Update messages
-  const setMessages = useCallback((messages: Message[]) => {
-    setState(prev => ({ ...prev, messages }));
-  }, []);
-
-  // Add message
-  const addMessage = useCallback((message: Message) => {
-    setState(prev => ({ ...prev, messages: [...prev.messages, message] }));
-  }, []);
-
-  // Update loading state
-  const setIsLoading = useCallback((isLoading: boolean) => {
-    setState(prev => ({ ...prev, isLoading }));
-  }, []);
-
-  // Update initializing state
-  const setIsInitializing = useCallback((isInitializing: boolean) => {
-    setState(prev => ({ ...prev, isInitializing }));
-  }, []);
-
-  // Create new conversation
-  const createNewConversation = useCallback(async (
-    userId: string, 
-    title: string, 
-    modalityType: 'text' | 'voice' = 'text'
-  ) => {
+  // Get conversation state for dashboard
+  const getConversationState = useCallback(async (userId: string): Promise<ConversationState> => {
     try {
-      setIsInitializing(true);
-      resetState();
+      setIsLoading(true);
 
+      // Check for paused conversations in the conversations table
+      const { data: pausedConv, error: pausedError } = await supabase
+        .from('conversations')
+        .select('id, title, session_data, created_at, started_at')
+        .eq('user_id', userId)
+        .eq('status', 'paused')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (pausedError) throw pausedError;
+
+      // Also check the old paused_conversations table for backward compatibility
+      const { data: oldPausedConv, error: oldPausedError } = await supabase
+        .from('paused_conversations')
+        .select('id, conversation_title, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (oldPausedError) throw oldPausedError;
+
+      // Check for active conversations
+      const { data: activeConv, error: activeError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+
+      if (activeError) throw activeError;
+
+      let state: ConversationState = {
+        hasActiveConversation: !!activeConv,
+        hasPausedConversation: false,
+        pausedConversationId: null
+      };
+
+      // Prioritize new paused conversations system
+      if (pausedConv) {
+        const sessionData = pausedConv.session_data as any;
+        state = {
+          ...state,
+          hasPausedConversation: true,
+          pausedConversationId: pausedConv.id,
+          conversationContext: pausedConv.title,
+          lastTopic: sessionData?.lastTopic,
+          pausedAt: sessionData?.pausedAt
+        };
+      } else if (oldPausedConv) {
+        // Fallback to old system
+        state = {
+          ...state,
+          hasPausedConversation: true,
+          pausedConversationId: oldPausedConv.id,
+          conversationContext: oldPausedConv.conversation_title,
+          pausedAt: oldPausedConv.created_at
+        };
+      }
+
+      setConversationState(state);
+      return state;
+    } catch (error) {
+      console.error('Error getting conversation state:', error);
+      const fallbackState: ConversationState = {
+        hasActiveConversation: false,
+        hasPausedConversation: false,
+        pausedConversationId: null
+      };
+      setConversationState(fallbackState);
+      return fallbackState;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Resume paused conversation
+  const resumeConversation = useCallback(async (conversationId: string, userId: string) => {
+    try {
+      setIsLoading(true);
+
+      // Get the paused conversation with session data
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .eq('user_id', userId)
+        .single();
+
+      if (convError) throw convError;
+
+      // Update status from 'paused' to 'active'
+      const sessionData = conversation.session_data as any;
+      const { error: updateError } = await supabase
+        .from('conversations')
+        .update({ 
+          status: 'active',
+          session_data: {
+            ...(sessionData || {}),
+            resumedAt: new Date().toISOString()
+          }
+        })
+        .eq('id', conversationId);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Conversation Resumed",
+        description: "Welcome back! Your conversation continues where you left off.",
+      });
+
+      return conversation;
+    } catch (error) {
+      console.error('Error resuming conversation:', error);
+      toast({
+        title: "Resume Failed",
+        description: "Could not resume conversation. Please try starting a new one.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Start new conversation (clears paused conversations)
+  const startNewConversation = useCallback(async (userId: string) => {
+    try {
+      setIsLoading(true);
+
+      // Clear any existing paused conversations
+      await supabase
+        .from('conversations')
+        .update({ status: 'terminated' })
+        .eq('user_id', userId)
+        .eq('status', 'paused');
+
+      // Also clear old paused conversations table
+      await supabase
+        .from('paused_conversations')
+        .delete()
+        .eq('user_id', userId);
+
+      // Count existing conversations for numbering
+      const { count } = await supabase
+        .from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      const conversationNumber = (count || 0) + 1;
+
+      // Create new conversation
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
           user_id: userId,
-          title,
-          status: 'active',
-          session_data: { modality: modalityType }
+          title: `Conversation ${conversationNumber}`,
+          status: 'active'
         })
         .select()
         .single();
 
       if (error) throw error;
-      
-      setConversation(newConversation as Conversation);
-      return newConversation as Conversation;
 
+      // Update conversation state
+      setConversationState({
+        hasActiveConversation: true,
+        hasPausedConversation: false,
+        pausedConversationId: null
+      });
+
+      return newConversation;
     } catch (error) {
-      console.error('Error creating conversation:', error);
+      console.error('Error starting new conversation:', error);
       toast({
         title: "Error",
-        description: "Could not create new conversation",
+        description: "Could not start new conversation",
         variant: "destructive",
       });
-      throw error;
-    } finally {
-      setIsInitializing(false);
-    }
-  }, [resetState, setConversation, setIsInitializing]);
-
-  // End conversation
-  const endConversation = useCallback(async (conversationId: string, durationMinutes: number = 0) => {
-    try {
-      await supabase
-        .from('conversations')
-        .update({ 
-          status: 'completed',
-          ended_at: new Date().toISOString(),
-          duration_minutes: durationMinutes
-        })
-        .eq('id', conversationId);
-
-      toast({
-        title: "✅ Session completed",
-        description: "Conversation saved",
-      });
-
-    } catch (error) {
-      console.error('Error ending conversation:', error);
-      toast({
-        title: "Error",
-        description: "Could not finalize session",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  }, []);
-
-  // Send message to AI
-  const sendMessageToAI = useCallback(async (
-    message: string,
-    conversationId: string,
-    userId: string,
-    options: {
-      isFirstMessage?: boolean;
-      modalityType?: 'text' | 'voice' | 'realtime';
-    } = {}
-  ) => {
-    try {
-      setIsLoading(true);
-
-      const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message,
-          conversationId,
-          userId,
-          ...options
-        }
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      if (!options.isFirstMessage) {
-        toast({
-          title: "✅ Message sent",
-          description: "The message has been processed successfully",
-        });
-      }
-
-      return response.data;
-
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast({
-        title: "Error",
-        description: "Could not send message",
-        variant: "destructive",
-      });
-      throw error;
+      return null;
     } finally {
       setIsLoading(false);
     }
-  }, [setIsLoading]);
+  }, []);
+
+  // Generate resume message with context
+  const generateResumeMessage = useCallback((sessionData: any, userName: string): string => {
+    if (!sessionData) {
+      return `Hi ${userName}! Welcome back. How would you like to continue our conversation?`;
+    }
+
+    const { lastTopic, userConcerns, pausedAt } = sessionData;
+    
+    let resumeMessage = `Hi ${userName}! Welcome back to our conversation`;
+    
+    if (lastTopic) {
+      resumeMessage += ` where we were discussing ${lastTopic}`;
+    }
+    
+    if (userConcerns && userConcerns.length > 0) {
+      resumeMessage += `. We were exploring your concerns about ${userConcerns.join(' and ')}`;
+    }
+    
+    if (pausedAt) {
+      const pausedDate = new Date(pausedAt);
+      const now = new Date();
+      const hoursDiff = Math.floor((now.getTime() - pausedDate.getTime()) / (1000 * 60 * 60));
+      
+      if (hoursDiff < 24) {
+        resumeMessage += ` from earlier today`;
+      } else {
+        resumeMessage += ` from ${Math.floor(hoursDiff / 24)} day(s) ago`;
+      }
+    }
+    
+    resumeMessage += '. How are you feeling now, and what would you like to focus on?';
+    
+    return resumeMessage;
+  }, []);
 
   return {
-    // State
-    conversation: state.conversation,
-    messages: state.messages,
-    isLoading: state.isLoading,
-    isInitializing: state.isInitializing,
-    
-    // Actions
-    resetState,
-    setConversation,
-    setMessages,
-    addMessage,
-    setIsLoading,
-    setIsInitializing,
-    createNewConversation,
-    endConversation,
-    sendMessageToAI
+    conversationState,
+    isLoading,
+    getConversationState,
+    resumeConversation,
+    startNewConversation,
+    generateResumeMessage
   };
 };

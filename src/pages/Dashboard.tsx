@@ -7,12 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield, BarChart3, Bot, Clock } from "lucide-react";
+import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield, BarChart3, Bot, Clock, Play, Pause } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { usePausedConversations } from "@/hooks/usePausedConversations";
+import { useConversationState } from "@/hooks/useConversationState";
 import SharingPreferences from "@/components/SharingPreferences";
 import SharedDataIndicator from "@/components/SharedDataIndicator";
 import PersonalRecommendations from "@/components/PersonalRecommendations";
@@ -28,6 +29,14 @@ const Dashboard = () => {
     getPausedConversation,
     clearPausedConversation
   } = usePausedConversations();
+  const {
+    conversationState,
+    isLoading: isConversationLoading,
+    getConversationState,
+    resumeConversation,
+    startNewConversation,
+    generateResumeMessage
+  } = useConversationState();
   const [lastConversation, setLastConversation] = useState<any>(null);
   const [pausedConversations, setPausedConversations] = useState<any[]>([]);
   const [hasPausedConversation, setHasPausedConversation] = useState(false);
@@ -64,8 +73,9 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       loadDashboardData();
+      getConversationState(user.id); // Load conversation state
     }
-  }, [user]);
+  }, [user, getConversationState]);
 
   // Load historical data when tab or period changes  
   useEffect(() => {
@@ -318,14 +328,25 @@ const Dashboard = () => {
 
   // Handle starting new conversation (clears paused conversation and cache)
   const handleStartNewConversation = async () => {
-    if (user && hasPausedConversation) {
-      await clearPausedConversation(user.id);
-      setHasPausedConversation(false);
+    if (user) {
+      const success = await startNewConversation(user.id);
+      if (success) {
+        // Clear OCEAN description cache when starting new conversation
+        const cacheKey = `ocean_description_${user.id}`;
+        localStorage.removeItem(cacheKey);
+        navigate('/conversation');
+      }
     }
+  };
 
-    // Clear OCEAN description cache when starting new conversation
-    const cacheKey = `ocean_description_${user?.id}`;
-    localStorage.removeItem(cacheKey);
+  // Handle resuming paused conversation
+  const handleResumeConversation = async () => {
+    if (user && conversationState.pausedConversationId) {
+      const conversation = await resumeConversation(conversationState.pausedConversationId, user.id);
+      if (conversation) {
+        navigate(`/conversation?resume=${conversation.id}`);
+      }
+    }
   };
   const handleSharingPreferencesChange = (preferences: any) => {
     setSharingPreferences(preferences);
@@ -502,21 +523,62 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div className="space-y-3">
               <h2 className="text-2xl font-bold">Speak with Glai</h2>
-              <p className="text-primary-foreground/90">
-                Start a new conversation
-              </p>
+              {conversationState.hasPausedConversation ? (
+                <div className="space-y-2">
+                  <p className="text-primary-foreground/90">
+                    You have a paused conversation
+                  </p>
+                  {conversationState.lastTopic && (
+                    <p className="text-sm text-primary-foreground/70">
+                      Last topic: {conversationState.lastTopic}
+                    </p>
+                  )}
+                  {conversationState.pausedAt && (
+                    <p className="text-xs text-primary-foreground/60">
+                      Paused {new Date(conversationState.pausedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-primary-foreground/90">
+                  Start a new conversation with your AI therapeutic assistant
+                </p>
+              )}
+              
               <div className="flex gap-3 mt-4">
-                {hasPausedConversation ? <Button variant="secondary" size="lg" asChild>
-                    <Link to="/conversation?continue=true">
-                      <MessageCircle className="mr-2 h-5 w-5" />
-                      Resume previous conversation
-                    </Link>
-                  </Button> : <Button variant="secondary" size="lg" asChild>
-                    <Link to="/conversation" onClick={handleStartNewConversation}>
+                {conversationState.hasPausedConversation ? (
+                  <>
+                    <Button 
+                      variant="secondary" 
+                      size="lg" 
+                      onClick={handleResumeConversation}
+                      disabled={isConversationLoading}
+                    >
+                      <Play className="mr-2 h-5 w-5" />
+                      Resume Conversation
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="lg" 
+                      onClick={handleStartNewConversation}
+                      disabled={isConversationLoading}
+                      className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+                    >
                       <Plus className="mr-2 h-5 w-5" />
-                      Start new session
-                    </Link>
-                  </Button>}
+                      Start New Conversation
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    variant="secondary" 
+                    size="lg" 
+                    onClick={handleStartNewConversation}
+                    disabled={isConversationLoading}
+                  >
+                    <Plus className="mr-2 h-5 w-5" />
+                    Start New Session
+                  </Button>
+                )}
               </div>
             </div>
             <div className="hidden md:block">

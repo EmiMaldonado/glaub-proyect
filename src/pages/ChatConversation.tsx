@@ -5,8 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Pause, Play } from 'lucide-react';
+import { ArrowLeft, Pause, Play, Power } from 'lucide-react';
 import { useSessionManager } from '@/hooks/useSessionManager';
+import { useAutoPause } from '@/hooks/useAutoPause';
+import { useConversationState } from '@/hooks/useConversationState';
 
 interface Message {
   id: string;
@@ -46,6 +48,19 @@ const ChatConversation: React.FC = () => {
     updateActivity,
     loadSessionFromLocal
   } = useSessionManager();
+
+  const { generateResumeMessage } = useConversationState();
+  
+  // Enhanced auto-pause system
+  const { pauseConversationWithContext } = useAutoPause({
+    conversation,
+    messages,
+    userId: user?.id,
+    onPause: () => {
+      // Navigate to dashboard after auto-pause
+      navigate('/dashboard');
+    }
+  });
   
   const [textInput, setTextInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -204,8 +219,14 @@ const ChatConversation: React.FC = () => {
       setIsInitializing(true);
       
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const resumeId = urlParams.get('resume');
+        
         if (continueConversation === 'true') {
           await handleContinuePausedConversation();
+        } else if (resumeId) {
+          // Handle new resume system
+          await handleResumeById(resumeId);
         } else {
           // Always create new conversation - no session restoration in chat mode
           // This ensures AI always starts fresh conversations like in voice chat
@@ -261,7 +282,91 @@ const ChatConversation: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle continue paused conversation - also doesn't send AI message automatically
+  // Handle resume by conversation ID (new system)
+  const handleResumeById = async (conversationId: string) => {
+    if (!user) return;
+
+    try {
+      // Get conversation with session data
+      const { data: conversation, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      // Check if conversation is paused
+      if (conversation.status !== 'paused') {
+        toast({
+          title: "Invalid conversation",
+          description: "This conversation is not available for resume",
+          variant: "destructive",
+        });
+        await createNewConversation();
+        return;
+      }
+
+      // Get message history
+      const { data: dbMessages } = await supabase  
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      // Convert database messages to Message format
+      const messages: Message[] = (dbMessages || []).map((msg: any) => ({
+        id: msg.id,
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        created_at: msg.created_at,
+        metadata: msg.metadata
+      }));
+
+      // Update conversation status to active
+      await supabase
+        .from('conversations')
+        .update({ status: 'active' })
+        .eq('id', conversationId);
+
+      // Resume session with previous messages  
+      resumeSession(conversation as Conversation, messages);
+
+      // Generate contextual resume message from AI
+      console.log('🤖 AI continuing conversation after resume with context');
+      const sessionData = conversation.session_data as any;
+      const resumeMessage = generateResumeMessage(
+        { 
+          lastTopic: sessionData?.lastTopic || conversation.title, 
+          pausedAt: sessionData?.pausedAt,
+          userConcerns: sessionData?.userConcerns 
+        },
+        user.email?.split('@')[0] || 'there'
+      );
+      
+      // Add resume message to chat
+      const aiResumeMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: resumeMessage,
+        created_at: new Date().toISOString(),
+        metadata: { isResumeMessage: true }
+      };
+      
+      addMessageToSession(aiResumeMessage);
+
+    } catch (error) {
+      console.error('Error resuming conversation:', error);
+      toast({
+        title: "Error",
+        description: "Could not resume conversation. Starting new one instead.",
+        variant: "destructive",
+      });
+      await createNewConversation();
+    }
+  };
+  // Handle continue paused conversation (legacy system - for backward compatibility)
   const handleContinuePausedConversation = async () => {
     if (!user) return;
 
@@ -305,9 +410,23 @@ const ChatConversation: React.FC = () => {
       // Resume session with previous messages
       resumeSession(newConversation as Conversation, previousMessages);
 
-      // AI should continue the conversation after resuming
-      console.log('🤖 AI continuing conversation after resume');
-      await sendAIFirstMessage(newConversation.id);
+      // Generate contextual resume message from AI
+      console.log('🤖 AI continuing conversation after resume with context');
+      const resumeMessage = generateResumeMessage(
+        { lastTopic: pausedConv.conversation_title, pausedAt: pausedConv.created_at },
+        user.email?.split('@')[0] || 'there'
+      );
+      
+      // Add resume message to chat
+      const aiResumeMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: resumeMessage,
+        created_at: new Date().toISOString(),
+        metadata: { isResumeMessage: true }
+      };
+      
+      addMessageToSession(aiResumeMessage);
 
       // Delete the paused conversation since we're continuing it
       await supabase
@@ -326,11 +445,14 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle pause session
+  // Handle pause session with enhanced context
   const handlePauseSession = async () => {
     if (!conversation || !user) return;
 
-    await pauseSession();
+    const success = await pauseConversationWithContext('manual');
+    if (success) {
+      navigate('/dashboard');
+    }
   };
 
   // Handle resume session
@@ -390,10 +512,43 @@ const ChatConversation: React.FC = () => {
           </div>
           <div className="flex items-center space-x-2">
             {hasActiveSession && !isPaused && (
-              <span className="text-sm text-green-600 font-medium">● Active Session</span>
+              <>
+                <span className="text-sm text-green-600 font-medium">● Active Session</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePauseSession}
+                  className="text-sm"
+                >
+                  <Pause className="h-4 w-4 mr-1" />
+                  Pause
+                </Button>
+              </>
             )}
             {isPaused && (
-              <span className="text-sm text-amber-600 font-medium">⏸ Paused Session</span>
+              <>
+                <span className="text-sm text-amber-600 font-medium">⏸ Paused Session</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResumeSession}
+                  className="text-sm"
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  Resume
+                </Button>
+              </>
+            )}
+            {hasActiveSession && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleEndSession}
+                className="text-sm text-red-600 hover:text-red-700"
+              >
+                <Power className="h-4 w-4 mr-1" />
+                End
+              </Button>
             )}
           </div>
         </div>
@@ -413,8 +568,27 @@ const ChatConversation: React.FC = () => {
                     <span className="font-medium">Session Paused</span>
                   </div>
                   <p className="text-sm text-amber-600 mt-1">
-                    Click Resume to continue your conversation
+                    Your conversation is safely saved. Click Resume to continue.
                   </p>
+                  <div className="mt-3 space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResumeSession}
+                      className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      Resume Conversation
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate('/dashboard')}
+                      className="text-amber-600"
+                    >
+                      Return to Dashboard
+                    </Button>
+                  </div>
                 </div>
               )}
 
