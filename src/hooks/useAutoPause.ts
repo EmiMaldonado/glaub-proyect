@@ -68,6 +68,9 @@ export const useAutoPause = ({
   const pauseTriggeredRef = useRef(false);
   const lastSaveRef = useRef<string>('');
   const isUnmountingRef = useRef(false);
+  const visibilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const offlineTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pageHideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Enhanced pause function with guaranteed navigation and bulletproof error handling
   const pauseConversationWithContext = useCallback(async (
@@ -298,19 +301,81 @@ export const useAutoPause = ({
 
     console.log('🔧 useAutoPause: Setting up event listeners');
 
-    // Visibility change (tab switching, minimizing)
+    // Visibility change (tab switching, minimizing) - WITH DELAY
     const handleVisibilityChange = async () => {
       if (document.hidden && !isUnmountingRef.current) {
-        console.log('👁️ Visibility change detected - pausing conversation');
-        await pauseConversationWithContext('visibility');
+        console.log('👁️ Visibility change detected - starting 30 second delay before pause');
+        
+        // Clear any existing timeout
+        if (visibilityTimeoutRef.current) {
+          clearTimeout(visibilityTimeoutRef.current);
+        }
+        
+        // Show toast to warn user
+        toast({
+          title: "Tab Hidden",
+          description: "Conversation will pause in 30 seconds if you don't return",
+        });
+        
+        // Set 30 second delay before pausing
+        visibilityTimeoutRef.current = setTimeout(async () => {
+          if (document.hidden && !isUnmountingRef.current) {
+            console.log('👁️ Tab still hidden after 30 seconds - pausing conversation');
+            await pauseConversationWithContext('visibility');
+          }
+        }, 30000); // 30 seconds delay
+        
+      } else if (!document.hidden && visibilityTimeoutRef.current) {
+        // User returned - cancel the pause
+        console.log('👁️ User returned - canceling pause');
+        clearTimeout(visibilityTimeoutRef.current);
+        visibilityTimeoutRef.current = null;
+        
+        toast({
+          title: "Welcome back!",
+          description: "Pause cancelled - continuing conversation",
+        });
       }
     };
 
-    // Network connectivity loss
+    // Network connectivity loss - WITH DELAY
     const handleOffline = async () => {
       if (!isUnmountingRef.current) {
-        console.log('📶 Network offline detected - pausing conversation');
-        await pauseConversationWithContext('network');
+        console.log('📶 Network offline detected - starting 60 second delay before pause');
+        
+        // Clear any existing timeout
+        if (offlineTimeoutRef.current) {
+          clearTimeout(offlineTimeoutRef.current);
+        }
+        
+        // Show toast to warn user
+        toast({
+          title: "Connection Lost",
+          description: "Conversation will pause in 60 seconds if connection isn't restored",
+          variant: "destructive",
+        });
+        
+        // Set 60 second delay before pausing
+        offlineTimeoutRef.current = setTimeout(async () => {
+          if (!navigator.onLine && !isUnmountingRef.current) {
+            console.log('📶 Still offline after 60 seconds - pausing conversation');
+            await pauseConversationWithContext('network');
+          }
+        }, 60000); // 60 seconds delay
+      }
+    };
+
+    // Network connectivity restored
+    const handleOnline = () => {
+      if (offlineTimeoutRef.current) {
+        console.log('📶 Connection restored - canceling pause');
+        clearTimeout(offlineTimeoutRef.current);
+        offlineTimeoutRef.current = null;
+        
+        toast({
+          title: "Connection Restored",
+          description: "Pause cancelled - continuing conversation",
+        });
       }
     };
 
@@ -336,28 +401,60 @@ export const useAutoPause = ({
       }
     };
 
-    // Mobile-specific: page hide (when app goes to background)
+    // Mobile-specific: page hide (when app goes to background) - WITH DELAY
     const handlePageHide = async () => {
       if (!isUnmountingRef.current) {
-        console.log('📱 Page hide detected - pausing conversation');
-        await pauseConversationWithContext('auto');
+        console.log('📱 Page hide detected - starting 45 second delay before pause');
+        
+        // Clear any existing timeout
+        if (pageHideTimeoutRef.current) {
+          clearTimeout(pageHideTimeoutRef.current);
+        }
+        
+        // Set 45 second delay before pausing
+        pageHideTimeoutRef.current = setTimeout(async () => {
+          if (!isUnmountingRef.current) {
+            console.log('📱 Page still hidden after 45 seconds - pausing conversation');
+            await pauseConversationWithContext('auto');
+          }
+        }, 45000); // 45 seconds delay
+      }
+    };
+
+    // Page show (when app returns to foreground)
+    const handlePageShow = () => {
+      if (pageHideTimeoutRef.current) {
+        console.log('📱 Page visible again - canceling pause');
+        clearTimeout(pageHideTimeoutRef.current);
+        pageHideTimeoutRef.current = null;
       }
     };
 
     // Set up event listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('pageshow', handlePageShow);
 
     console.log('✅ useAutoPause: Event listeners registered');
 
     return () => {
       console.log('🧹 useAutoPause: Cleaning up event listeners');
+      
+      // Clear all timeouts
+      if (visibilityTimeoutRef.current) clearTimeout(visibilityTimeoutRef.current);
+      if (offlineTimeoutRef.current) clearTimeout(offlineTimeoutRef.current);
+      if (pageHideTimeoutRef.current) clearTimeout(pageHideTimeoutRef.current);
+      
+      // Remove event listeners
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [conversation, messages.length, pauseConversationWithContext]);
 
