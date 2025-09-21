@@ -13,13 +13,14 @@ const LoadingSpinner = ({ size = "md", className }: LoadingSpinnerProps) => {
   };
 
   return (
-    <div className={cn("relative", sizeClasses[size], className)}>
+    <div className={cn("flex items-center justify-center", sizeClasses[size], className)}>
       <style>{`
         .loader {
           width: 64px;
           height: 48px;
           position: relative;
           animation: split 1s ease-in infinite alternate;
+          margin: 0 auto;
         }
         .loader::before, .loader::after {
           content: '';
@@ -30,13 +31,13 @@ const LoadingSpinner = ({ size = "md", className }: LoadingSpinnerProps) => {
           left: 0;
           top: 0;
           transform: translateX(-10px);
-          background: #6889B4; /* Azul de Tailwind blue-500 */
+          background: hsl(var(--primary));
           opacity: 0.75;
         }
         .loader::after {
           left: auto;
           right: 0;
-          background: #0000; /* transparente */
+          background: transparent;
           transform: translateX(10px);
         }
         @keyframes split {
