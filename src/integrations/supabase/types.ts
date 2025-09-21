@@ -409,6 +409,7 @@ export type Database = {
           full_name: string | null
           gender: string | null
           id: string
+          job_level: string | null
           job_position: string | null
           manager_id: string | null
           onboarding_completed: boolean | null
@@ -427,6 +428,7 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id?: string
+          job_level?: string | null
           job_position?: string | null
           manager_id?: string | null
           onboarding_completed?: boolean | null
@@ -445,6 +447,7 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id?: string
+          job_level?: string | null
           job_position?: string | null
           manager_id?: string | null
           onboarding_completed?: boolean | null

@@ -13,13 +13,13 @@ import { User, Briefcase, Calendar, Users, ArrowRight, SkipForward } from 'lucid
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface OnboardingData {
-  age: string;
+  job_level: string;
   gender: string;
   job_position: string;
 }
 
 interface OnboardingErrors {
-  age?: string;
+  job_level?: string;
   gender?: string;
   job_position?: string;
 }
@@ -30,7 +30,7 @@ const PostRegistrationOnboarding = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<OnboardingData>({
-    age: '',
+    job_level: '',
     gender: '',
     job_position: ''
   });
@@ -45,13 +45,11 @@ const PostRegistrationOnboarding = () => {
     'Teacher', 'Nurse', 'Doctor', 'Lawyer', 'Accountant', 'Student', 'Other'
   ];
 
-  // Age ranges for selection
-  const ageRanges = [
-    { value: '18-28', label: '18 - 28 years old' },
-    { value: '29-44', label: '29 - 44 years old' },
-    { value: '45-60', label: '45 - 60 years old' },
-    { value: '61-79', label: '61 - 79 years old' },
-    { value: '80-99', label: '80 - 99 years old' }
+  // Job experience levels for selection
+  const jobLevels = [
+    { value: 'entry-level', label: 'Entry-Level' },
+    { value: 'mid-level', label: 'Mid-Level' },
+    { value: 'senior-level', label: 'Senior-Level' }
   ];
 
   const [jobSuggestionFilter, setJobSuggestionFilter] = useState('');
@@ -108,9 +106,9 @@ const PostRegistrationOnboarding = () => {
       newErrors.job_position = 'Job position is required';
     }
 
-    // Age validation (optional but if provided, must be valid)
-    if (formData.age && !ageRanges.some(range => range.value === formData.age)) {
-      newErrors.age = 'Please select a valid age range';
+    // Job level validation (optional but if provided, must be valid)
+    if (formData.job_level && !jobLevels.some(level => level.value === formData.job_level)) {
+      newErrors.job_level = 'Please select a valid job level';
     }
 
     setErrors(newErrors);
@@ -139,7 +137,7 @@ const PostRegistrationOnboarding = () => {
       const { error } = await supabase
         .from('profiles')
         .update({
-          age: formData.age ? parseInt(formData.age.split('-')[0]) : null, // Store the lower bound of the range as integer for backwards compatibility
+          job_level: formData.job_level || null,
           gender: formData.gender || null,
           job_position: formData.job_position,
           onboarding_completed: true,
@@ -289,33 +287,33 @@ const PostRegistrationOnboarding = () => {
               )}
             </div>
 
-            {/* Age - Optional */}
+            {/* Job Level - Optional */}
             <div className="space-y-2">
-              <Label htmlFor="age" className="flex items-center gap-2 text-sm font-medium">
-                <Calendar className="h-4 w-4 text-primary" />
-                Age Range (Optional)
+              <Label htmlFor="job_level" className="flex items-center gap-2 text-sm font-medium">
+                <Briefcase className="h-4 w-4 text-primary" />
+                Job Level (Optional)
               </Label>
               <Select
-                value={formData.age || 'not-specified'}
+                value={formData.job_level || 'not-specified'}
                 onValueChange={(value) => setFormData(prev => ({ 
                   ...prev, 
-                  age: value === 'not-specified' ? '' : value 
+                  job_level: value === 'not-specified' ? '' : value 
                 }))}
               >
-                <SelectTrigger className={errors.age ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select your age range" />
+                <SelectTrigger className={errors.job_level ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select your job level" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border shadow-lg z-50">
                   <SelectItem value="not-specified">Prefer not to say</SelectItem>
-                  {ageRanges.map((range) => (
-                    <SelectItem key={range.value} value={range.value}>
-                      {range.label}
+                  {jobLevels.map((level) => (
+                    <SelectItem key={level.value} value={level.value}>
+                      {level.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.age && (
-                <p className="text-sm text-red-600">{errors.age}</p>
+              {errors.job_level && (
+                <p className="text-sm text-red-600">{errors.job_level}</p>
               )}
             </div>
 
