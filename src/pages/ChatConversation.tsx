@@ -847,10 +847,10 @@ const ChatConversation: React.FC = () => {
               {messages.length === 0 && !isLoading && (
                 <div className="text-center text-muted-foreground py-8">
                   <div className="max-w-md mx-auto space-y-4">
-                    <h3 className="text-lg font-medium text-foreground">Therapeutic Chat Starting...</h3>
+                    <h3 className="text-lg font-medium text-foreground">Waiting for AI to start conversation...</h3>
                     <p className="text-sm">
-                      Your AI therapeutic assistant is starting the conversation. 
-                      It will guide you through personalized questions to understand you better.
+                      Your AI therapeutic assistant will start the conversation automatically. 
+                      Please wait a moment while it prepares your first message.
                     </p>
                     <p className="text-xs opacity-75">
                       All conversations are private and secure.
