@@ -50,6 +50,8 @@ interface UseAutoPauseOptions {
   userId: string | undefined;
   onPause: () => void;
   onNavigateToSummary?: () => void;
+  updateSessionState?: (updater: (prev: any) => any) => void;
+  onConversationPaused?: (conversationId: string) => void;
 }
 
 export const useAutoPause = ({
@@ -57,7 +59,9 @@ export const useAutoPause = ({
   messages,
   userId,
   onPause,
-  onNavigateToSummary
+  onNavigateToSummary,
+  updateSessionState,
+  onConversationPaused
 }: UseAutoPauseOptions) => {
   const pauseTriggeredRef = useRef(false);
   const lastSaveRef = useRef<string>('');
@@ -66,7 +70,7 @@ export const useAutoPause = ({
   const pauseConversationWithContext = useCallback(async (
     pauseReason: 'manual' | 'auto' | 'network' | 'visibility' = 'manual'
   ) => {
-    if (!conversation || !userId || messages.length === 0 || pauseTriggeredRef.current) {
+    if (!conversation || !userId || pauseTriggeredRef.current) {
       return false;
     }
 
@@ -134,6 +138,20 @@ export const useAutoPause = ({
         visibility: "Conversation paused - tab switched"
       };
 
+      // CRITICAL: Update local session state immediately
+      if (updateSessionState) {
+        updateSessionState((prev: any) => ({
+          ...prev,
+          isPaused: true,
+          lastActivity: new Date().toISOString()
+        }));
+      }
+
+      // Notify conversation state change for dashboard refresh
+      if (onConversationPaused) {
+        onConversationPaused(conversation.id);
+      }
+
       toast({
         title: "Conversation Paused",
         description: toastMessages[pauseReason],
@@ -155,7 +173,7 @@ export const useAutoPause = ({
         pauseTriggeredRef.current = false;
       }, 2000);
     }
-  }, [conversation, userId, messages, onPause]);
+  }, [conversation, userId, messages, onPause, updateSessionState, onConversationPaused]);
 
   // Auto-pause event handlers
   useEffect(() => {

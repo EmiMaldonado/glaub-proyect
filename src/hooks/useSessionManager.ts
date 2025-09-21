@@ -389,6 +389,27 @@ export const useSessionManager = () => {
     };
   }, []);
 
+  // Sync with database state
+  const syncWithDatabaseState = useCallback(async (conversationId: string) => {
+    try {
+      const { data } = await supabase
+        .from('conversations')
+        .select('status')
+        .eq('id', conversationId)
+        .single();
+        
+      if (data) {
+        setSessionState(prev => ({
+          ...prev,
+          isPaused: data.status === 'paused',
+          lastActivity: new Date().toISOString()
+        }));
+      }
+    } catch (error) {
+      console.error('Error syncing with database state:', error);
+    }
+  }, []);
+
   return {
     // State
     conversation: sessionState.conversation,
@@ -407,6 +428,10 @@ export const useSessionManager = () => {
     endSession,
     updateActivity,
     clearLocalSession,
+    syncWithDatabaseState,
+    
+    // State management
+    updateSessionState: setSessionState,
     
     // Utils
     loadSessionFromLocal

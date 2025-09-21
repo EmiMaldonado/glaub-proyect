@@ -46,12 +46,14 @@ const ChatConversation: React.FC = () => {
     resumePausedSession,
     endSession,
     updateActivity,
-    loadSessionFromLocal
+    loadSessionFromLocal,
+    updateSessionState,
+    syncWithDatabaseState
   } = useSessionManager();
 
-  const { generateResumeMessage } = useConversationState();
+  const { generateResumeMessage, refetchConversationState } = useConversationState();
   
-  // Enhanced auto-pause system
+  // Enhanced auto-pause system with unified state management
   const { pauseConversationWithContext } = useAutoPause({
     conversation,
     messages,
@@ -59,6 +61,14 @@ const ChatConversation: React.FC = () => {
     onPause: () => {
       // Navigate to dashboard after auto-pause
       navigate('/dashboard');
+    },
+    updateSessionState,
+    onConversationPaused: (conversationId) => {
+      // Sync session state with database
+      if (user?.id) {
+        syncWithDatabaseState(conversationId);
+        refetchConversationState(user.id);
+      }
     }
   });
   
@@ -445,13 +455,32 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle pause session with enhanced context
+  // Handle pause session with unified state management
   const handlePauseSession = async () => {
     if (!conversation || !user) return;
 
-    const success = await pauseConversationWithContext('manual');
-    if (success) {
-      navigate('/dashboard');
+    try {
+      const success = await pauseConversationWithContext('manual');
+      if (success) {
+        toast({
+          title: "Conversation Paused",
+          description: "Your conversation has been paused and saved successfully",
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to pause conversation. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Pause error:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while pausing the conversation",
+        variant: "destructive",
+      });
     }
   };
 
@@ -683,7 +712,7 @@ const ChatConversation: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handlePauseSession}
-                    disabled={!conversation || messages.length === 0}
+                    disabled={!conversation}
                   >
                     <Pause className="h-4 w-4 mr-2" />
                     Pause

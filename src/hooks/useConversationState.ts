@@ -267,12 +267,18 @@ export const useConversationState = () => {
     return resumeMessage;
   }, []);
 
+  // Force refresh conversation state
+  const refetchConversationState = useCallback(async (userId: string) => {
+    await getConversationState(userId);
+  }, [getConversationState]);
+
   return {
     conversationState,
     isLoading,
     getConversationState,
     resumeConversation,
     startNewConversation,
-    generateResumeMessage
+    generateResumeMessage,
+    refetchConversationState
   };
 };

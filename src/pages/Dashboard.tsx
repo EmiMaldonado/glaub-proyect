@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageCircle, TrendingUp, Users, Calendar, Plus, History, Settings, Target, Lightbulb, Share2, UserCheck, Shield, BarChart3, Bot, Clock, Play, Pause } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
@@ -21,21 +21,18 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
 const Dashboard = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const {
-    getPausedConversation,
-    clearPausedConversation
-  } = usePausedConversations();
+  const location = useLocation();
+  const { getPausedConversation, clearPausedConversation } = usePausedConversations();
   const {
     conversationState,
     isLoading: isConversationLoading,
     getConversationState,
     resumeConversation,
     startNewConversation,
-    generateResumeMessage
+    generateResumeMessage,
+    refetchConversationState
   } = useConversationState();
   const [lastConversation, setLastConversation] = useState<any>(null);
   const [pausedConversations, setPausedConversations] = useState<any[]>([]);
@@ -76,6 +73,13 @@ const Dashboard = () => {
       getConversationState(user.id); // Load conversation state
     }
   }, [user, getConversationState]);
+
+  // Refresh conversation state when navigating to dashboard (e.g., after pausing)
+  useEffect(() => {
+    if (user && location.pathname === '/dashboard') {
+      refetchConversationState(user.id);
+    }
+  }, [user, location.pathname, refetchConversationState]);
 
   // Load historical data when tab or period changes  
   useEffect(() => {
