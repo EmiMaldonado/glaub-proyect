@@ -42,6 +42,29 @@ const VoiceConversation: React.FC = () => {
   const [sessionTranscripts, setSessionTranscripts] = useState<Message[]>([]);
   const [currentAIResponse, setCurrentAIResponse] = useState<string>('');
   
+  // Session manager
+  const { pauseSession } = useSessionManager();
+
+  // Handle stop session (user-initiated) - must be defined before timer
+  const handleStopSession = async () => {
+    try {
+      await pauseSession();
+      
+      toast({
+        title: "🔄 Session Paused",
+        description: "You can continue this conversation later from the dashboard",
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error pausing session:', error);
+      toast({
+        title: "Error",
+        description: "Could not pause the session",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Session timer
   const {
     sessionTime,
@@ -64,11 +87,8 @@ const VoiceConversation: React.FC = () => {
         description: "You have 1 minute of conversation remaining",
       });
     },
-    onTimeUp: handleEndSession
+    onTimeUp: handleStopSession // Use pause instead of complete for timer expiry
   });
-
-  // Session manager
-  const { pauseSession } = useSessionManager();
 
   // Reset all state for new conversation
   const resetConversationState = () => {
@@ -336,28 +356,6 @@ const VoiceConversation: React.FC = () => {
   // Handle extend session
   const handleExtendSession = () => {
     extendSession();
-  };
-
-  // Handle stop session (user-initiated)
-  const handleStopSession = async () => {
-    // Use session manager's pauseSession method instead of manual database update
-    try {
-      await pauseSession(); // This properly pauses and saves the session
-      stopSession(); // Stop the timer
-      
-      toast({
-        title: "🔄 Session Paused",
-        description: "You can continue this conversation later from the dashboard",
-      });
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Error pausing session:', error);
-      toast({
-        title: "Error",
-        description: "Could not pause the session",
-        variant: "destructive",
-      });
-    }
   };
 
   // Handle end session (explicit finish - timer expiry or user finish button)
