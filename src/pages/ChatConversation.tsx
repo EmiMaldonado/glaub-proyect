@@ -526,6 +526,19 @@ const ChatConversation: React.FC = () => {
   const handleEndSession = async () => {
     if (!conversation) return;
 
+    // Count user messages (not AI messages)
+    const userMessageCount = messages.filter(msg => msg.role === 'user').length;
+    
+    // Require minimum 5 user messages before allowing completion
+    if (userMessageCount < 5) {
+      toast({
+        title: "Minimum Messages Required",
+        description: `You need to send at least 5 messages before ending the session. You've sent ${userMessageCount} message${userMessageCount === 1 ? '' : 's'}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const success = await completeSession();
     if (success) {
       navigate(`/session-summary?conversation_id=${conversation.id}`);
@@ -604,7 +617,8 @@ const ChatConversation: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleEndSession}
-                className="text-sm text-red-600 hover:text-red-700"
+                disabled={messages.filter(msg => msg.role === 'user').length < 5}
+                className="text-sm text-red-600 hover:text-red-700 disabled:text-gray-400"
               >
                 <Power className="h-4 w-4 mr-1" />
                 End
@@ -771,9 +785,9 @@ const ChatConversation: React.FC = () => {
                   variant="destructive"
                   size="sm"
                   onClick={handleEndSession}
-                  disabled={!conversation || messages.length === 0}
+                  disabled={!conversation || messages.filter(msg => msg.role === 'user').length < 5}
                 >
-                  End Session
+                  End Session ({messages.filter(msg => msg.role === 'user').length}/5 messages)
                 </Button>
               </div>
             </div>
