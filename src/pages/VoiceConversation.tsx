@@ -43,6 +43,7 @@ const VoiceConversation: React.FC = () => {
   
   // Session timer
   const {
+    sessionTime,
     formattedTime,
     formattedTimeRemaining,
     progressPercentage,
@@ -495,6 +496,7 @@ const VoiceConversation: React.FC = () => {
         formattedTimeRemaining={isTimerActive ? formattedTimeRemaining : "05:00"}
         extensionsUsed={extensionsUsed}
         currentAIResponse={currentAIResponse}
+        canFinishSession={isTimerActive && (sessionTime >= 60)}
       />
     </VoiceErrorBoundary>
   );

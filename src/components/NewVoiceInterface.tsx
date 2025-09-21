@@ -19,6 +19,7 @@ interface VoiceInterfaceProps {
   formattedTimeRemaining: string;
   extensionsUsed?: number;
   currentAIResponse?: string;
+  canFinishSession?: boolean;
 }
 
 interface VoiceState {
@@ -44,7 +45,8 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   formattedTime,
   formattedTimeRemaining,
   extensionsUsed = 0,
-  currentAIResponse
+  currentAIResponse,
+  canFinishSession = false
 }) => {
   const [voiceState, setVoiceState] = useState<VoiceStateKey>('idle');
   const [microphoneGranted, setMicrophoneGranted] = useState(false);
@@ -700,7 +702,9 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
                   variant="outline" 
                   size="sm" 
                   onClick={onEndSession}
-                  className="border-[#24476e] text-[#24476e] hover:bg-[#24476e] hover:text-white"
+                  disabled={!canFinishSession}
+                  className={`border-[#24476e] ${canFinishSession ? 'text-[#24476e] hover:bg-[#24476e] hover:text-white' : 'text-gray-400 border-gray-300 cursor-not-allowed'}`}
+                  title={!canFinishSession ? "Minimum 1 minute required to finish session" : "Finish conversation"}
                 >
                   <Check className="h-4 w-4 mr-2" />
                   Finish
