@@ -539,9 +539,27 @@ const ChatConversation: React.FC = () => {
       return;
     }
 
-    const success = await completeSession();
-    if (success) {
-      navigate(`/session-summary?conversation_id=${conversation.id}`);
+    console.log('🏁 handleEndSession: Attempting to complete chat session');
+    
+    try {
+      const success = await completeSession();
+      if (success) {
+        console.log('✅ handleEndSession: Session completed, navigating to dashboard');
+        navigate('/dashboard');
+      } else {
+        throw new Error('Failed to complete session');
+      }
+    } catch (error) {
+      console.error('❌ handleEndSession: Error completing session:', error);
+      
+      // Even on completion failure, navigate to dashboard
+      toast({
+        title: "⚠️ Completion Issues", 
+        description: "Session may not be fully processed, but navigating to dashboard.",
+        variant: "default",
+      });
+      
+      setTimeout(() => navigate('/dashboard'), 1000);
     }
   };
 

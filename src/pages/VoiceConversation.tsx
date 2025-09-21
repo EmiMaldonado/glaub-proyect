@@ -47,32 +47,58 @@ const VoiceConversation: React.FC = () => {
 
   // Handle stop session (user-initiated) with immediate audio control
   const handleStopSession = async () => {
+    console.log('🔄 handleStopSession: Starting pause with guaranteed navigation');
+    
     try {
-      console.log('🔄 handleStopSession: Starting pause with audio stop');
-      
-      // Stop all voice audio IMMEDIATELY
+      // Stop all voice audio IMMEDIATELY (highest priority)
       const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
       stopAllVoiceAudio();
       console.log('🔇 handleStopSession: Voice audio stopped');
       
-      // Then pause the session
-      const success = await pauseSession();
+      // Attempt to pause the session with timeout protection
+      const pausePromise = pauseSession();
+      const timeoutPromise = new Promise<boolean>((resolve) => {
+        setTimeout(() => {
+          console.warn('⏰ handleStopSession: Pause timeout - proceeding with navigation');
+          resolve(false);
+        }, 8000);
+      });
+      
+      const success = await Promise.race([pausePromise, timeoutPromise]);
+      
+      // GUARANTEED NAVIGATION: Navigate to dashboard regardless of pause result
+      console.log('🧭 handleStopSession: Navigating to dashboard (success:', success, ')');
+      
       if (success) {
         toast({
           title: "🔄 Session Paused",
           description: "Voice stopped and conversation paused. You can continue later from the dashboard",
         });
-        navigate('/dashboard');
       } else {
-        throw new Error('Failed to pause session');
+        toast({
+          title: "⚠️ Session Partially Paused",
+          description: "Audio stopped and navigating to dashboard. Session state may need manual cleanup.",
+          variant: "default",
+        });
       }
+      
+      // Navigate regardless of pause success
+      navigate('/dashboard');
+      
     } catch (error) {
-      console.error('❌ Error pausing session:', error);
+      console.error('❌ Error in handleStopSession:', error);
+      
+      // EMERGENCY NAVIGATION: Even on complete failure, get user to dashboard
+      console.log('🚨 handleStopSession: Emergency navigation due to error');
+      
       toast({
-        title: "Error",
-        description: "Could not pause the session properly",
-        variant: "destructive",
+        title: "⚠️ Navigation Override",
+        description: "Encountered issues but moving you to dashboard. You can restart conversations from there.",
+        variant: "default",
       });
+      
+      // Force navigation as last resort
+      setTimeout(() => navigate('/dashboard'), 100);
     }
   };
 
@@ -222,12 +248,20 @@ const VoiceConversation: React.FC = () => {
         .delete()
         .eq('user_id', user.id);
 
-      // Create new conversation
+      // Count ALL existing conversations (voice + chat) for unified session numbering
+      const { count } = await supabase
+        .from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      const conversationNumber = (count || 0) + 1;
+      
+      // Create new conversation with unified numbering
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          title: `Voice Session ${new Date().toLocaleDateString()}`,
+          title: `Voice Conversation ${conversationNumber}`,
           status: 'active'
         })
         .select()

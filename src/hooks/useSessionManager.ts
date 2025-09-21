@@ -228,57 +228,130 @@ export const useSessionManager = () => {
     updateActivity();
   }, [saveSessionToLocal, updateActivity]);
 
-  // Pause current session with audio control
+  // Pause current session with bulletproof error handling and guaranteed navigation
   const pauseSession = useCallback(async () => {
-    if (!sessionState.conversation) return false;
+    if (!sessionState.conversation) {
+      console.log('🚫 pauseSession: No active conversation to pause');
+      return false;
+    }
+
+    console.log('🔄 pauseSession: Starting comprehensive pause operation');
+    let audioStopped = false;
+    let dbUpdateSuccess = false;
+    let localStateUpdated = false;
 
     try {
-      console.log('🔄 pauseSession: Starting pause with audio stop');
-      
-      // CRITICAL: Stop all voice audio FIRST before any other operations
-      const { stopAllVoiceAudio } = await import('./useTextToSpeech');
-      stopAllVoiceAudio();
-      console.log('🔇 pauseSession: Voice audio stopped');
+      // STEP 1: Stop all voice audio IMMEDIATELY (highest priority)
+      try {
+        console.log('🔇 pauseSession: Stopping all voice audio...');
+        const { stopAllVoiceAudio } = await import('./useTextToSpeech');
+        stopAllVoiceAudio();
+        audioStopped = true;
+        console.log('✅ pauseSession: Voice audio stopped successfully');
+      } catch (audioError) {
+        console.error('⚠️ pauseSession: Audio stop failed:', audioError);
+        // Continue with pause operation even if audio stop fails
+      }
 
-      // Update database and conversation status
-      await supabase
+      // STEP 2: Validate conversation state before database operations
+      if (!sessionState.conversation?.id) {
+        throw new Error('Invalid conversation ID - cannot update database');
+      }
+
+      // STEP 3: Update conversation status with timeout protection
+      console.log('💾 pauseSession: Updating conversation status in database...');
+      const dbUpdatePromise = supabase
         .from('conversations')
         .update({
           status: 'paused',
           session_data: {
-            messages: sessionState.messages as any,
+            messages: sessionState.messages || [] as any,
             lastActivity: new Date().toISOString(),
             pauseReason: 'manual',
-            pausedAt: new Date().toISOString()
+            pausedAt: new Date().toISOString(),
+            messageCount: sessionState.messages?.length || 0
           } as any
         })
         .eq('id', sessionState.conversation.id);
 
-      await saveSessionToDatabase(sessionState);
-      
-      // Update local state synchronously
+      // Add 10-second timeout for database operations
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database update timeout after 10 seconds')), 10000);
+      });
+
+      await Promise.race([dbUpdatePromise, timeoutPromise]);
+      dbUpdateSuccess = true;
+      console.log('✅ pauseSession: Database update completed');
+
+      // STEP 4: Save session data (optional - failure won't block pause)
+      try {
+        console.log('💾 pauseSession: Saving session to database...');
+        await saveSessionToDatabase(sessionState);
+        console.log('✅ pauseSession: Session data saved');
+      } catch (saveError) {
+        console.warn('⚠️ pauseSession: Session save failed (non-critical):', saveError);
+        // Continue - this is not critical for pause operation
+      }
+
+      // STEP 5: Update local state
       setSessionState(prev => ({
         ...prev,
         isPaused: true,
         lastActivity: new Date().toISOString()
       }));
-      
-      console.log('✅ pauseSession: Successfully paused session');
-      
+      localStateUpdated = true;
+      console.log('✅ pauseSession: Local state updated');
+
+      // STEP 6: Success feedback
       toast({
         title: "🔄 Session Paused",
         description: "Voice stopped and conversation paused. You can resume anytime.",
       });
-      
+
+      console.log('🎉 pauseSession: Complete success - audio stopped, DB updated, state synced');
       return true;
+
     } catch (error) {
-      console.error('❌ Error pausing session:', error);
+      console.error('❌ pauseSession: Critical error occurred:', error);
+      
+      // Comprehensive error recovery
+      const errorDetails = {
+        audioStopped,
+        dbUpdateSuccess,
+        localStateUpdated,
+        conversationId: sessionState.conversation?.id,
+        messageCount: sessionState.messages?.length || 0,
+        errorMessage: error instanceof Error ? error.message : String(error)
+      };
+      
+      console.error('🔍 pauseSession: Error context:', errorDetails);
+
+      // Even on failure, ensure local state reflects pause attempt
+      if (!localStateUpdated) {
+        try {
+          setSessionState(prev => ({
+            ...prev,
+            isPaused: true,
+            lastActivity: new Date().toISOString(),
+            hasErrors: true
+          }));
+          console.log('🔧 pauseSession: Emergency local state update applied');
+        } catch (stateError) {
+          console.error('💥 pauseSession: Emergency state update failed:', stateError);
+        }
+      }
+
+      // User feedback with recovery guidance
       toast({
-        title: "Error",
-        description: "Could not pause session properly",
-        variant: "destructive",
+        title: "⚠️ Pause Operation Issues",
+        description: audioStopped 
+          ? "Audio stopped but session data may not be fully saved. You can still navigate to dashboard."
+          : "Could not pause session completely. Try again or restart the app.",
+        variant: audioStopped ? "default" : "destructive",
       });
-      return false;
+
+      // Return true if audio was stopped (partial success allows navigation)
+      return audioStopped;
     }
   }, [sessionState, saveSessionToDatabase]);
 
