@@ -41,7 +41,7 @@ const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
   };
 
   const isStep2Valid = () => {
-    return formData.workArea.trim() !== '' && formData.positionLevel !== '' && formData.gender !== '';
+    return formData.workArea.trim() !== '' && formData.positionLevel !== '';
   };
 
   const isStep3Valid = () => {
@@ -160,7 +160,7 @@ const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
         </div>
 
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Gender</Label>
+          <Label className="text-sm font-medium">Gender (Optional)</Label>
           <RadioGroup
             value={formData.gender}
             onValueChange={(value) => updateFormData('gender', value)}
