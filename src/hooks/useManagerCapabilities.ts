@@ -36,9 +36,20 @@ export const useManagerCapabilities = (): ManagerCapabilities => {
           .from('profiles')
           .select('id, role, team_name')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (profileError) throw profileError;
+
+        if (!profile) {
+          // Profile doesn't exist, user is not a manager
+          setCapabilities({
+            isManager: false,
+            hasTeamMembers: false,
+            canAccessManagerDashboard: false,
+            loading: false,
+          });
+          return;
+        }
 
         const isManager = profile?.role === 'manager';
         let hasTeamMembers = false;

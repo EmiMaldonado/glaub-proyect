@@ -130,16 +130,23 @@ const PostRegistrationOnboarding = () => {
     setSubmitting(true);
 
     try {
+      // Create or update the user profile with upsert
       const { error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          user_id: user.id,
+          full_name: user.user_metadata?.full_name || null,
+          display_name: user.user_metadata?.display_name || null,
+          email: user.email || null,
           job_level: formData.job_level || null,
           gender: formData.gender || null,
-          job_position: formData.job_position,
+          job_position: formData.job_position || null,
+          role: 'employee',
           onboarding_completed: true,
           updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
+        }, {
+          onConflict: 'user_id'
+        });
 
       if (error) {
         throw error;

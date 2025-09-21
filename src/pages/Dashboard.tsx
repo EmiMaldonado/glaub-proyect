@@ -206,7 +206,7 @@ const Dashboard = () => {
       if (profile?.manager_id) {
         const {
           data: manager
-        } = await supabase.from('profiles').select('*, user_id').eq('id', profile.manager_id).single();
+        } = await supabase.from('profiles').select('*, user_id').eq('id', profile.manager_id).maybeSingle();
         setCurrentManager(manager);
       }
 
