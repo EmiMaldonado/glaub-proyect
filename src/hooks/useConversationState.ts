@@ -44,6 +44,7 @@ export const useConversationState = () => {
   const getConversationState = useCallback(async (userId: string): Promise<ConversationState> => {
     try {
       setIsLoading(true);
+      console.log('🔍 [ConversationState] Fetching conversation state for user:', userId);
 
       // Check for paused conversations in the conversations table
       const { data: pausedConv, error: pausedError } = await supabase
@@ -56,6 +57,7 @@ export const useConversationState = () => {
         .maybeSingle();
 
       if (pausedError) throw pausedError;
+      console.log('📊 [ConversationState] Paused conversation found:', pausedConv);
 
       // Also check the old paused_conversations table for backward compatibility
       const { data: oldPausedConv, error: oldPausedError } = await supabase
@@ -96,6 +98,7 @@ export const useConversationState = () => {
           lastTopic: sessionData?.lastTopic,
           pausedAt: sessionData?.pausedAt
         };
+        console.log('✅ [ConversationState] Found paused conversation:', pausedConv.id);
       } else if (oldPausedConv) {
         // Fallback to old system
         state = {
@@ -105,8 +108,12 @@ export const useConversationState = () => {
           conversationContext: oldPausedConv.conversation_title,
           pausedAt: oldPausedConv.created_at
         };
+        console.log('✅ [ConversationState] Found old paused conversation:', oldPausedConv.id);
+      } else {
+        console.log('❌ [ConversationState] No paused conversations found');
       }
 
+      console.log('🔄 [ConversationState] Final state:', state);
       setConversationState(state);
       return state;
     } catch (error) {

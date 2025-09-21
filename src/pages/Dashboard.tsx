@@ -77,7 +77,11 @@ const Dashboard = () => {
   // Refresh conversation state when navigating to dashboard (e.g., after pausing)
   useEffect(() => {
     if (user && location.pathname === '/dashboard') {
-      refetchConversationState(user.id);
+      console.log('🔄 [Dashboard] Refreshing conversation state after navigation to dashboard');
+      // Add small delay to ensure database has been updated after pause
+      setTimeout(() => {
+        refetchConversationState(user.id);
+      }, 500);
     }
   }, [user, location.pathname, refetchConversationState]);
 
@@ -137,13 +141,10 @@ const Dashboard = () => {
         ascending: false
       });
 
-      // Check for paused conversations (old system - kept for backwards compatibility)
+      // Note: Paused conversation state is now managed by useConversationState hook
+      // Keeping this for backwards compatibility with old data but not setting state here
       const pausedConversations = conversations?.filter(c => c.status === 'paused') || [];
-      setPausedConversations(pausedConversations);
-
-      // Check for new paused conversation system
-      const pausedConv = await getPausedConversation(user.id);
-      setHasPausedConversation(!!pausedConv);
+      console.log('📋 [Dashboard] Found paused conversations in data:', pausedConversations.length);
 
       // Load all insights from all conversations
       const {
