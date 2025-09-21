@@ -52,8 +52,9 @@ const DashboardViewSwitch: React.FC = () => {
           "flex items-center gap-2 px-3 py-2 text-sm transition-all",
           isOnManagerDashboard 
             ? "bg-background shadow-sm"
-            : "text-slate-700 hover:text-slate-600 hover:bg-primary/10"
+            : "hover:bg-primary/10"
         )}
+        style={!isOnManagerDashboard ? { color: '#0D2948' } : undefined}
         data-testid="manager-view-button"
       >
         <Users size={16} />
