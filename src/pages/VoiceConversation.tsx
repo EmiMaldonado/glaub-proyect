@@ -102,27 +102,39 @@ const VoiceConversation: React.FC = () => {
       if (shouldGenerateInsights) {
         console.log('✅ Session meets criteria for insights generation');
         
-        const sessionData = {
-          messages: sessionTranscripts,
-          duration: actualDuration,
-          userId: user?.id,
-          conversationId: conversation.id
-        };
-
         toast({
           title: "🎯 Session Complete!",
           description: `Session completed (${actualDuration} min). Generating insights...`,
         });
 
-        // Generate insights via edge function
-        const response = await supabase.functions.invoke('session-analysis', {
-          body: sessionData
-        });
+        try {
+          // Generate insights via edge function with correct payload
+          const response = await supabase.functions.invoke('session-analysis', {
+            body: {
+              conversationId: conversation.id,
+              userId: user?.id
+            }
+          });
 
-        if (response.data) {
-          navigate(`/session-summary?id=${conversation.id}`);
-        } else {
-          console.log('⚠️ Insights generation failed, going to dashboard');
+          if (response.error) {
+            console.error('❌ Session analysis failed:', response.error);
+            throw new Error(response.error.message);
+          }
+
+          if (response.data) {
+            console.log('✅ Session analysis completed successfully');
+            navigate(`/session-summary?id=${conversation.id}`);
+          } else {
+            console.log('⚠️ Session analysis returned no data');
+            navigate('/dashboard');
+          }
+        } catch (analysisError) {
+          console.error('❌ Session analysis failed:', analysisError);
+          toast({
+            title: "Session Completed",
+            description: "Session saved but analysis failed. Check dashboard for personality insights.",
+            variant: "default",
+          });
           navigate('/dashboard');
         }
       } else {

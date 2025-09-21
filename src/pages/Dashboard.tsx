@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { usePausedConversations } from "@/hooks/usePausedConversations";
 import { useConversationState } from "@/hooks/useConversationState";
+import { useDataRecovery } from "@/hooks/useDataRecovery";
 import SharingPreferences from "@/components/SharingPreferences";
 import SharedDataIndicator from "@/components/SharedDataIndicator";
 import PersonalRecommendations from "@/components/PersonalRecommendations";
@@ -34,6 +35,7 @@ const Dashboard = () => {
     generateResumeMessage,
     refetchConversationState
   } = useConversationState();
+  const { recoverAllMissingAnalyses } = useDataRecovery();
   const [lastConversation, setLastConversation] = useState<any>(null);
   const [pausedConversations, setPausedConversations] = useState<any[]>([]);
   const [hasPausedConversation, setHasPausedConversation] = useState(false);
@@ -71,8 +73,13 @@ const Dashboard = () => {
     if (user) {
       loadDashboardData();
       getConversationState(user.id); // Load conversation state
+      
+      // Automatically recover any missing analyses when dashboard loads
+      setTimeout(() => {
+        recoverAllMissingAnalyses();
+      }, 2000); // Small delay to let dashboard load first
     }
-  }, [user, getConversationState]);
+  }, [user, getConversationState, recoverAllMissingAnalyses]);
 
   // Refresh conversation state when navigating to dashboard (e.g., after pausing)
   useEffect(() => {

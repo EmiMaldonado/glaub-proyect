@@ -425,11 +425,35 @@ const Conversation: React.FC = () => {
         .eq('id', conversation.id);
 
       if (shouldGenerateInsights) {
-        console.log('✅ Session completed with insights generation');
-        toast({
-          title: "✅ Session Completed",
-          description: "Review the summary and generated insights",
-        });
+        console.log('✅ Session completed - calling session-analysis function');
+        
+        try {
+          // Generate insights via session-analysis function
+          const analysisResponse = await supabase.functions.invoke('session-analysis', {
+            body: {
+              conversationId: conversation.id,
+              userId: user?.id
+            }
+          });
+
+          if (analysisResponse.error) {
+            console.error('❌ Session analysis failed:', analysisResponse.error);
+            throw new Error(analysisResponse.error.message);
+          }
+
+          console.log('✅ Session analysis completed successfully');
+          toast({
+            title: "✅ Session Completed",
+            description: "Review the summary and generated insights",
+          });
+        } catch (analysisError) {
+          console.error('❌ Session analysis failed:', analysisError);
+          toast({
+            title: "✅ Session Completed",
+            description: "Session saved but analysis failed. Check dashboard for personality insights.",
+            variant: "default",
+          });
+        }
       } else {
         console.log('⚠️ Session completed but too short for insights');
         toast({

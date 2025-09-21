@@ -395,13 +395,36 @@ export const useSessionManager = () => {
         })
         .eq('id', sessionState.conversation.id);
 
-      // Generate insights only if conversation meets minimum requirements
+      // Generate insights via session-analysis if conversation meets requirements
       if (shouldGenerateInsights) {
-        console.log('✅ Session completed with insights generation');
-        toast({
-          title: "Session Completed",
-          description: "Your conversation has been saved and analyzed successfully",
-        });
+        console.log('✅ Session completed - calling session-analysis function');
+        
+        try {
+          const analysisResponse = await supabase.functions.invoke('session-analysis', {
+            body: {
+              conversationId: sessionState.conversation.id,
+              userId: user?.id
+            }
+          });
+
+          if (analysisResponse.error) {
+            console.error('❌ Session analysis failed:', analysisResponse.error);
+            throw new Error(analysisResponse.error.message);
+          }
+
+          console.log('✅ Session analysis completed successfully');
+          toast({
+            title: "Session Completed",
+            description: "Your conversation has been saved and analyzed successfully",
+          });
+        } catch (analysisError) {
+          console.error('❌ Session analysis failed:', analysisError);
+          toast({
+            title: "Session Completed",
+            description: "Session saved but analysis failed. You can retry analysis from the dashboard.",
+            variant: "default",
+          });
+        }
       } else {
         console.log('⚠️ Session completed but too short for insights');
         toast({
