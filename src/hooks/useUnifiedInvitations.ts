@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
