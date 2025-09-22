@@ -187,7 +187,22 @@ const DashboardManager = () => {
     setIsInviting(true);
     try {
       // Use the unified invitation system
-      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Debes estar autenticado para enviar invitaciones');
+        }
+        
+        // Usar token del usuario
+        const { data, error } = await supabase.functions.invoke('unified-invitation', {
+          body: {
+            email: memberEmail.trim().toLowerCase(),
+            invitationType: 'team_member',
+            teamId: userProfile?.id
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
         body: {
           email: memberEmail.trim().toLowerCase(),
           invitationType: 'team_member',
