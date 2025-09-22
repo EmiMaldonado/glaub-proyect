@@ -146,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email with custom template and timeout
     const emailStart = Date.now();
-    const baseUrl = Deno.env.get("SITE_URL") || "https://xn--gläub-thesis-m8a.com/";
+    const baseUrl = Deno.env.get("SITE_URL") || "https://xn--glub-thesis-m8a.com";
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
     
     try {
