@@ -146,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email with custom template and timeout
     const emailStart = Date.now();
-    const baseUrl = Deno.env.get("SITE_URL") || "https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev";
+    const baseUrl = Deno.env.get("SITE_URL") || "https://xn--gläub-thesis-m8a.com/";
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
     
     try {
@@ -155,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
       const html = await renderAsync(
         React.createElement(PasswordResetEmail, {
           resetUrl,
-          expirationTime: "1 hora",
+          expirationTime: "1 hour",
         })
       );
       console.log(`🎨 Email template rendered in ${Date.now() - templateStart}ms`);
