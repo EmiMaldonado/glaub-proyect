@@ -47,12 +47,15 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Validate token and get user ID
-    const { data: userId, error: validateError } = await supabase.rpc('validate_reset_token', {
+    // Get user ID from token
+    const { data: userId, error: tokenError } = await supabase.rpc('get_user_id_from_token', {
       token_input: token
     });
-
-    if (validateError || !userId) {
-      console.error("Token validation error:", validateError);
+    
+    console.log('Token lookup result - userId:', userId, 'error:', tokenError);
+    
+    if (tokenError || !userId) {
+      console.error("Token validation error:", tokenError);
       return new Response(
         JSON.stringify({ error: "This reset link is invalid or has expired. Please request a new one." }),
         {
