@@ -38,9 +38,29 @@ export const useUnifiedInvitations = () => {
     try {
       console.log('Sending unified invitation:', request);
       
-      const { data, error } = await supabase.functions.invoke('unified-invitation', {
-        body: request
-      });
+// Obtener sesión del usuario actual
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  throw new Error('Debes estar autenticado para enviar invitaciones');
+}
+
+// Crear cliente con token del usuario
+const userSupabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    global: {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
+    }
+  }
+);
+
+const { data, error } = await userSupabase.functions.invoke('unified-invitation', {
+  body: request
+});
 
       if (error) {
         console.error('Error sending invitation:', error);
