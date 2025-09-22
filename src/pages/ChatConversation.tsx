@@ -60,24 +60,24 @@ const ChatConversation: React.FC = () => {
     messages,
     userId: user?.id,
     onPause: () => {
-      // Navigate to dashboard after auto-pause
       navigate('/dashboard');
     },
     updateSessionState,
     onConversationPaused: (conversationId) => {
-      // Sync session state with database
       if (user?.id) {
         syncWithDatabaseState(conversationId);
         refetchConversationState(user.id);
       }
     },
-    pauseSessionFunction: pauseSession // CRITICAL: Connect to session manager
+    pauseSessionFunction: pauseSession
   });
   
   const [textInput, setTextInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isWaitingForAI, setIsWaitingForAI] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<any>(null); // Track subscription
 
   // Create new conversation with AI automatically starting the conversation
   const createNewConversation = async () => {
@@ -85,6 +85,7 @@ const ChatConversation: React.FC = () => {
 
     try {
       setIsLoading(true);
+      setIsWaitingForAI(true);
       
       console.log('🚀 Creating new conversation for user:', user.id);
       
@@ -128,11 +129,11 @@ const ChatConversation: React.FC = () => {
       
       console.log('🔑 Conversation ID confirmed:', newConversation.id);
       
-      // Start new session
+      // Start new session FIRST
       startNewSession(newConversation as Conversation);
 
-      // Verify session state was updated correctly
-      console.log('📊 Session state after startNewSession - conversation ID:', newConversation.id);
+      // Setup real-time subscription BEFORE sending AI message
+      await setupRealtimeSubscription(newConversation.id);
 
       // AI automatically starts the conversation with OCEAN profiling questions
       await sendAIFirstMessage(newConversation.id);
@@ -146,13 +147,56 @@ const ChatConversation: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsWaitingForAI(false);
     }
+  };
+
+  // Setup real-time subscription with proper cleanup
+  const setupRealtimeSubscription = async (conversationId: string) => {
+    // Clean up existing subscription
+    if (channelRef.current) {
+      console.log('🔕 Cleaning up existing subscription');
+      await supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    // Create new subscription
+    const channel = supabase
+      .channel(`chat-messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => {
+          const newMessage = payload.new as Message;
+          console.log('📨 Received real-time message:', newMessage.role, newMessage.id);
+          
+          // Add message to session state
+          addMessageToSession(newMessage);
+          
+          // If it's an AI message, we're no longer waiting
+          if (newMessage.role === 'assistant') {
+            setIsWaitingForAI(false);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔔 Subscription status:', status, 'for conversation:', conversationId);
+      });
+
+    channelRef.current = channel;
+    console.log('✅ Real-time subscription setup for conversation:', conversationId);
   };
 
   // Send AI's first message to start the conversation with enhanced session context
   const sendAIFirstMessage = async (conversationId: string) => {
     try {
       console.log('🤖 Sending AI first message for conversation:', conversationId);
+      setIsWaitingForAI(true);
       
       // Get comprehensive session history for proper continuity
       const { data: allConversations } = await supabase
@@ -162,7 +206,7 @@ const ChatConversation: React.FC = () => {
         .order('created_at', { ascending: false });
 
       const completedConversations = allConversations?.filter(c => c.status === 'completed') || [];
-      const totalSessionCount = (allConversations?.length || 0) + 1; // Include current session
+      const totalSessionCount = (allConversations?.length || 0);
       const isFirstSessionEver = completedConversations.length === 0;
 
       // Analyze conversation history for cross-mode awareness
@@ -184,7 +228,7 @@ const ChatConversation: React.FC = () => {
         sessionContext = {
           isFirstSession: true,
           sessionNumber: 1,
-          totalSessions: 1,
+          totalSessions: totalSessionCount,
           modalityExperience: 'new_user'
         };
       } else {
@@ -215,6 +259,8 @@ const ChatConversation: React.FC = () => {
         initialMessage = `This is session ${sessionContext.sessionNumber} with this returning user (${completedConversations.length} completed sessions).${modalityContext} Welcome them back warmly, acknowledge their previous sessions, and ask if there are new topics they'd like to explore today in chat mode.`;
       }
 
+      console.log('🚀 Calling ai-chat function for first message...');
+      
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
           message: initialMessage,
@@ -227,24 +273,70 @@ const ChatConversation: React.FC = () => {
       });
 
       if (response.error) {
-        console.error('Supabase function error:', response.error);
+        console.error('❌ Supabase function error:', response.error);
         throw new Error(response.error.message || 'Failed to start AI conversation');
       }
 
       if (response.data?.error) {
-        console.error('AI chat function error:', response.data.error);
+        console.error('❌ AI chat function error:', response.data.error);
         throw new Error(response.data.error);
       }
 
       console.log('✅ AI conversation started with session context:', sessionContext);
 
+      // Set a timeout in case the real-time doesn't work
+      setTimeout(() => {
+        if (isWaitingForAI) {
+          console.log('⚠️ AI message timeout - checking database manually');
+          checkForNewMessages(conversationId);
+        }
+      }, 10000); // 10 second timeout
+
     } catch (error) {
-      console.error('Error starting AI conversation:', error);
+      console.error('❌ Error starting AI conversation:', error);
+      setIsWaitingForAI(false);
       toast({
         title: "Error",
         description: "AI couldn't start the conversation. Please type a message to begin.",
         variant: "destructive",
       });
+    }
+  };
+
+  // Manual check for new messages (fallback)
+  const checkForNewMessages = async (conversationId: string) => {
+    try {
+      const { data: dbMessages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (dbMessages && dbMessages.length > 0) {
+        console.log('📥 Found messages in database:', dbMessages.length);
+        
+        // Convert and add any missing messages
+        const convertedMessages: Message[] = dbMessages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          created_at: msg.created_at,
+          metadata: msg.metadata
+        }));
+
+        // Add messages that aren't already in state
+        convertedMessages.forEach(msg => {
+          const exists = messages.find(m => m.id === msg.id);
+          if (!exists) {
+            console.log('➕ Adding missing message:', msg.role, msg.id);
+            addMessageToSession(msg);
+          }
+        });
+
+        setIsWaitingForAI(false);
+      }
+    } catch (error) {
+      console.error('❌ Error checking for messages:', error);
     }
   };
 
@@ -285,6 +377,7 @@ const ChatConversation: React.FC = () => {
     console.log('📝 Message content:', messageText.trim());
 
     setIsLoading(true);
+    setIsWaitingForAI(true);
     updateActivity(); // Update last activity
 
     // Check if this is the first message in the conversation
@@ -314,7 +407,7 @@ const ChatConversation: React.FC = () => {
       const response = await supabase.functions.invoke('ai-chat', {
         body: {
           message: messageText.trim(),
-          conversationId: conversation.id, // This should now always be valid
+          conversationId: conversation.id,
           userId: user?.id,
           isFirstMessage: isFirstMessage
         }
@@ -330,11 +423,19 @@ const ChatConversation: React.FC = () => {
         throw new Error(response.data.error);
       }
 
-      // The AI response will be added automatically via real-time subscription
       console.log('✅ Message sent successfully', response.data?.debug);
+
+      // Set timeout for AI response
+      setTimeout(() => {
+        if (isWaitingForAI) {
+          console.log('⚠️ AI response timeout - checking database');
+          checkForNewMessages(conversation.id);
+        }
+      }, 15000); // 15 second timeout
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
+      setIsWaitingForAI(false);
       
       toast({
         title: "Error",
@@ -360,11 +461,11 @@ const ChatConversation: React.FC = () => {
         if (continueConversation === 'true') {
           await handleContinuePausedConversation();
         } else if (resumeId) {
-          // Handle new resume system
           await handleResumeById(resumeId);
-        } else if (hasActiveSession && conversation) {
-          // Continue existing active session - maintain session continuity
+        } else if (hasActiveSession && conversation?.id) {
+          // Continue existing active session - setup subscription
           console.log('📋 Continuing active chat session:', conversation.id);
+          await setupRealtimeSubscription(conversation.id);
           setIsInitializing(false);
           return;
         } else {
@@ -385,40 +486,23 @@ const ChatConversation: React.FC = () => {
     };
 
     initializeConversation();
-  }, [user, continueConversation, hasActiveSession, conversation]);
+  }, [user, continueConversation]);
 
-  // Real-time message updates
+  // Setup real-time subscription when conversation changes
   useEffect(() => {
-    if (!conversation) return;
+    if (!conversation?.id) return;
 
-    const channel = supabase
-      .channel('chat-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversation.id}`
-        },
-        (payload) => {
-          const newMessage = payload.new as Message;
-          console.log('📨 Received real-time message:', newMessage.role, newMessage.id);
-          // Only add AI messages via real-time, user messages are added immediately
-          if (newMessage.role === 'assistant') {
-            addMessageToSession(newMessage);
-          }
-        }
-      )
-      .subscribe();
+    setupRealtimeSubscription(conversation.id);
 
-    console.log('🔔 Real-time subscription active for conversation:', conversation.id);
-
+    // Cleanup function
     return () => {
-      supabase.removeChannel(channel);
-      console.log('🔕 Real-time subscription cleaned up');
+      if (channelRef.current) {
+        console.log('🔕 Cleaning up subscription on unmount');
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [conversation, addMessageToSession]);
+  }, [conversation?.id]);
 
   // Scroll to bottom when messages update
   useEffect(() => {
@@ -475,6 +559,9 @@ const ChatConversation: React.FC = () => {
 
       // Resume session with previous messages  
       resumeSession(conversation as Conversation, messages);
+
+      // Setup real-time subscription
+      await setupRealtimeSubscription(conversationId);
 
       // Generate contextual resume message from AI
       console.log('🤖 AI continuing conversation after resume with context');
@@ -554,6 +641,9 @@ const ChatConversation: React.FC = () => {
       // Resume session with previous messages
       resumeSession(newConversation as Conversation, previousMessages);
 
+      // Setup real-time subscription
+      await setupRealtimeSubscription(newConversation.id);
+
       // Generate contextual resume message from AI
       console.log('🤖 AI continuing conversation after resume with context');
       const resumeMessage = generateResumeMessage(
@@ -629,7 +719,6 @@ const ChatConversation: React.FC = () => {
   // Handle resume session
   const handleResumeSession = () => {
     if (!conversation || !user) return;
-
     resumePausedSession();
   };
 
@@ -844,17 +933,39 @@ const ChatConversation: React.FC = () => {
                 </div>
               )}
 
-              {messages.length === 0 && !isLoading && (
+              {/* Waiting for AI state */}
+              {messages.length === 0 && isWaitingForAI && (
                 <div className="text-center text-muted-foreground py-8">
                   <div className="max-w-md mx-auto space-y-4">
-                    <h3 className="text-lg font-medium text-foreground">Waiting for AI to start conversation...</h3>
+                    <LoadingSpinner />
+                    <h3 className="text-lg font-medium text-foreground">AI is starting the conversation...</h3>
                     <p className="text-sm">
-                      Your AI therapeutic assistant will start the conversation automatically. 
-                      Please wait a moment while it prepares your first message.
+                      Your AI therapeutic assistant is preparing your first message. 
+                      This should only take a moment.
                     </p>
                     <p className="text-xs opacity-75">
                       All conversations are private and secure.
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* No messages and not waiting */}
+              {messages.length === 0 && !isWaitingForAI && !isLoading && (
+                <div className="text-center text-muted-foreground py-8">
+                  <div className="max-w-md mx-auto space-y-4">
+                    <h3 className="text-lg font-medium text-foreground">Ready to start your conversation</h3>
+                    <p className="text-sm">
+                      You can type a message below to begin, or wait for the AI to start automatically.
+                    </p>
+                    <Button 
+                      onClick={() => createNewConversation()}
+                      disabled={isLoading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Start AI Conversation
+                    </Button>
                   </div>
                 </div>
               )}
@@ -878,3 +989,73 @@ const ChatConversation: React.FC = () => {
                   </div>
                 </div>
               ))}
+
+              {/* AI typing indicator */}
+              {isWaitingForAI && messages.length > 0 && (
+                <div className="flex justify-start">
+                  <div className="bg-muted px-4 py-3 rounded-lg max-w-[80%]">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      </div>
+                      <span className="text-xs text-muted-foreground">AI is typing...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="border-t bg-background p-4">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(textInput);
+                    }
+                  }}
+                  placeholder={isPaused ? "Resume the conversation to continue..." : "Type your message..."}
+                  disabled={isLoading || isPaused || isWaitingForAI}
+                  className="flex-1 px-3 py-2 border border-input rounded-md bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <Button
+                  onClick={() => handleSendMessage(textInput)}
+                  disabled={!textInput.trim() || isLoading || isPaused || isWaitingForAI}
+                  size="sm"
+                >
+                  {isLoading ? (
+                    <LoadingSpinner />
+                  ) : (
+                    'Send'
+                  )}
+                </Button>
+              </div>
+              
+              {isPaused && (
+                <p className="text-xs text-amber-600 mt-2 text-center">
+                  Resume the conversation to continue messaging
+                </p>
+              )}
+              
+              {isWaitingForAI && (
+                <p className="text-xs text-blue-600 mt-2 text-center">
+                  Waiting for AI response...
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatConversation;
