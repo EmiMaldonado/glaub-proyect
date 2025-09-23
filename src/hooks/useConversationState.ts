@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -39,10 +39,20 @@ export const useConversationState = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  
+  // ARREGLO: Prevenir múltiples llamadas simultáneas
+  const fetchingRef = useRef<boolean>(false);
 
   // Get conversation state for dashboard
   const getConversationState = useCallback(async (userId: string): Promise<ConversationState> => {
+    // Prevenir llamadas múltiples simultáneas
+    if (fetchingRef.current) {
+      console.log('⚠️ [ConversationState] Already fetching, skipping duplicate request');
+      return conversationState;
+    }
+
     try {
+      fetchingRef.current = true;
       setIsLoading(true);
       console.log('🔍 [ConversationState] Fetching conversation state for user:', userId);
 
@@ -117,7 +127,7 @@ export const useConversationState = () => {
       setConversationState(state);
       return state;
     } catch (error) {
-      console.error('Error getting conversation state:', error);
+      console.error('❌ [ConversationState] Error getting conversation state:', error);
       const fallbackState: ConversationState = {
         hasActiveConversation: false,
         hasPausedConversation: false,
@@ -127,13 +137,15 @@ export const useConversationState = () => {
       return fallbackState;
     } finally {
       setIsLoading(false);
+      fetchingRef.current = false;
     }
-  }, []);
+  }, [conversationState]);
 
   // Resume paused conversation
   const resumeConversation = useCallback(async (conversationId: string, userId: string) => {
     try {
       setIsLoading(true);
+      console.log('🔄 [ConversationState] Resuming conversation:', conversationId);
 
       // Get the paused conversation with session data
       const { data: conversation, error: convError } = await supabase
@@ -160,6 +172,8 @@ export const useConversationState = () => {
 
       if (updateError) throw updateError;
 
+      console.log('✅ [ConversationState] Conversation resumed successfully');
+      
       toast({
         title: "Conversation Resumed",
         description: "Welcome back! Your conversation continues where you left off.",
@@ -167,7 +181,7 @@ export const useConversationState = () => {
 
       return conversation;
     } catch (error) {
-      console.error('Error resuming conversation:', error);
+      console.error('❌ [ConversationState] Error resuming conversation:', error);
       toast({
         title: "Resume Failed",
         description: "Could not resume conversation. Please try starting a new one.",
@@ -183,6 +197,7 @@ export const useConversationState = () => {
   const startNewConversation = useCallback(async (userId: string) => {
     try {
       setIsLoading(true);
+      console.log('🆕 [ConversationState] Starting new conversation for user:', userId);
 
       // Clear any existing paused conversations
       await supabase
@@ -218,6 +233,8 @@ export const useConversationState = () => {
 
       if (error) throw error;
 
+      console.log('✅ [ConversationState] New conversation created:', newConversation.id);
+
       // Update conversation state
       setConversationState({
         hasActiveConversation: true,
@@ -227,7 +244,7 @@ export const useConversationState = () => {
 
       return newConversation;
     } catch (error) {
-      console.error('Error starting new conversation:', error);
+      console.error('❌ [ConversationState] Error starting new conversation:', error);
       toast({
         title: "Error",
         description: "Could not start new conversation",
@@ -274,8 +291,19 @@ export const useConversationState = () => {
     return resumeMessage;
   }, []);
 
-  // Force refresh conversation state
+  // ARREGLO CRÍTICO: Throttled refetch para evitar loops
+  const lastRefetchTime = useRef<number>(0);
+  const REFETCH_THROTTLE_MS = 2000; // Solo permitir refetch cada 2 segundos
+
   const refetchConversationState = useCallback(async (userId: string) => {
+    const now = Date.now();
+    if (now - lastRefetchTime.current < REFETCH_THROTTLE_MS) {
+      console.log('⚠️ [ConversationState] Refetch throttled, skipping...');
+      return;
+    }
+    
+    lastRefetchTime.current = now;
+    console.log('🔄 [ConversationState] Refetching conversation state...');
     await getConversationState(userId);
   }, [getConversationState]);
 
