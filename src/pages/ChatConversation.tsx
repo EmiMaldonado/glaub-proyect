@@ -54,20 +54,17 @@ const ChatConversation: React.FC = () => {
 
   const { generateResumeMessage, refetchConversationState } = useConversationState();
   
-  // TEMPORARILY DISABLE auto-pause during initialization to avoid conflicts
-  const [autoResumeEnabled, setAutoResumeEnabled] = useState(false);
-  
-  // Enhanced auto-pause system with unified state management and audio control
+  // Enhanced auto-pause system
   const { pauseConversationWithContext } = useAutoPause({
-    conversation: autoResumeEnabled ? conversation : null, // Disable during init
-    messages: autoResumeEnabled ? messages : [],
-    userId: autoResumeEnabled ? user?.id : undefined,
+    conversation,
+    messages,
+    userId: user?.id,
     onPause: () => {
       navigate('/dashboard');
     },
     updateSessionState,
     onConversationPaused: (conversationId) => {
-      if (user?.id && autoResumeEnabled) {
+      if (user?.id) {
         syncWithDatabaseState(conversationId);
         refetchConversationState(user.id);
       }
@@ -82,46 +79,19 @@ const ChatConversation: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
 
-  // DEBUGGING: Verificar estado de Supabase
-  const checkSupabaseConnection = () => {
-    const connectionStatus = supabase.realtime.connection?.readyState;
-    const connectionMap: { [key: number]: string } = {
-      0: 'CONNECTING',
-      1: 'OPEN', 
-      2: 'CLOSING',
-      3: 'CLOSED'
-    };
-    
-    console.log('🔌 Supabase connection status:', connectionStatus, connectionMap[connectionStatus || 3]);
-    return connectionStatus === 1;
-  };
-
-  // Setup real-time subscription with proper cleanup and validation
+  // Setup real-time subscription
   const setupRealtimeSubscription = async (conversationId: string) => {
-    // CRITICAL: Validate conversationId before proceeding
-    if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
-      console.error('❌ Invalid conversationId for subscription:', conversationId);
-      return;
-    }
+    if (!conversationId || conversationId === 'undefined') return;
 
     // Clean up existing subscription
     if (channelRef.current) {
-      console.log('🔕 Cleaning up existing subscription');
       await supabase.removeChannel(channelRef.current);
       channelRef.current = null;
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     console.log('🔔 Setting up real-time subscription for:', conversationId);
-    
-    // Verify connection
-    const isConnected = checkSupabaseConnection();
-    if (!isConnected) {
-      console.warn('⚠️ Supabase not connected, waiting...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    }
 
-    // Create subscription
     const channel = supabase
       .channel(`chat-messages-${conversationId}`)
       .on(
@@ -145,51 +115,36 @@ const ChatConversation: React.FC = () => {
         }
       )
       .subscribe((status) => {
-        console.log('🔔 Subscription status:', status, 'for:', conversationId);
+        console.log('🔔 Subscription status:', status);
       });
 
     channelRef.current = channel;
     await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('✅ Real-time subscription ready for:', conversationId);
   };
 
-  // FIXED: Create new conversation with single-call protection
+  // SIMPLIFIED: Create conversation and let AI start automatically
   const createNewConversation = async () => {
-    if (!user || isLoading) {
-      console.log('❌ Cannot create conversation: no user or loading');
-      return;
-    }
-
-    // Prevent multiple simultaneous calls
-    if (isLoading) {
-      console.log('⚠️ Already creating conversation, skipping duplicate call');
-      return;
-    }
+    if (!user || isLoading) return;
 
     try {
       setIsLoading(true);
       setIsWaitingForAI(true);
       
-      // Reset AI message flag for new conversation
-      aiMessageSentRef.current = false;
+      console.log('🚀 Creating new conversation for user:', user.id);
       
-      console.log('🚀 SINGLE CALL - Creating new conversation for user:', user.id);
-      
-      // Clean up existing state
+      // Clean up
       if (channelRef.current) {
         await supabase.removeChannel(channelRef.current);
         channelRef.current = null;
-        await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
-      // Clear paused conversations when creating new
-      console.log('🗑️ Clearing existing paused conversations');
+      // Clear paused conversations
       await supabase
         .from('paused_conversations')
         .delete()
         .eq('user_id', user.id);
       
-      // Count conversations for numbering
+      // Count conversations
       const { count } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
@@ -197,7 +152,7 @@ const ChatConversation: React.FC = () => {
 
       const conversationNumber = (count || 0) + 1;
       
-      // Create conversation in database
+      // Create conversation
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
@@ -208,31 +163,43 @@ const ChatConversation: React.FC = () => {
         .select()
         .single();
 
-      if (error) {
-        console.error('❌ Database error:', error);
-        throw error;
-      }
-
-      // CRITICAL: Validate conversation was created with ID
-      if (!newConversation?.id) {
-        console.error('❌ No conversation ID returned:', newConversation);
-        throw new Error('Failed to create conversation - no ID returned');
+      if (error || !newConversation?.id) {
+        throw new Error('Failed to create conversation');
       }
       
-      console.log('✅ Conversation created with ID:', newConversation.id);
+      console.log('✅ Conversation created:', newConversation.id);
       
-      // Start session manager with new conversation
+      // Start session
       startNewSession(newConversation as Conversation);
-
+      
       // Setup subscription
       await setupRealtimeSubscription(newConversation.id);
+      
+      // SIMPLIFIED: Just send a simple start message, let the AI handle context
+      console.log('🤖 Starting AI conversation...');
+      
+      const response = await supabase.functions.invoke('ai-chat', {
+        body: {
+          message: "Start the conversation. Check if this is the user's first session and respond appropriately.",
+          conversationId: newConversation.id,
+          userId: user.id,
+          isFirstMessage: true,
+          aiInitiated: true
+        }
+      });
 
-      // CRITICAL: Add longer delay before AI message to ensure session is fully established
-      console.log('⏰ Waiting for session to stabilize before AI message...');
-      await new Promise(resolve => setTimeout(resolve, 3000)); // Increased to 3 seconds
+      if (response.error) {
+        throw new Error(response.error.message || 'AI function failed');
+      }
 
-      // Send AI first message with VALIDATED conversationId
-      await sendAIFirstMessage(newConversation.id);
+      console.log('✅ AI conversation started');
+      
+      // Simple fallback check
+      setTimeout(async () => {
+        if (isWaitingForAI) {
+          await checkForNewMessages(newConversation.id);
+        }
+      }, 5000);
 
     } catch (error) {
       console.error('❌ Error creating conversation:', error);
@@ -247,224 +214,9 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // FIXED: Send AI first message with protection against double calls
-  const aiMessageSentRef = useRef(false);
-  
-  const sendAIFirstMessage = async (conversationId: string) => {
-    // CRITICAL: Prevent double calls to AI
-    if (aiMessageSentRef.current) {
-      console.log('⚠️ AI message already sent for this session, skipping duplicate call');
-      return;
-    }
-    
-    // CRITICAL: Validate conversationId before making request
-    if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
-      console.error('❌ Invalid conversationId for AI message:', conversationId);
-      setIsWaitingForAI(false);
-      toast({
-        title: "Error",
-        description: "Invalid conversation ID. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user?.id) {
-      console.error('❌ No user ID available');
-      setIsWaitingForAI(false);
-      return;
-    }
-
-    // CRITICAL: Verify conversation exists in session manager
-    if (!conversation || conversation.id !== conversationId) {
-      console.error('❌ Conversation state mismatch:', {
-        sessionConversationId: conversation?.id,
-        requestedId: conversationId
-      });
-      setIsWaitingForAI(false);
-      toast({
-        title: "Error",
-        description: "Conversation state not ready. Please refresh and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Mark as sending to prevent duplicates
-      aiMessageSentRef.current = true;
-      
-      console.log('🤖 SINGLE AI CALL - Sending first message...');
-      console.log('📝 ConversationId:', conversationId);
-      console.log('👤 UserId:', user.id);
-      console.log('🔍 Session state verified:', conversation.id);
-      
-      setIsWaitingForAI(true);
-      
-      // Get session context - CORRECT LOGIC
-      const { data: allConversations } = await supabase
-        .from('conversations')
-        .select('id, title, status, ended_at, insights, ocean_signals')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      console.log('📊 All conversations found:', allConversations?.length || 0);
-
-      // CORRECT: Only count COMPLETED conversations for first session detection
-      const completedConversations = allConversations?.filter(c => c.status === 'completed') || [];
-      const isFirstSessionEver = completedConversations.length === 0;
-      
-      console.log('🔍 Session analysis:', {
-        totalConversations: allConversations?.length || 0,
-        completedConversations: completedConversations.length,
-        isFirstSessionEver
-      });
-
-      // Analyze conversation types from ALL conversations (not just completed)
-      const voiceConversations = allConversations?.filter(c => 
-        c.title?.toLowerCase().includes('voice') || 
-        c.title?.toLowerCase().includes('session')
-      ) || [];
-      const chatConversations = allConversations?.filter(c => 
-        c.title?.toLowerCase().includes('conversation') && 
-        !c.title?.toLowerCase().includes('voice')
-      ) || [];
-
-      const hasUsedVoice = voiceConversations.length > 0;
-      const hasUsedChat = chatConversations.length > 1; // > 1 because current chat is included
-      
-      console.log('🔍 Conversation types:', {
-        voiceConversations: voiceConversations.length,
-        chatConversations: chatConversations.length,
-        hasUsedVoice,
-        hasUsedChat
-      });
-
-      let initialMessage;
-      let sessionContext;
-      
-      if (isFirstSessionEver) {
-        console.log('🎯 First session ever - using introduction protocol');
-        initialMessage = "Start the first conversation with this user using the standard Glai introduction and personality discovery protocol.";
-        sessionContext = {
-          isFirstSession: true,
-          sessionNumber: 1,
-          totalSessions: allConversations?.length || 1,
-          modalityExperience: 'new_user'
-        };
-      } else {
-        console.log('🔄 Returning user with completed sessions - using continuation protocol');
-        const sessionNumber = allConversations?.length || 1;
-        
-        // Determine modality experience
-        let modalityExperience = 'chat_only';
-        let modalityMessage = 'Welcome back to chat mode.';
-        
-        if (hasUsedVoice && !hasUsedChat) {
-          modalityExperience = 'voice_to_chat';
-          modalityMessage = `You've previously used voice conversations with me (${voiceConversations.length} voice sessions) and this is your first time trying chat mode.`;
-        } else if (hasUsedVoice && hasUsedChat) {
-          modalityExperience = 'cross_modal';
-          modalityMessage = `You have experience with both voice (${voiceConversations.length} sessions) and chat modes.`;
-        } else if (hasUsedChat) {
-          modalityExperience = 'chat_returning';
-          modalityMessage = `Welcome back to chat mode. You've had ${chatConversations.length - 1} previous chat sessions.`;
-        }
-        
-        initialMessage = `This is session ${sessionNumber} with this returning user (${completedConversations.length} completed sessions). ${modalityMessage} Ask if there are new topics they'd like to explore today.`;
-        
-        sessionContext = {
-          isFirstSession: false,
-          sessionNumber: sessionNumber,
-          totalSessions: allConversations?.length || 1,
-          completedSessions: completedConversations.length,
-          hasUsedVoice,
-          hasUsedChat,
-          modalityExperience
-        };
-      }
-
-      console.log('📊 Session context:', sessionContext);
-      console.log('💬 Initial message:', initialMessage);
-
-      // FIXED: Proper parameter structure for Edge Function
-      const requestBody = {
-        message: initialMessage,
-        conversationId: conversationId, // Ensure this is explicitly set
-        userId: user.id, // Ensure this is explicitly set
-        isFirstMessage: isFirstSessionEver,
-        sessionContext: sessionContext,
-        aiInitiated: true
-      };
-
-      console.log('🚀 Calling ai-chat function with body:', JSON.stringify(requestBody, null, 2));
-      
-      const response = await supabase.functions.invoke('ai-chat', {
-        body: requestBody
-      });
-
-      console.log('📥 AI chat response:', response);
-
-      if (response.error) {
-        console.error('❌ Supabase function error:', response.error);
-        throw new Error(response.error.message || 'AI function failed');
-      }
-
-      if (response.data?.error) {
-        console.error('❌ AI chat function error:', response.data.error);
-        throw new Error(response.data.error);
-      }
-
-      console.log('✅ AI function called successfully');
-
-      // Check for AI response with backoff
-      let checkAttempts = 0;
-      const maxAttempts = 8;
-      
-      const checkLoop = async () => {
-        checkAttempts++;
-        console.log(`🔍 Checking for AI response (${checkAttempts}/${maxAttempts})`);
-        
-        const foundMessage = await checkForNewMessages(conversationId);
-        
-        if (foundMessage) {
-          console.log('✅ AI message found');
-          return;
-        }
-        
-        if (checkAttempts < maxAttempts) {
-          const delay = 2000 + (checkAttempts * 1000);
-          setTimeout(checkLoop, delay);
-        } else {
-          console.error('❌ AI response timeout');
-          setIsWaitingForAI(false);
-          toast({
-            title: "AI Response Delayed",
-            description: "Please try typing a message to continue.",
-            variant: "default",
-          });
-        }
-      };
-
-      setTimeout(checkLoop, 1000);
-
-    } catch (error) {
-      console.error('❌ Error in sendAIFirstMessage:', error);
-      aiMessageSentRef.current = false; // Reset on error so it can retry
-      setIsWaitingForAI(false);
-      toast({
-        title: "Error",
-        description: "AI couldn't start the conversation. Please type a message to begin.",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Check for new messages fallback
   const checkForNewMessages = async (conversationId: string) => {
     try {
-      console.log('🔍 Checking database for messages in:', conversationId);
-      
       const { data: dbMessages } = await supabase
         .from('messages')
         .select('*')
@@ -484,14 +236,12 @@ const ChatConversation: React.FC = () => {
         let newMessagesAdded = 0;
         convertedMessages.forEach(msg => {
           if (!currentMessageIds.includes(msg.id)) {
-            console.log('➕ Adding missing message:', msg.role, msg.content.substring(0, 50));
             addMessageToSession(msg);
             newMessagesAdded++;
           }
         });
 
         if (newMessagesAdded > 0) {
-          console.log(`✅ Added ${newMessagesAdded} new messages`);
           setIsWaitingForAI(false);
           return true;
         }
@@ -504,39 +254,14 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // FIXED: Handle sending user messages with proper validation
+  // Handle sending user messages
   const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim()) return;
-
-    // CRITICAL: Validate conversation state
-    if (!conversation?.id) {
-      console.error('❌ No conversation ID available:', conversation);
-      toast({
-        title: "Error",
-        description: "No active conversation. Please refresh the page.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user?.id) {
-      console.error('❌ No user ID available');
-      return;
-    }
-
-    if (isLoading || isPaused) return;
-
-    console.log('📤 Sending message:', messageText.trim());
-    console.log('🔑 Using conversation ID:', conversation.id);
-    console.log('👤 Using user ID:', user.id);
+    if (!messageText.trim() || !conversation?.id || !user?.id || isLoading || isPaused) return;
 
     setIsLoading(true);
     setIsWaitingForAI(true);
     updateActivity();
 
-    const isFirstMessage = messages.length === 0;
-    
-    // Add user message to UI immediately
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -548,51 +273,35 @@ const ChatConversation: React.FC = () => {
     setTextInput('');
 
     try {
-      // FIXED: Ensure parameters are properly structured
-      const requestBody = {
-        message: messageText.trim(),
-        conversationId: conversation.id, // Explicitly pass conversationId
-        userId: user.id, // Explicitly pass userId
-        isFirstMessage: isFirstMessage
-      };
-
-      console.log('🚀 Sending to ai-chat:', JSON.stringify(requestBody, null, 2));
-
       const response = await supabase.functions.invoke('ai-chat', {
-        body: requestBody
+        body: {
+          message: messageText.trim(),
+          conversationId: conversation.id,
+          userId: user.id,
+          isFirstMessage: messages.length === 0
+        }
       });
 
       if (response.error) {
-        console.error('❌ Function error:', response.error);
         throw new Error(response.error.message);
       }
 
-      if (response.data?.error) {
-        console.error('❌ AI error:', response.data.error);
-        throw new Error(response.data.error);
-      }
-
-      console.log('✅ Message sent successfully');
-
-      // Check for AI response
-      let attempts = 0;
-      const checkResponse = async () => {
-        attempts++;
-        const found = await checkForNewMessages(conversation.id);
-        
-        if (!found && attempts < 5) {
-          setTimeout(checkResponse, 6000);
-        } else if (!found) {
-          setIsWaitingForAI(false);
-          toast({
-            title: "AI Response Delayed",
-            description: "Please try again if no response appears.",
-            variant: "default",
-          });
+      // Check for response
+      setTimeout(async () => {
+        if (isWaitingForAI) {
+          await checkForNewMessages(conversation.id);
+          setTimeout(() => {
+            if (isWaitingForAI) {
+              setIsWaitingForAI(false);
+              toast({
+                title: "AI Response Delayed",
+                description: "Please try again if no response appears.",
+                variant: "default",
+              });
+            }
+          }, 10000);
         }
-      };
-
-      setTimeout(checkResponse, 4000);
+      }, 4000);
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -607,91 +316,56 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // FIXED: Initialize conversation with complete isolation from other hooks
-  const hasInitializedRef = useRef(false);
-  const isCreatingConversationRef = useRef(false);
-  
+  // SIMPLIFIED: Initialize conversation
   useEffect(() => {
     if (!user?.id) return;
-    if (hasInitializedRef.current) {
-      console.log('⚠️ Initialization already completed, skipping...');
-      return;
-    }
-    if (isCreatingConversationRef.current) {
-      console.log('⚠️ Already creating conversation, skipping...');
-      return;
-    }
+    
+    let isMounted = true;
     
     const initializeConversation = async () => {
-      if (hasInitializedRef.current || isCreatingConversationRef.current) return;
-      
-      hasInitializedRef.current = true;
-      isCreatingConversationRef.current = true;
       setIsInitializing(true);
       
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const resumeId = urlParams.get('resume');
         
-        console.log('🔍 ISOLATED INITIALIZATION:', {
+        console.log('🔍 Initializing conversation:', {
           userId: user.id,
           continueConversation,
-          resumeId,
-          url: window.location.href,
-          timestamp: new Date().toISOString()
+          resumeId
         });
         
-        // DISABLE OTHER HOOKS TEMPORARILY
-        console.log('🛑 Disabling other hooks during initialization');
-        
         if (continueConversation === 'true') {
-          console.log('🔄 Handling continue paused conversation');
           await handleContinuePausedConversation();
         } else if (resumeId) {
-          console.log('🔄 Handling resume by ID:', resumeId);
           await handleResumeById(resumeId);
         } else {
-          console.log('🤖 Creating ISOLATED new chat conversation');
           await createNewConversation();
         }
       } catch (error) {
         console.error('❌ Initialization error:', error);
-        hasInitializedRef.current = false;
-        isCreatingConversationRef.current = false;
-        toast({
-          title: "Error", 
-          description: "Could not initialize conversation",
-          variant: "destructive",
-        });
       } finally {
-        setIsInitializing(false);
-        isCreatingConversationRef.current = false;
-        console.log('✅ Isolated initialization completed');
-        
-        // ENABLE OTHER HOOKS AFTER INITIALIZATION
-        setTimeout(() => {
-          console.log('🔓 Re-enabling hooks after successful initialization');
-          setAutoResumeEnabled(true);
-        }, 2000);
+        if (isMounted) {
+          setIsInitializing(false);
+        }
       }
     };
 
-    // DELAY INITIALIZATION to avoid conflicts with other components
-    console.log('⏰ Delaying initialization to avoid hook conflicts...');
-    setTimeout(initializeConversation, 1000);
+    // Small delay to avoid conflicts
+    setTimeout(initializeConversation, 500);
     
-  }, [user?.id]); // Only depend on user.id
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   // Setup subscription when conversation changes
   useEffect(() => {
     if (!conversation?.id) return;
-
-    console.log('🔄 Setting up subscription for conversation:', conversation.id);
     setupRealtimeSubscription(conversation.id);
 
     return () => {
       if (channelRef.current) {
-        console.log('🔕 Cleaning up subscription');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
@@ -769,11 +443,6 @@ const ChatConversation: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error resuming conversation:', error);
-      toast({
-        title: "Error",
-        description: "Could not resume conversation. Starting new one instead.",
-        variant: "destructive",
-      });
       await createNewConversation();
     }
   };
@@ -792,10 +461,6 @@ const ChatConversation: React.FC = () => {
         .maybeSingle();
       
       if (!pausedConv) {
-        toast({
-          title: "No paused conversation found",
-          description: "Starting a new conversation instead",
-        });
         await createNewConversation();
         return;
       }
@@ -841,11 +506,6 @@ const ChatConversation: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error continuing paused conversation:', error);
-      toast({
-        title: "Error",
-        description: "Could not continue paused conversation. Starting new one instead.",
-        variant: "destructive",
-      });
       await createNewConversation();
     }
   };
@@ -855,32 +515,19 @@ const ChatConversation: React.FC = () => {
     if (!conversation || !user) return;
 
     try {
-      console.log('🔄 Pausing session...');
-      
       const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
       stopAllVoiceAudio();
       
       const success = await pauseSession();
       if (success) {
         toast({
-          title: "🔄 Conversation Paused",
+          title: "Conversation Paused",
           description: "Conversation paused successfully",
         });
         navigate('/dashboard');
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to pause conversation",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       console.error('❌ Pause error:', error);
-      toast({
-        title: "Error",
-        description: "An error occurred while pausing",
-        variant: "destructive",
-      });
     }
   };
 
@@ -913,7 +560,7 @@ const ChatConversation: React.FC = () => {
       
       if (success && shouldGenerateInsights) {
         toast({
-          title: "🎯 Session Complete!",
+          title: "Session Complete!",
           description: `Session completed (${actualDuration} min). Generating insights...`,
         });
 
@@ -944,13 +591,11 @@ const ChatConversation: React.FC = () => {
           description: `Session completed but was too brief (${actualDuration} min) for detailed insights`,
         });
         navigate('/dashboard');
-      } else {
-        throw new Error('Failed to complete session');
       }
     } catch (error) {
       console.error('❌ Error completing session:', error);
       toast({
-        title: "⚠️ Completion Issues", 
+        title: "Completion Issues", 
         description: "Session may not be fully processed, but navigating to dashboard.",
         variant: "default",
       });
@@ -971,8 +616,8 @@ const ChatConversation: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-background border-b px-4 py-3">
+      {/* FIXED: Header with mobile layout */}
+      <header className="bg-background border-b px-4 py-3 sticky top-0 z-10">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-3">
             <Button 
@@ -984,8 +629,24 @@ const ChatConversation: React.FC = () => {
             </Button>
             <h1 className="text-lg font-medium">Therapeutic Chat</h1>
           </div>
-          <div className="flex items-center space-x-2">
+          
+          {/* Desktop: All buttons in one line */}
+          <div className="hidden sm:flex items-center space-x-2">
             {hasActiveSession && !isPaused && (
+              <>
+                <span className="text-sm text-green-600 font-medium">● Active Session</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePauseSession}
+                  className="text-sm"
+                >
+                  <Pause className="h-4 w-4 mr-1" />
+                  Pause
+                </Button>
+              </>
+            )}
+            {isPaused && (
               <>
                 <span className="text-sm text-amber-600 font-medium">⏸ Paused Session</span>
                 <Button
@@ -1013,9 +674,213 @@ const ChatConversation: React.FC = () => {
             )}
           </div>
         </div>
+        
+        {/* FIXED: Mobile - Session status and buttons on separate line */}
+        <div className="sm:hidden mt-2 flex flex-col space-y-2">
+          {/* Session status */}
+          <div className="flex justify-center">
+            {hasActiveSession && !isPaused && (
+              <span className="text-sm text-green-600 font-medium">● Active Session</span>
+            )}
+            {isPaused && (
+              <span className="text-sm text-amber-600 font-medium">⏸ Paused Session</span>
+            )}
+          </div>
+          
+          {/* Action buttons */}
+          <div className="flex justify-center space-x-3">
+            {hasActiveSession && !isPaused && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePauseSession}
+                className="text-sm"
+              >
+                <Pause className="h-4 w-4 mr-1" />
+                Pause
+              </Button>
+            )}
+            {isPaused && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResumeSession}
+                className="text-sm"
+              >
+                <Play className="h-4 w-4 mr-1" />
+                Resume
+              </Button>
+            )}
+            {hasActiveSession && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleEndSession}
+                disabled={messages.filter(msg => msg.role === 'user').length < 5}
+                className="text-sm text-red-600 hover:text-red-700 disabled:text-gray-400"
+              >
+                <Power className="h-4 w-4 mr-1" />
+                End
+              </Button>
+            )}
+          </div>
+        </div>
       </header>
 
       {/* Chat Interface */}
+      <div className="flex-1 flex flex-col w-full">
+        <div className="flex-1 overflow-hidden">
+          <div className="w-full h-full flex flex-col">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4 pb-20 sm:pb-4">
+              {/* Paused State Banner */}
+              {isPaused && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                  <div className="flex items-center justify-center space-x-2 text-amber-700">
+                    <Pause className="h-5 w-5" />
+                    <span className="font-medium">Session Paused</span>
+                  </div>
+                  <p className="text-sm text-amber-600 mt-1">
+                    Your conversation is safely saved. Click Resume to continue.
+                  </p>
+                  <div className="mt-3 space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResumeSession}
+                      className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      Resume Conversation
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate('/dashboard')}
+                      className="text-amber-600"
+                    >
+                      Return to Dashboard
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Waiting for AI state */}
+              {messages.length === 0 && isWaitingForAI && (
+                <div className="text-center text-muted-foreground py-8">
+                  <div className="max-w-md mx-auto space-y-4">
+                    <LoadingSpinner />
+                    <h3 className="text-lg font-medium text-foreground">AI is starting the conversation...</h3>
+                    <p className="text-sm">
+                      Your AI therapeutic assistant is preparing your first message. 
+                      This should only take a moment.
+                    </p>
+                    <p className="text-xs opacity-75">
+                      All conversations are private and secure.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* No messages and not waiting */}
+              {messages.length === 0 && !isWaitingForAI && !isLoading && (
+                <div className="text-center text-muted-foreground py-8">
+                  <div className="max-w-md mx-auto space-y-4">
+                    <h3 className="text-lg font-medium text-foreground">Ready to start your conversation</h3>
+                    <p className="text-sm">
+                      You can type a message below to begin, or wait for the AI to start automatically.
+                    </p>
+                    <Button 
+                      onClick={() => createNewConversation()}
+                      disabled={isLoading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Start AI Conversation
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] px-4 py-3 rounded-lg ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                    <p className="text-xs opacity-70 mt-1">
+                      {new Date(message.created_at).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {/* AI typing indicator */}
+              {isWaitingForAI && messages.length > 0 && (
+                <div className="flex justify-start">
+                  <div className="bg-muted px-4 py-3 rounded-lg max-w-[80%]">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      </div>
+                      <span className="text-xs text-muted-foreground">AI is typing...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* FIXED: Input Area with mobile layout */}
+            <div className="border-t bg-background p-4 sticky bottom-0 z-10">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(textInput);
+                    }
+                  }}
+                  placeholder={isPaused ? "Resume the conversation to continue..." : "Type your message..."}
+                  disabled={isLoading || isPaused || isWaitingForAI}
+                  className="flex-1 px-3 py-2 border border-input rounded-md bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <Button
+                  onClick={() => handleSendMessage(textInput)}
+                  disabled={!textInput.trim() || isLoading || isPaused || isWaitingForAI}
+                  size="sm"
+                >
+                  {isLoading ? (
+                    <LoadingSpinner />
+                  ) : (
+                    'Send'
+                  )}
+                </Button>
+              </div>
+              
+              {isPaused && (
+                <p className="text-xs text-amber-600 mt-2 text-center">
+                  Resume the conversation to continue messaging
+                </p>
+              )}
+              
+              {isWaitingForAI && (
+                <p className="text-xs text-blue-600 mt-2 text-center">
+                  Waiting for AI response...
+                </p>
       <div className="flex-1 flex flex-col w-full">
         <div className="flex-1 overflow-hidden">
           <div className="w-full h-full flex flex-col">
