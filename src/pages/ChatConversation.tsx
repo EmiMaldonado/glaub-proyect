@@ -160,6 +160,8 @@ const ChatConversation: React.FC = () => {
       channelRef.current = null;
     }
 
+    console.log('🔔 Setting up real-time subscription for:', conversationId);
+
     // Create new subscription
     const channel = supabase
       .channel(`chat-messages-${conversationId}`)
@@ -180,16 +182,26 @@ const ChatConversation: React.FC = () => {
           
           // If it's an AI message, we're no longer waiting
           if (newMessage.role === 'assistant') {
+            console.log('✅ AI message received, clearing waiting state');
             setIsWaitingForAI(false);
           }
         }
       )
       .subscribe((status) => {
         console.log('🔔 Subscription status:', status, 'for conversation:', conversationId);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active');
+        } else if (status === 'CLOSED') {
+          console.log('❌ Real-time subscription closed');
+        }
       });
 
     channelRef.current = channel;
-    console.log('✅ Real-time subscription setup for conversation:', conversationId);
+    console.log('✅ Real-time subscription setup completed for conversation:', conversationId);
+    
+    // Wait a moment for subscription to be ready
+    await new Promise(resolve => setTimeout(resolve, 500));
   };
 
   // Send AI's first message to start the conversation with enhanced session context
@@ -306,6 +318,8 @@ const ChatConversation: React.FC = () => {
   // Manual check for new messages (fallback)
   const checkForNewMessages = async (conversationId: string) => {
     try {
+      console.log('🔍 Checking database for messages in conversation:', conversationId);
+      
       const { data: dbMessages } = await supabase
         .from('messages')
         .select('*')
@@ -325,15 +339,24 @@ const ChatConversation: React.FC = () => {
         }));
 
         // Add messages that aren't already in state
+        let newMessagesAdded = 0;
         convertedMessages.forEach(msg => {
           const exists = messages.find(m => m.id === msg.id);
           if (!exists) {
             console.log('➕ Adding missing message:', msg.role, msg.id);
             addMessageToSession(msg);
+            newMessagesAdded++;
           }
         });
 
-        setIsWaitingForAI(false);
+        if (newMessagesAdded > 0) {
+          console.log(`✅ Added ${newMessagesAdded} missing messages`);
+          setIsWaitingForAI(false);
+        } else {
+          console.log('ℹ️ No new messages found');
+        }
+      } else {
+        console.log('⚠️ No messages found in database yet');
       }
     } catch (error) {
       console.error('❌ Error checking for messages:', error);
@@ -458,18 +481,28 @@ const ChatConversation: React.FC = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const resumeId = urlParams.get('resume');
         
+        console.log('🔍 Initialization check:', {
+          continueConversation,
+          resumeId,
+          hasActiveSession,
+          conversationId: conversation?.id,
+          url: window.location.href
+        });
+        
         if (continueConversation === 'true') {
+          console.log('🔄 Handling continue paused conversation');
           await handleContinuePausedConversation();
         } else if (resumeId) {
+          console.log('🔄 Handling resume by ID:', resumeId);
           await handleResumeById(resumeId);
-        } else if (hasActiveSession && conversation?.id) {
-          // Continue existing active session - setup subscription
+        } else if (hasActiveSession && conversation?.id && !window.location.href.includes('/chat-conversation')) {
+          // Only continue existing session if we're not on a fresh chat page
           console.log('📋 Continuing active chat session:', conversation.id);
           await setupRealtimeSubscription(conversation.id);
           setIsInitializing(false);
           return;
         } else {
-          // Create new conversation only when no active session exists
+          // Always create new conversation for fresh chat page visits
           console.log('🤖 Creating new chat conversation - AI will start automatically');
           await createNewConversation();
         }
