@@ -27,6 +27,12 @@ interface Conversation {
   started_at: string;
   insights?: any;
   ocean_signals?: any;
+
+useEffect(() => {
+  console.log('🎯 ChatConversation MOUNTED', Date.now());
+  return () => console.log('🎯 ChatConversation UNMOUNTED');
+}, []);
+
 }
 
 const ChatConversation: React.FC = () => {
