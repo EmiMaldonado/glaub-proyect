@@ -27,12 +27,6 @@ interface Conversation {
   started_at: string;
   insights?: any;
   ocean_signals?: any;
-
-useEffect(() => {
-  console.log('🎯 ChatConversation MOUNTED', Date.now());
-  return () => console.log('🎯 ChatConversation UNMOUNTED');
-}, []);
-
 }
 
 const ChatConversation: React.FC = () => {
@@ -40,6 +34,13 @@ const ChatConversation: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const continueConversation = searchParams.get('continue');
+  
+  // DEBUGGING: Log mount/unmount
+  useEffect(() => {
+    console.log('🎯 ChatConversation MOUNTED', Date.now());
+    return () => console.log('🎯 ChatConversation UNMOUNTED');
+  }, []);
+
   const {
     conversation,
     messages,
@@ -60,7 +61,6 @@ const ChatConversation: React.FC = () => {
 
   // ARREGLO CRÍTICO 1: Loop infinito eliminado
   const { generateResumeMessage } = useConversationState();
-  // REMOVIDO: refetchConversationState - causaba loop infinito
   
   // ARREGLO CRÍTICO 2: Auto-pause controlado sin loops
   const { pauseConversationWithContext } = useAutoPause({
@@ -72,7 +72,6 @@ const ChatConversation: React.FC = () => {
     },
     updateSessionState,
     onConversationPaused: (conversationId) => {
-      // REMOVIDO: refetchConversationState - causaba loops
       if (user?.id) {
         syncWithDatabaseState(conversationId);
       }
@@ -91,13 +90,11 @@ const ChatConversation: React.FC = () => {
   const subscriptionRef = useRef<string | null>(null);
 
   const setupRealtimeSubscription = async (conversationId: string) => {
-    // Prevenir múltiples suscripciones simultáneas
     if (subscriptionRef.current === conversationId) {
       console.log('⚠️ Subscription already exists for:', conversationId);
       return;
     }
 
-    // Limpiar suscripción anterior si existe
     if (channelRef.current) {
       console.log('🔕 Cleaning up previous subscription');
       await supabase.removeChannel(channelRef.current);
@@ -144,7 +141,6 @@ const ChatConversation: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 2000));
   };
 
-  // ARREGLO CRÍTICO 4: createNewConversation simplificado sin duplicación
   const createNewConversation = async () => {
     if (!user || isLoading) return;
 
@@ -154,20 +150,17 @@ const ChatConversation: React.FC = () => {
       
       console.log('🚀 SINGLE createNewConversation call for user:', user.id);
       
-      // Limpiar estado previo
       if (channelRef.current) {
         await supabase.removeChannel(channelRef.current);
         channelRef.current = null;
         subscriptionRef.current = null;
       }
       
-      // Clear paused conversations
       await supabase
         .from('paused_conversations')
         .delete()
         .eq('user_id', user.id);
       
-      // Count conversations
       const { count } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
@@ -175,7 +168,6 @@ const ChatConversation: React.FC = () => {
 
       const conversationNumber = (count || 0) + 1;
       
-      // Create conversation
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
@@ -192,12 +184,22 @@ const ChatConversation: React.FC = () => {
       
       console.log('✅ Conversation created with ID:', newConversation.id);
       
-      // Start session
       startNewSession(newConversation as Conversation);
-
-      // Setup UNIQUE subscription
       await setupRealtimeSubscription(newConversation.id);
+      await sendAIFirstMessage(newConversation.id);
 
+    } catch (error) {
+      console.error('❌ Error in createNewConversation:', error);
+      setIsWaitingForAI(false);
+      toast({
+        title: "Error",
+        description: "Could not create new conversation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
       // Send AI first message
       await sendAIFirstMessage(newConversation.id);
 
