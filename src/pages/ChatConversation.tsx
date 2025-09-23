@@ -338,6 +338,11 @@ const ChatConversation: React.FC = () => {
       console.log('✅ AI function called successfully');
 
       // Check for AI response with backoff
+      // Permitir llamadas del sistema sin conversationId
+      const isSystemCall = requestBody.systemContext && requestBody.skipDatabase;
+      if (!conversationId && !isSystemCall) {
+        throw new Error('Missing required field: conversationId');
+      }
       let checkAttempts = 0;
       const maxAttempts = 8;
       
