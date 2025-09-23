@@ -296,13 +296,32 @@ const ChatConversation: React.FC = () => {
 
       console.log('✅ AI conversation started with session context:', sessionContext);
 
-      // Set a timeout in case the real-time doesn't work
-      setTimeout(() => {
-        if (isWaitingForAI) {
-          console.log('⚠️ AI message timeout - checking database manually');
-          checkForNewMessages(conversationId);
+      // CRITICAL: Implement aggressive fallback checking
+      let checkAttempts = 0;
+      const maxAttempts = 6; // 6 attempts over 30 seconds
+      
+      const checkLoop = async () => {
+        checkAttempts++;
+        console.log(`🔍 Checking for AI message (attempt ${checkAttempts}/${maxAttempts})`);
+        
+        await checkForNewMessages(conversationId);
+        
+        // If still waiting and haven't reached max attempts, check again
+        if (isWaitingForAI && checkAttempts < maxAttempts) {
+          setTimeout(checkLoop, 5000); // Check every 5 seconds
+        } else if (isWaitingForAI && checkAttempts >= maxAttempts) {
+          console.error('❌ AI message timeout after maximum attempts');
+          setIsWaitingForAI(false);
+          toast({
+            title: "AI Response Delayed",
+            description: "The AI is taking longer than expected. Please try typing a message to continue.",
+            variant: "default",
+          });
         }
-      }, 10000); // 10 second timeout
+      };
+
+      // Start checking after 3 seconds
+      setTimeout(checkLoop, 3000);
 
     } catch (error) {
       console.error('❌ Error starting AI conversation:', error);
@@ -329,6 +348,9 @@ const ChatConversation: React.FC = () => {
       if (dbMessages && dbMessages.length > 0) {
         console.log('📥 Found messages in database:', dbMessages.length);
         
+        // Get current message IDs to avoid duplicates
+        const currentMessageIds = messages.map(m => m.id);
+        
         // Convert and add any missing messages
         const convertedMessages: Message[] = dbMessages.map((msg: any) => ({
           id: msg.id,
@@ -341,9 +363,8 @@ const ChatConversation: React.FC = () => {
         // Add messages that aren't already in state
         let newMessagesAdded = 0;
         convertedMessages.forEach(msg => {
-          const exists = messages.find(m => m.id === msg.id);
-          if (!exists) {
-            console.log('➕ Adding missing message:', msg.role, msg.id);
+          if (!currentMessageIds.includes(msg.id)) {
+            console.log('➕ Adding missing message:', msg.role, msg.id, msg.content.substring(0, 50));
             addMessageToSession(msg);
             newMessagesAdded++;
           }
@@ -352,14 +373,18 @@ const ChatConversation: React.FC = () => {
         if (newMessagesAdded > 0) {
           console.log(`✅ Added ${newMessagesAdded} missing messages`);
           setIsWaitingForAI(false);
+          return true; // Return success
         } else {
-          console.log('ℹ️ No new messages found');
+          console.log('ℹ️ No new messages found (all messages already in state)');
+          return false;
         }
       } else {
         console.log('⚠️ No messages found in database yet');
+        return false;
       }
     } catch (error) {
       console.error('❌ Error checking for messages:', error);
+      return false;
     }
   };
 
@@ -448,13 +473,32 @@ const ChatConversation: React.FC = () => {
 
       console.log('✅ Message sent successfully', response.data?.debug);
 
-      // Set timeout for AI response
-      setTimeout(() => {
-        if (isWaitingForAI) {
-          console.log('⚠️ AI response timeout - checking database');
-          checkForNewMessages(conversation.id);
+      // Set timeout for AI response with multiple checks
+      let responseCheckAttempts = 0;
+      const maxResponseAttempts = 5;
+      
+      const checkResponseLoop = async () => {
+        responseCheckAttempts++;
+        console.log(`🔍 Checking for AI response (attempt ${responseCheckAttempts}/${maxResponseAttempts})`);
+        
+        const foundMessage = await checkForNewMessages(conversation.id);
+        
+        // If still waiting and haven't reached max attempts, check again
+        if (!foundMessage && isWaitingForAI && responseCheckAttempts < maxResponseAttempts) {
+          setTimeout(checkResponseLoop, 6000); // Check every 6 seconds
+        } else if (!foundMessage && isWaitingForAI && responseCheckAttempts >= maxResponseAttempts) {
+          console.error('❌ AI response timeout after maximum attempts');
+          setIsWaitingForAI(false);
+          toast({
+            title: "AI Response Delayed",
+            description: "The AI is taking longer than expected. Please try typing a message to continue.",
+            variant: "default",
+          });
         }
-      }, 15000); // 15 second timeout
+      };
+
+      // Start checking after 4 seconds to give real-time a chance first
+      setTimeout(checkResponseLoop, 4000);
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
