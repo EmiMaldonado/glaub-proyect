@@ -77,7 +77,7 @@ const ChatConversation: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isWaitingForAI, setIsWaitingForAI] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<any>(null); // Track subscription
+  const channelRef = useRef<any>(null);
 
   // DEBUGGING: Verificar estado de Supabase
   const checkSupabaseConnection = () => {
@@ -90,36 +90,35 @@ const ChatConversation: React.FC = () => {
     };
     
     console.log('🔌 Supabase connection status:', connectionStatus, connectionMap[connectionStatus || 3]);
-    console.log('🔌 Supabase realtime:', {
-      connected: supabase.realtime.isConnected(),
-      channels: supabase.realtime.channels?.length || 0
-    });
-    
-    return connectionStatus === 1; // 1 = OPEN
+    return connectionStatus === 1;
   };
 
-  // SOLUCIÓN 2: Mejorar setupRealtimeSubscription
+  // Setup real-time subscription with proper cleanup and validation
   const setupRealtimeSubscription = async (conversationId: string) => {
+    // CRITICAL: Validate conversationId before proceeding
+    if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
+      console.error('❌ Invalid conversationId for subscription:', conversationId);
+      return;
+    }
+
     // Clean up existing subscription
     if (channelRef.current) {
       console.log('🔕 Cleaning up existing subscription');
       await supabase.removeChannel(channelRef.current);
       channelRef.current = null;
-      // Esperar un poco para asegurar limpieza completa
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     console.log('🔔 Setting up real-time subscription for:', conversationId);
     
-    // DEBUGGING: Verificar conexión antes de suscribir
+    // Verify connection
     const isConnected = checkSupabaseConnection();
     if (!isConnected) {
       console.warn('⚠️ Supabase not connected, waiting...');
       await new Promise(resolve => setTimeout(resolve, 2000));
-      checkSupabaseConnection();
     }
 
-    // Create new subscription
+    // Create subscription
     const channel = supabase
       .channel(`chat-messages-${conversationId}`)
       .on(
@@ -132,12 +131,10 @@ const ChatConversation: React.FC = () => {
         },
         (payload) => {
           const newMessage = payload.new as Message;
-          console.log('📨 Received real-time message:', newMessage.role, newMessage.id, newMessage.content.substring(0, 50));
+          console.log('📨 Real-time message received:', newMessage.role, newMessage.id);
           
-          // Add message to session state
           addMessageToSession(newMessage);
           
-          // If it's an AI message, we're no longer waiting
           if (newMessage.role === 'assistant') {
             console.log('✅ AI message received, clearing waiting state');
             setIsWaitingForAI(false);
@@ -145,72 +142,56 @@ const ChatConversation: React.FC = () => {
         }
       )
       .subscribe((status) => {
-        console.log('🔔 Subscription status:', status, 'for conversation:', conversationId, 'at:', new Date().toISOString());
-        
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Real-time subscription active and ready');
-        } else if (status === 'CLOSED') {
-          console.log('❌ Real-time subscription closed');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Real-time subscription error');
-        }
+        console.log('🔔 Subscription status:', status, 'for:', conversationId);
       });
 
     channelRef.current = channel;
-    
-    // MEJORADO: Esperar más tiempo para asegurar que la suscripción esté completamente activa
-    console.log('⏰ Waiting for subscription to be ready...');
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // DEBUGGING: Verificar estado final de la suscripción
-    console.log('🔔 Final subscription state:', {
-      channelState: channel.state,
-      subscribed: channel.state === 'joined',
-      conversationId
-    });
-    
-    console.log('✅ Real-time subscription setup completed for conversation:', conversationId);
+    console.log('✅ Real-time subscription ready for:', conversationId);
   };
 
-  // Create new conversation with AI automatically starting the conversation
+  // FIXED: Create new conversation with single-call protection
   const createNewConversation = async () => {
-    if (!user || isLoading) return;
+    if (!user || isLoading) {
+      console.log('❌ Cannot create conversation: no user or loading');
+      return;
+    }
+
+    // Prevent multiple simultaneous calls
+    if (isLoading) {
+      console.log('⚠️ Already creating conversation, skipping duplicate call');
+      return;
+    }
 
     try {
       setIsLoading(true);
       setIsWaitingForAI(true);
       
-      console.log('🚀 Creating new conversation for user:', user.id);
+      console.log('🚀 SINGLE CALL - Creating new conversation for user:', user.id);
       
-      // MEJORADO: Limpiar estado previo COMPLETAMENTE
-      console.log('🧹 Starting complete state cleanup...');
+      // Clean up existing state
       if (channelRef.current) {
-        console.log('🔕 Removing existing channel subscription');
         await supabase.removeChannel(channelRef.current);
         channelRef.current = null;
-        // Esperar para asegurar limpieza completa
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
-      // Clear any existing paused conversation first (only one paused conversation allowed)
-      console.log('🗑️ Clearing any existing paused conversations');
+      // Clear paused conversations when creating new
+      console.log('🗑️ Clearing existing paused conversations');
       await supabase
         .from('paused_conversations')
         .delete()
         .eq('user_id', user.id);
       
-      // Count ALL existing conversations (voice + chat) for unified session numbering
-      console.log('🔢 Counting existing conversations...');
+      // Count conversations for numbering
       const { count } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       const conversationNumber = (count || 0) + 1;
-      console.log('📊 This will be conversation number:', conversationNumber);
       
-      // Create new conversation with unified numbering
-      console.log('💾 Creating new conversation in database...');
+      // Create conversation in database
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
@@ -222,34 +203,34 @@ const ChatConversation: React.FC = () => {
         .single();
 
       if (error) {
-        console.error('❌ Database error creating conversation:', error);
+        console.error('❌ Database error:', error);
         throw error;
       }
 
-      console.log('✅ New conversation created successfully:', newConversation);
-      
-      // CRITICAL: Verify that the conversation has an ID
+      // CRITICAL: Validate conversation was created with ID
       if (!newConversation?.id) {
-        console.error('❌ Conversation created but ID is missing:', newConversation);
-        throw new Error('Conversation created but ID is missing');
+        console.error('❌ No conversation ID returned:', newConversation);
+        throw new Error('Failed to create conversation - no ID returned');
       }
       
-      console.log('🔑 Conversation ID confirmed:', newConversation.id);
+      console.log('✅ Conversation created with ID:', newConversation.id);
       
-      // MEJORADO: Start new session FIRST (esto actualiza el estado local inmediatamente)
-      console.log('🎯 Starting new session in session manager...');
+      // Start session manager with new conversation
       startNewSession(newConversation as Conversation);
 
-      // MEJORADO: Setup real-time subscription and WAIT for it to be completely ready
-      console.log('🔔 Setting up real-time subscription...');
+      // Setup subscription
       await setupRealtimeSubscription(newConversation.id);
 
-      // MEJORADO: Send AI first message AFTER subscription is confirmed ready
-      console.log('🤖 Sending AI first message...');
+      // CRITICAL: Add delay before AI message to ensure session is fully established
+      console.log('⏰ Waiting for session to stabilize before AI message...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Send AI first message with VALIDATED conversationId
       await sendAIFirstMessage(newConversation.id);
 
     } catch (error) {
       console.error('❌ Error creating conversation:', error);
+      setIsWaitingForAI(false);
       toast({
         title: "Error",
         description: "Could not create new conversation",
@@ -257,96 +238,96 @@ const ChatConversation: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
-      // NO ponemos setIsWaitingForAI(false) aquí - lo dejamos para cuando llegue la respuesta del AI
     }
   };
 
-  // Send AI's first message to start the conversation with enhanced session context
+  // FIXED: Send AI first message with proper parameter validation
   const sendAIFirstMessage = async (conversationId: string) => {
+    // CRITICAL: Validate conversationId before making request
+    if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
+      console.error('❌ Invalid conversationId for AI message:', conversationId);
+      setIsWaitingForAI(false);
+      toast({
+        title: "Error",
+        description: "Invalid conversation ID. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      console.error('❌ No user ID available');
+      setIsWaitingForAI(false);
+      return;
+    }
+
     try {
-      console.log('🤖 Sending AI first message for conversation:', conversationId);
+      console.log('🤖 Sending AI first message...');
+      console.log('📝 ConversationId:', conversationId);
+      console.log('👤 UserId:', user.id);
+      
       setIsWaitingForAI(true);
       
-      // Get comprehensive session history for proper continuity
+      // Get session context
       const { data: allConversations } = await supabase
         .from('conversations')
         .select('id, title, status, ended_at, insights, ocean_signals')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       const completedConversations = allConversations?.filter(c => c.status === 'completed') || [];
-      const totalSessionCount = (allConversations?.length || 0);
       const isFirstSessionEver = completedConversations.length === 0;
 
-      // Analyze conversation history for cross-mode awareness
-      const voiceConversations = completedConversations.filter(c => 
-        c.title?.toLowerCase().includes('voice') || 
-        c.title?.toLowerCase().includes('session')
-      );
-      const chatConversations = completedConversations.filter(c => 
-        c.title?.toLowerCase().includes('conversation') && 
-        !c.title?.toLowerCase().includes('voice')
-      );
-
-      const hasUsedVoice = voiceConversations.length > 0;
-      const hasUsedChat = chatConversations.length > 0;
-      
+      let initialMessage;
       let sessionContext;
       
       if (isFirstSessionEver) {
+        initialMessage = "Start the first conversation with this user using the standard Glai introduction and personality discovery protocol.";
         sessionContext = {
           isFirstSession: true,
           sessionNumber: 1,
-          totalSessions: totalSessionCount,
           modalityExperience: 'new_user'
         };
       } else {
+        const voiceConversations = completedConversations.filter(c => 
+          c.title?.toLowerCase().includes('voice') || 
+          c.title?.toLowerCase().includes('session')
+        );
+        const hasUsedVoice = voiceConversations.length > 0;
+        
+        initialMessage = `This is session ${allConversations?.length || 1} with this returning user (${completedConversations.length} completed sessions). ${hasUsedVoice ? 'The user has previously used voice conversations and is now trying chat mode.' : 'Welcome them back to chat mode.'} Ask if there are new topics they'd like to explore today.`;
         sessionContext = {
           isFirstSession: false,
-          sessionNumber: totalSessionCount,
-          totalSessions: totalSessionCount,
+          sessionNumber: allConversations?.length || 1,
           completedSessions: completedConversations.length,
-          hasUsedVoice,
-          hasUsedChat,
-          modalityExperience: hasUsedVoice && hasUsedChat ? 'cross_modal' : 
-                             hasUsedVoice ? 'voice_to_chat' : 'chat_only'
+          hasUsedVoice
         };
       }
 
-      console.log('📊 Session context determined:', sessionContext);
+      console.log('📊 Session context:', sessionContext);
+      console.log('💬 Initial message:', initialMessage);
 
-      // Create context-aware initial message
-      let initialMessage;
-      
-      if (isFirstSessionEver) {
-        initialMessage = "Start the first conversation with this user using the standard Glai introduction and personality discovery protocol.";
-      } else {
-        const modalityContext = sessionContext.modalityExperience === 'voice_to_chat' 
-          ? ` The user has previously used voice conversations with you (${voiceConversations.length} voice sessions) and is now trying chat mode for the first time.`
-          : sessionContext.modalityExperience === 'cross_modal'
-          ? ` The user has experience with both voice and chat modes.`
-          : ` The user has used chat mode before.`;
+      // FIXED: Proper parameter structure for Edge Function
+      const requestBody = {
+        message: initialMessage,
+        conversationId: conversationId, // Ensure this is explicitly set
+        userId: user.id, // Ensure this is explicitly set
+        isFirstMessage: isFirstSessionEver,
+        sessionContext: sessionContext,
+        aiInitiated: true
+      };
 
-        initialMessage = `This is session ${sessionContext.sessionNumber} with this returning user (${completedConversations.length} completed sessions).${modalityContext} Welcome them back warmly, acknowledge their previous sessions, and ask if there are new topics they'd like to explore today in chat mode.`;
-      }
-
-      console.log('🚀 Calling ai-chat function for first message...');
-      console.log('📝 Initial message:', initialMessage);
+      console.log('🚀 Calling ai-chat function with body:', JSON.stringify(requestBody, null, 2));
       
       const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message: initialMessage,
-          conversationId: conversationId,
-          userId: user?.id,
-          isFirstMessage: isFirstSessionEver,
-          sessionContext,
-          aiInitiated: true
-        }
+        body: requestBody
       });
+
+      console.log('📥 AI chat response:', response);
 
       if (response.error) {
         console.error('❌ Supabase function error:', response.error);
-        throw new Error(response.error.message || 'Failed to start AI conversation');
+        throw new Error(response.error.message || 'AI function failed');
       }
 
       if (response.data?.error) {
@@ -354,47 +335,41 @@ const ChatConversation: React.FC = () => {
         throw new Error(response.data.error);
       }
 
-      console.log('✅ AI conversation started with session context:', sessionContext);
-      console.log('🔍 Function response:', response.data);
+      console.log('✅ AI function called successfully');
 
-      // MEJORADO: Verificación más robusta con backoff exponencial
+      // Check for AI response with backoff
       let checkAttempts = 0;
       const maxAttempts = 8;
-      const baseDelay = 2000; // Empezar con 2 segundos
       
       const checkLoop = async () => {
         checkAttempts++;
-        console.log(`🔍 Checking for AI message (attempt ${checkAttempts}/${maxAttempts}) at ${new Date().toISOString()}`);
+        console.log(`🔍 Checking for AI response (${checkAttempts}/${maxAttempts})`);
         
         const foundMessage = await checkForNewMessages(conversationId);
         
         if (foundMessage) {
-          console.log('✅ AI message found successfully, stopping check loop');
+          console.log('✅ AI message found');
           return;
         }
         
         if (checkAttempts < maxAttempts) {
-          // Backoff exponencial: 2s, 3s, 4s, 6s, 8s, 12s, 16s, 24s
-          const delay = baseDelay + (checkAttempts * 1000);
-          console.log(`⏰ No message yet, retrying in ${delay}ms`);
+          const delay = 2000 + (checkAttempts * 1000);
           setTimeout(checkLoop, delay);
         } else {
-          console.error('❌ AI message timeout after maximum attempts');
+          console.error('❌ AI response timeout');
           setIsWaitingForAI(false);
           toast({
             title: "AI Response Delayed",
-            description: "The AI is taking longer than expected. Please try typing a message to continue.",
+            description: "Please try typing a message to continue.",
             variant: "default",
           });
         }
       };
 
-      // MEJORADO: Empezar verificación inmediatamente pero con delay corto
-      console.log('⏰ Starting message verification in 1 second...');
       setTimeout(checkLoop, 1000);
 
     } catch (error) {
-      console.error('❌ Error starting AI conversation:', error);
+      console.error('❌ Error in sendAIFirstMessage:', error);
       setIsWaitingForAI(false);
       toast({
         title: "Error",
@@ -404,10 +379,10 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Manual check for new messages (fallback)
+  // Check for new messages fallback
   const checkForNewMessages = async (conversationId: string) => {
     try {
-      console.log('🔍 Checking database for messages in conversation:', conversationId);
+      console.log('🔍 Checking database for messages in:', conversationId);
       
       const { data: dbMessages } = await supabase
         .from('messages')
@@ -416,12 +391,7 @@ const ChatConversation: React.FC = () => {
         .order('created_at', { ascending: true });
 
       if (dbMessages && dbMessages.length > 0) {
-        console.log('📥 Found messages in database:', dbMessages.length);
-        
-        // Get current message IDs to avoid duplicates
         const currentMessageIds = messages.map(m => m.id);
-        
-        // Convert and add any missing messages
         const convertedMessages: Message[] = dbMessages.map((msg: any) => ({
           id: msg.id,
           role: msg.role as 'user' | 'assistant',
@@ -430,79 +400,62 @@ const ChatConversation: React.FC = () => {
           metadata: msg.metadata
         }));
 
-        // Add messages that aren't already in state
         let newMessagesAdded = 0;
         convertedMessages.forEach(msg => {
           if (!currentMessageIds.includes(msg.id)) {
-            console.log('➕ Adding missing message:', msg.role, msg.id, msg.content.substring(0, 50));
+            console.log('➕ Adding missing message:', msg.role, msg.content.substring(0, 50));
             addMessageToSession(msg);
             newMessagesAdded++;
           }
         });
 
         if (newMessagesAdded > 0) {
-          console.log(`✅ Added ${newMessagesAdded} missing messages`);
+          console.log(`✅ Added ${newMessagesAdded} new messages`);
           setIsWaitingForAI(false);
-          return true; // Return success
-        } else {
-          console.log('ℹ️ No new messages found (all messages already in state)');
-          return false;
+          return true;
         }
-      } else {
-        console.log('⚠️ No messages found in database yet');
-        return false;
       }
+      
+      return false;
     } catch (error) {
-      console.error('❌ Error checking for messages:', error);
+      console.error('❌ Error checking messages:', error);
       return false;
     }
   };
 
-  // Handle sending user messages - FIXED VERSION with proper validation
+  // FIXED: Handle sending user messages with proper validation
   const handleSendMessage = async (messageText: string) => {
-    // CRITICAL: Add comprehensive validation
-    if (!messageText.trim()) {
-      console.log('❌ Cannot send empty message');
-      return;
-    }
+    if (!messageText.trim()) return;
 
-    if (!conversation) {
-      console.log('❌ Cannot send message: No conversation object');
+    // CRITICAL: Validate conversation state
+    if (!conversation?.id) {
+      console.error('❌ No conversation ID available:', conversation);
       toast({
         title: "Error",
-        description: "No active conversation. Please try refreshing the page.",
+        description: "No active conversation. Please refresh the page.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!conversation.id) {
-      console.log('❌ Cannot send message: Conversation ID is missing', conversation);
-      toast({
-        title: "Error",
-        description: "Invalid conversation state. Please start a new conversation.",
-        variant: "destructive",
-      });
+    if (!user?.id) {
+      console.error('❌ No user ID available');
       return;
     }
 
-    if (isLoading || isPaused) {
-      console.log('❌ Cannot send message: Loading or paused', { isLoading, isPaused });
-      return;
-    }
+    if (isLoading || isPaused) return;
 
-    console.log('📤 Sending message with conversation ID:', conversation.id);
-    console.log('📝 Message content:', messageText.trim());
+    console.log('📤 Sending message:', messageText.trim());
+    console.log('🔑 Using conversation ID:', conversation.id);
+    console.log('👤 Using user ID:', user.id);
 
     setIsLoading(true);
     setIsWaitingForAI(true);
-    updateActivity(); // Update last activity
+    updateActivity();
 
-    // Check if this is the first message in the conversation
     const isFirstMessage = messages.length === 0;
-    console.log('🔍 Is first message:', isFirstMessage, 'Current message count:', messages.length);
     
-    // Add user message immediately for instant feedback
+    // Add user message to UI immediately
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -510,73 +463,62 @@ const ChatConversation: React.FC = () => {
       created_at: new Date().toISOString(),
     };
     
-    console.log('💬 Adding user message to session:', userMessage.id);
     addMessageToSession(userMessage);
-    setTextInput(''); // Clear input immediately
+    setTextInput('');
 
     try {
-      console.log('🚀 Calling ai-chat function with:', {
-        conversationId: conversation.id,
-        userId: user?.id,
-        messageLength: messageText.trim().length,
-        isFirstMessage
-      });
+      // FIXED: Ensure parameters are properly structured
+      const requestBody = {
+        message: messageText.trim(),
+        conversationId: conversation.id, // Explicitly pass conversationId
+        userId: user.id, // Explicitly pass userId
+        isFirstMessage: isFirstMessage
+      };
+
+      console.log('🚀 Sending to ai-chat:', JSON.stringify(requestBody, null, 2));
 
       const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message: messageText.trim(),
-          conversationId: conversation.id,
-          userId: user?.id,
-          isFirstMessage: isFirstMessage
-        }
+        body: requestBody
       });
 
       if (response.error) {
-        console.error('❌ Supabase function error:', response.error);
-        throw new Error(response.error.message || 'Failed to send message');
+        console.error('❌ Function error:', response.error);
+        throw new Error(response.error.message);
       }
 
       if (response.data?.error) {
-        console.error('❌ AI chat function error:', response.data.error);
+        console.error('❌ AI error:', response.data.error);
         throw new Error(response.data.error);
       }
 
-      console.log('✅ Message sent successfully', response.data?.debug);
+      console.log('✅ Message sent successfully');
 
-      // Set timeout for AI response with multiple checks
-      let responseCheckAttempts = 0;
-      const maxResponseAttempts = 5;
-      
-      const checkResponseLoop = async () => {
-        responseCheckAttempts++;
-        console.log(`🔍 Checking for AI response (attempt ${responseCheckAttempts}/${maxResponseAttempts})`);
+      // Check for AI response
+      let attempts = 0;
+      const checkResponse = async () => {
+        attempts++;
+        const found = await checkForNewMessages(conversation.id);
         
-        const foundMessage = await checkForNewMessages(conversation.id);
-        
-        // If still waiting and haven't reached max attempts, check again
-        if (!foundMessage && isWaitingForAI && responseCheckAttempts < maxResponseAttempts) {
-          setTimeout(checkResponseLoop, 6000); // Check every 6 seconds
-        } else if (!foundMessage && isWaitingForAI && responseCheckAttempts >= maxResponseAttempts) {
-          console.error('❌ AI response timeout after maximum attempts');
+        if (!found && attempts < 5) {
+          setTimeout(checkResponse, 6000);
+        } else if (!found) {
           setIsWaitingForAI(false);
           toast({
             title: "AI Response Delayed",
-            description: "The AI is taking longer than expected. Please try typing a message to continue.",
+            description: "Please try again if no response appears.",
             variant: "default",
           });
         }
       };
 
-      // Start checking after 4 seconds to give real-time a chance first
-      setTimeout(checkResponseLoop, 4000);
+      setTimeout(checkResponse, 4000);
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
       setIsWaitingForAI(false);
-      
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Could not send message. Please try again.",
+        description: error instanceof Error ? error.message : "Could not send message",
         variant: "destructive",
       });
     } finally {
@@ -584,36 +526,39 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // SOLUCIÓN 1: Initialize conversation on mount - LÓGICA SIMPLIFICADA
+  // FIXED: Initialize conversation with proper dependency management to prevent multiple calls
+  const hasInitializedRef = useRef(false);
+  
   useEffect(() => {
     if (!user) return;
+    if (hasInitializedRef.current) {
+      console.log('⚠️ Initialization already completed, skipping...');
+      return;
+    }
     
     const initializeConversation = async () => {
+      if (hasInitializedRef.current) return; // Double-check
+      
+      hasInitializedRef.current = true; // Mark as started immediately
       setIsInitializing(true);
       
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const resumeId = urlParams.get('resume');
         
-        // DEBUGGING: Logs detallados del estado
-        console.log('🔍 DETAILED STATE CHECK:', {
+        console.log('🔍 INITIALIZATION STATE:', {
           user: !!user,
           userId: user?.id,
           hasActiveSession,
           conversationExists: !!conversation,
           conversationId: conversation?.id,
-          conversationStatus: conversation?.status,
           continueConversation,
           resumeId,
           url: window.location.href,
           timestamp: new Date().toISOString(),
-          messagesCount: messages.length,
-          isInitializing,
-          isLoading,
-          isWaitingForAI
+          isInitializing
         });
         
-        // DEBUGGING: Verificar estado de Supabase al inicio
         checkSupabaseConnection();
         
         if (continueConversation === 'true') {
@@ -623,13 +568,13 @@ const ChatConversation: React.FC = () => {
           console.log('🔄 Handling resume by ID:', resumeId);
           await handleResumeById(resumeId);
         } else {
-          // SOLUCIÓN 1: SIMPLIFICADO - Siempre crear nueva conversación para nueva pestaña
-          console.log('🤖 Creating new chat conversation - AI will start automatically');
-          console.log('🎯 Reason: Fresh chat page visit or no special resume parameters');
+          // For new chat tabs, always create new conversation
+          console.log('🤖 Creating new chat conversation - SINGLE CALL');
           await createNewConversation();
         }
       } catch (error) {
-        console.error('❌ Error initializing conversation:', error);
+        console.error('❌ Initialization error:', error);
+        hasInitializedRef.current = false; // Reset on error so it can retry
         toast({
           title: "Error", 
           description: "Could not initialize conversation",
@@ -642,19 +587,18 @@ const ChatConversation: React.FC = () => {
     };
 
     initializeConversation();
-  }, [user, continueConversation]);
+  }, [user?.id]); // FIXED: Only depend on user.id, not user object or other changing values
 
-  // Setup real-time subscription when conversation changes
+  // Setup subscription when conversation changes
   useEffect(() => {
     if (!conversation?.id) return;
 
-    console.log('🔄 Conversation changed, setting up subscription for:', conversation.id);
+    console.log('🔄 Setting up subscription for conversation:', conversation.id);
     setupRealtimeSubscription(conversation.id);
 
-    // Cleanup function
     return () => {
       if (channelRef.current) {
-        console.log('🔕 Cleaning up subscription on unmount for conversation:', conversation.id);
+        console.log('🔕 Cleaning up subscription');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
@@ -666,14 +610,11 @@ const ChatConversation: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle resume by conversation ID (new system)
+  // Handle resume by conversation ID
   const handleResumeById = async (conversationId: string) => {
     if (!user) return;
 
     try {
-      console.log('🔄 Resuming conversation by ID:', conversationId);
-      
-      // Get conversation with session data
       const { data: conversation, error } = await supabase
         .from('conversations')
         .select('*')
@@ -683,7 +624,6 @@ const ChatConversation: React.FC = () => {
 
       if (error) throw error;
 
-      // Check if conversation is paused
       if (conversation.status !== 'paused') {
         toast({
           title: "Invalid conversation",
@@ -694,14 +634,12 @@ const ChatConversation: React.FC = () => {
         return;
       }
 
-      // Get message history
       const { data: dbMessages } = await supabase  
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
-      // Convert database messages to Message format
       const messages: Message[] = (dbMessages || []).map((msg: any) => ({
         id: msg.id,
         role: msg.role as 'user' | 'assistant',
@@ -710,31 +648,22 @@ const ChatConversation: React.FC = () => {
         metadata: msg.metadata
       }));
 
-      // Update conversation status to active
       await supabase
         .from('conversations')
         .update({ status: 'active' })
         .eq('id', conversationId);
 
-      // Resume session with previous messages  
       resumeSession(conversation as Conversation, messages);
-
-      // Setup real-time subscription
       await setupRealtimeSubscription(conversationId);
 
-      // Generate contextual resume message from AI
-      console.log('🤖 AI continuing conversation after resume with context');
-      const sessionData = conversation.session_data as any;
       const resumeMessage = generateResumeMessage(
         { 
-          lastTopic: sessionData?.lastTopic || conversation.title, 
-          pausedAt: sessionData?.pausedAt,
-          userConcerns: sessionData?.userConcerns 
+          lastTopic: conversation.title, 
+          pausedAt: conversation.session_data?.pausedAt 
         },
         user.email?.split('@')[0] || 'there'
       );
       
-      // Add resume message to chat
       const aiResumeMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -745,7 +674,73 @@ const ChatConversation: React.FC = () => {
       
       addMessageToSession(aiResumeMessage);
 
-      // Delete the paused conversation since we're continuing it
+    } catch (error) {
+      console.error('❌ Error resuming conversation:', error);
+      toast({
+        title: "Error",
+        description: "Could not resume conversation. Starting new one instead.",
+        variant: "destructive",
+      });
+      await createNewConversation();
+    }
+  };
+
+  // Handle continue paused conversation (legacy)
+  const handleContinuePausedConversation = async () => {
+    if (!user) return;
+
+    try {
+      const { data: pausedConv } = await supabase
+        .from('paused_conversations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (!pausedConv) {
+        toast({
+          title: "No paused conversation found",
+          description: "Starting a new conversation instead",
+        });
+        await createNewConversation();
+        return;
+      }
+
+      const previousMessages = typeof pausedConv.message_history === 'string' 
+        ? JSON.parse(pausedConv.message_history)
+        : pausedConv.message_history;
+
+      const { data: newConversation, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: `Continued ${pausedConv.conversation_title}`,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      resumeSession(newConversation as Conversation, previousMessages);
+      await setupRealtimeSubscription(newConversation.id);
+
+      const resumeMessage = generateResumeMessage(
+        { lastTopic: pausedConv.conversation_title, pausedAt: pausedConv.created_at },
+        user.email?.split('@')[0] || 'there'
+      );
+      
+      const aiResumeMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: resumeMessage,
+        created_at: new Date().toISOString(),
+        metadata: { isResumeMessage: true }
+      };
+      
+      addMessageToSession(aiResumeMessage);
+
       await supabase
         .from('paused_conversations')
         .delete()
@@ -762,30 +757,27 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle pause session with audio control and unified state management
+  // Handle pause session
   const handlePauseSession = async () => {
     if (!conversation || !user) return;
 
     try {
-      console.log('🔄 handlePauseSession: Starting pause with audio stop');
+      console.log('🔄 Pausing session...');
       
-      // Stop all voice audio IMMEDIATELY
       const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
       stopAllVoiceAudio();
-      console.log('🔇 handlePauseSession: Voice audio stopped');
       
-      // Use the session manager's pause function directly (already has audio control)
       const success = await pauseSession();
       if (success) {
         toast({
           title: "🔄 Conversation Paused",
-          description: "Voice stopped and conversation paused successfully",
+          description: "Conversation paused successfully",
         });
         navigate('/dashboard');
       } else {
         toast({
           title: "Error",
-          description: "Failed to pause conversation. Please try again.",
+          description: "Failed to pause conversation",
           variant: "destructive",
         });
       }
@@ -793,7 +785,7 @@ const ChatConversation: React.FC = () => {
       console.error('❌ Pause error:', error);
       toast({
         title: "Error",
-        description: "An error occurred while pausing the conversation",
+        description: "An error occurred while pausing",
         variant: "destructive",
       });
     }
@@ -805,14 +797,12 @@ const ChatConversation: React.FC = () => {
     resumePausedSession();
   };
 
-  // Handle end session (explicit finish conversation)
+  // Handle end session
   const handleEndSession = async () => {
     if (!conversation) return;
 
-    // Count user messages (not AI messages)
     const userMessageCount = messages.filter(msg => msg.role === 'user').length;
     
-    // Require minimum 5 user messages before allowing completion
     if (userMessageCount < 5) {
       toast({
         title: "Minimum Messages Required",
@@ -822,27 +812,19 @@ const ChatConversation: React.FC = () => {
       return;
     }
 
-    console.log('🏁 handleEndSession: Attempting to complete chat session');
-    
     try {
-      // Calculate actual duration based on conversation start time
       const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
-      
-      // Check minimum duration requirement for insights (1 minute)
       const shouldGenerateInsights = actualDuration >= 1 && userMessageCount >= 5;
 
       const success = await completeSession();
       
       if (success && shouldGenerateInsights) {
-        console.log('✅ Session meets criteria for insights generation');
-        
         toast({
           title: "🎯 Session Complete!",
           description: `Session completed (${actualDuration} min). Generating insights...`,
         });
 
         try {
-          // Generate insights via edge function
           const response = await supabase.functions.invoke('session-analysis', {
             body: {
               conversationId: conversation.id,
@@ -850,20 +832,12 @@ const ChatConversation: React.FC = () => {
             }
           });
 
-          if (response.error) {
-            console.error('❌ Session analysis failed:', response.error);
-            throw new Error(response.error.message);
-          }
-
           if (response.data) {
-            console.log('✅ Session analysis completed successfully');
             navigate(`/session-summary?conversation_id=${conversation.id}`);
           } else {
-            console.log('⚠️ Session analysis returned no data');
             navigate('/dashboard');
           }
         } catch (analysisError) {
-          console.error('❌ Session analysis failed:', analysisError);
           toast({
             title: "Session Completed",
             description: "Session saved but analysis failed. Check dashboard for insights.",
@@ -872,7 +846,6 @@ const ChatConversation: React.FC = () => {
           navigate('/dashboard');
         }
       } else if (success) {
-        console.log(`⚠️ Session too short for insights: ${actualDuration} min, ${userMessageCount} messages`);
         toast({
           title: "Session Complete",
           description: `Session completed but was too brief (${actualDuration} min) for detailed insights`,
@@ -882,29 +855,14 @@ const ChatConversation: React.FC = () => {
         throw new Error('Failed to complete session');
       }
     } catch (error) {
-      console.error('❌ handleEndSession: Error completing session:', error);
-      
-      // Even on completion failure, navigate to dashboard
+      console.error('❌ Error completing session:', error);
       toast({
         title: "⚠️ Completion Issues", 
         description: "Session may not be fully processed, but navigating to dashboard.",
         variant: "default",
       });
-      
       setTimeout(() => navigate('/dashboard'), 1000);
     }
-  };
-
-  // Handle new conversation (clears any session)
-  const handleNewConversation = async () => {
-    // Clear any existing paused session
-    if (user) {
-      await supabase
-        .from('paused_conversations')
-        .delete()
-        .eq('user_id', user.id);
-    }
-    createNewConversation();
   };
 
   if (isInitializing) {
@@ -913,9 +871,6 @@ const ChatConversation: React.FC = () => {
         <div className="text-center space-y-4">
           <LoadingSpinner />
           <p className="text-muted-foreground">Starting conversation...</p>
-          <p className="text-xs text-muted-foreground">
-            Initializing real-time connection and AI system
-          </p>
         </div>
       </div>
     );
@@ -938,20 +893,6 @@ const ChatConversation: React.FC = () => {
           </div>
           <div className="flex items-center space-x-2">
             {hasActiveSession && !isPaused && (
-              <>
-                <span className="text-sm text-green-600 font-medium">● Active Session</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePauseSession}
-                  className="text-sm"
-                >
-                  <Pause className="h-4 w-4 mr-1" />
-                  Pause
-                </Button>
-              </>
-            )}
-            {isPaused && (
               <>
                 <span className="text-sm text-amber-600 font-medium">⏸ Paused Session</span>
                 <Button
@@ -1144,82 +1085,17 @@ const ChatConversation: React.FC = () => {
   );
 };
 
-export default ChatConversation;ResumeMessage);
-
-    } catch (error) {
-      console.error('❌ Error resuming conversation:', error);
-      toast({
-        title: "Error",
-        description: "Could not resume conversation. Starting new one instead.",
-        variant: "destructive",
-      });
-      await createNewConversation();
-    }
-  };
-
-  // Handle continue paused conversation (legacy system - for backward compatibility)
-  const handleContinuePausedConversation = async () => {
-    if (!user) return;
-
-    try {
-      console.log('🔄 Handling continue paused conversation (legacy)');
-      
-      // Get paused conversation messages
-      const { data: pausedConv } = await supabase
-        .from('paused_conversations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (!pausedConv) {
-        toast({
-          title: "No paused conversation found",
-          description: "Starting a new conversation instead",
-        });
-        await createNewConversation();
-        return;
-      }
-
-      // Parse messages
-      const previousMessages = typeof pausedConv.message_history === 'string' 
-        ? JSON.parse(pausedConv.message_history)
-        : pausedConv.message_history;
-
-      // Create new active conversation for continuation
-      const { data: newConversation, error } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          title: `Continued ${pausedConv.conversation_title}`,
-          status: 'active'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Resume session with previous messages
-      resumeSession(newConversation as Conversation, previousMessages);
-
-      // Setup real-time subscription
-      await setupRealtimeSubscription(newConversation.id);
-
-      // Generate contextual resume message from AI
-      console.log('🤖 AI continuing conversation after resume with context');
-      const resumeMessage = generateResumeMessage(
-        { lastTopic: pausedConv.conversation_title, pausedAt: pausedConv.created_at },
-        user.email?.split('@')[0] || 'there'
-      );
-      
-      // Add resume message to chat
-      const aiResumeMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: resumeMessage,
-        created_at: new Date().toISOString(),
-        metadata: { isResumeMessage: true }
-      };
-      
-      addMessageToSession(ai
+export default ChatConversation;<span className="text-sm text-green-600 font-medium">● Active Session</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePauseSession}
+                  className="text-sm"
+                >
+                  <Pause className="h-4 w-4 mr-1" />
+                  Pause
+                </Button>
+              </>
+            )}
+            {isPaused && (
+              <>
