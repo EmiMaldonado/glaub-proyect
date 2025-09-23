@@ -35,12 +35,31 @@ const ChatConversation: React.FC = () => {
   const [searchParams] = useSearchParams();
   const continueConversation = searchParams.get('continue');
   
-  // DEBUGGING: Log mount/unmount
+  // Estados principales
+  const [textInput, setTextInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isWaitingForAI, setIsWaitingForAI] = useState(false);
+  
+  // Debug logging
   useEffect(() => {
-    console.log('🎯 ChatConversation MOUNTED', Date.now());
-    return () => console.log('🎯 ChatConversation UNMOUNTED');
-  }, []);
+    console.log('🎯 ChatConversation STATE UPDATE:', {
+      hasActiveSession,
+      isPaused,
+      conversationId: conversation?.id,
+      messageCount: messages.length,
+      userMessageCount: messages.filter(msg => msg.role === 'user').length,
+      conversationStatus: conversation?.status
+    });
+  }, [hasActiveSession, isPaused, conversation, messages]);
+  
+  // Referencias
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<any>(null);
+  const subscriptionRef = useRef<string | null>(null);
+  const hasInitialized = useRef(false);
 
+  // Hooks personalizados
   const {
     conversation,
     messages,
@@ -52,24 +71,18 @@ const ChatConversation: React.FC = () => {
     pauseSession,
     resumePausedSession,
     completeSession,
-    endSession,
     updateActivity,
-    loadSessionFromLocal,
     updateSessionState,
     syncWithDatabaseState
   } = useSessionManager();
 
-  // ARREGLO CRÍTICO 1: Loop infinito eliminado
   const { generateResumeMessage } = useConversationState();
   
-  // ARREGLO CRÍTICO 2: Auto-pause controlado sin loops
   const { pauseConversationWithContext } = useAutoPause({
     conversation,
     messages,
     userId: user?.id,
-    onPause: () => {
-      navigate('/dashboard');
-    },
+    onPause: () => navigate('/dashboard'),
     updateSessionState,
     onConversationPaused: (conversationId) => {
       if (user?.id) {
@@ -78,23 +91,15 @@ const ChatConversation: React.FC = () => {
     },
     pauseSessionFunction: pauseSession
   });
-  
-  const [textInput, setTextInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [isWaitingForAI, setIsWaitingForAI] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<any>(null);
 
-  // ARREGLO CRÍTICO 3: Sistema mejorado de suscripciones únicas
-  const subscriptionRef = useRef<string | null>(null);
-
+  // Configurar suscripción en tiempo real (una sola por conversación)
   const setupRealtimeSubscription = async (conversationId: string) => {
     if (subscriptionRef.current === conversationId) {
       console.log('⚠️ Subscription already exists for:', conversationId);
       return;
     }
 
+    // Limpiar suscripción previa si existe
     if (channelRef.current) {
       console.log('🔕 Cleaning up previous subscription');
       await supabase.removeChannel(channelRef.current);
@@ -103,7 +108,7 @@ const ChatConversation: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    console.log('🔔 Setting up NEW real-time subscription for:', conversationId);
+    console.log('🔔 Setting up real-time subscription for:', conversationId);
     
     const channel = supabase
       .channel(`chat-messages-${conversationId}`)
@@ -117,7 +122,7 @@ const ChatConversation: React.FC = () => {
         },
         (payload) => {
           const newMessage = payload.new as Message;
-          console.log('📨 UNIQUE subscription received message:', newMessage.role, newMessage.id);
+          console.log('📨 Subscription received message:', newMessage.role, newMessage.id);
           
           addMessageToSession(newMessage);
           
@@ -127,20 +132,21 @@ const ChatConversation: React.FC = () => {
         }
       )
       .subscribe((status) => {
-        console.log('🔔 UNIQUE subscription status:', status, 'for:', conversationId);
+        console.log('🔔 Subscription status:', status, 'for:', conversationId);
         
         if (status === 'SUBSCRIBED') {
           subscriptionRef.current = conversationId;
-          console.log('✅ UNIQUE subscription confirmed for:', conversationId);
+          console.log('✅ Subscription confirmed for:', conversationId);
         } else if (status === 'CLOSED') {
           subscriptionRef.current = null;
         }
       });
 
     channelRef.current = channel;
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
   };
 
+  // Crear nueva conversación
   const createNewConversation = async () => {
     if (!user || isLoading) return;
 
@@ -148,19 +154,22 @@ const ChatConversation: React.FC = () => {
       setIsLoading(true);
       setIsWaitingForAI(true);
       
-      console.log('🚀 SINGLE createNewConversation call for user:', user.id);
+      console.log('🚀 Creating new conversation for user:', user.id);
       
+      // Limpiar suscripciones previas
       if (channelRef.current) {
         await supabase.removeChannel(channelRef.current);
         channelRef.current = null;
         subscriptionRef.current = null;
       }
       
+      // Limpiar conversaciones pausadas previas
       await supabase
         .from('paused_conversations')
         .delete()
         .eq('user_id', user.id);
       
+      // Obtener número de conversación
       const { count } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
@@ -168,6 +177,7 @@ const ChatConversation: React.FC = () => {
 
       const conversationNumber = (count || 0) + 1;
       
+      // Crear nueva conversación
       const { data: newConversation, error } = await supabase
         .from('conversations')
         .insert({
@@ -189,22 +199,7 @@ const ChatConversation: React.FC = () => {
       await sendAIFirstMessage(newConversation.id);
 
     } catch (error) {
-      console.error('❌ Error in createNewConversation:', error);
-      setIsWaitingForAI(false);
-      toast({
-        title: "Error",
-        description: "Could not create new conversation",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-      // Send AI first message
-      await sendAIFirstMessage(newConversation.id);
-
-    } catch (error) {
-      console.error('❌ Error in createNewConversation:', error);
+      console.error('❌ Error creating conversation:', error);
       setIsWaitingForAI(false);
       toast({
         title: "Error",
@@ -216,7 +211,7 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Send AI first message
+  // Enviar primer mensaje de AI
   const sendAIFirstMessage = async (conversationId: string) => {
     if (!conversationId || !user?.id) {
       setIsWaitingForAI(false);
@@ -243,22 +238,24 @@ const ChatConversation: React.FC = () => {
 
       console.log('✅ AI conversation started successfully');
 
-      // Simple fallback check
+      // Fallback para verificar si llegó el mensaje
       setTimeout(async () => {
         if (isWaitingForAI) {
-          await checkForNewMessages(conversationId);
-          setTimeout(() => {
-            if (isWaitingForAI) {
-              setIsWaitingForAI(false);
-              toast({
-                title: "Ready to Chat",
-                description: "You can start the conversation by typing a message below.",
-                variant: "default",
-              });
-            }
-          }, 10000);
+          const hasNewMessages = await checkForNewMessages(conversationId);
+          if (!hasNewMessages) {
+            setTimeout(() => {
+              if (isWaitingForAI) {
+                setIsWaitingForAI(false);
+                toast({
+                  title: "Ready to Chat",
+                  description: "You can start the conversation by typing a message below.",
+                  variant: "default",
+                });
+              }
+            }, 5000);
+          }
         }
-      }, 5000);
+      }, 3000);
 
     } catch (error) {
       console.error('❌ Error starting AI conversation:', error);
@@ -271,8 +268,8 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Check for new messages fallback
-  const checkForNewMessages = async (conversationId: string) => {
+  // Verificar nuevos mensajes (fallback)
+  const checkForNewMessages = async (conversationId: string): Promise<boolean> => {
     try {
       const { data: dbMessages } = await supabase
         .from('messages')
@@ -311,7 +308,7 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle sending user messages
+  // Manejar envío de mensajes del usuario
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim() || !conversation?.id || !user?.id || isLoading || isPaused) return;
 
@@ -343,22 +340,24 @@ const ChatConversation: React.FC = () => {
         throw new Error(response.error.message);
       }
 
-      // Check for AI response
+      // Verificar respuesta de AI con timeout
       setTimeout(async () => {
         if (isWaitingForAI) {
-          await checkForNewMessages(conversation.id);
-          setTimeout(() => {
-            if (isWaitingForAI) {
-              setIsWaitingForAI(false);
-              toast({
-                title: "AI Response Delayed",
-                description: "Please try again if no response appears.",
-                variant: "default",
-              });
-            }
-          }, 10000);
+          const hasNewMessages = await checkForNewMessages(conversation.id);
+          if (!hasNewMessages) {
+            setTimeout(() => {
+              if (isWaitingForAI) {
+                setIsWaitingForAI(false);
+                toast({
+                  title: "AI Response Delayed",
+                  description: "Please try again if no response appears.",
+                  variant: "default",
+                });
+              }
+            }, 7000);
+          }
         }
-      }, 4000);
+      }, 3000);
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -373,73 +372,7 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // ARREGLO CRÍTICO 5: Inicialización controlada sin loops
-  const hasInitialized = useRef(false);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    if (hasInitialized.current) {
-      console.log('⚠️ Already initialized, preventing duplicate initialization');
-      return;
-    }
-    
-    hasInitialized.current = true;
-    
-    const initializeConversation = async () => {
-      setIsInitializing(true);
-      
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const resumeId = urlParams.get('resume');
-        
-        console.log('🔍 CONTROLLED initialization:', {
-          userId: user.id,
-          continueConversation,
-          resumeId,
-          hasActiveSession,
-          conversationId: conversation?.id
-        });
-        
-        if (continueConversation === 'true') {
-          console.log('🔄 Continue paused conversation');
-          await handleContinuePausedConversation();
-        } else if (resumeId) {
-          console.log('🔄 Resume by ID:', resumeId);
-          await handleResumeById(resumeId);
-        } else if (hasActiveSession && conversation?.id) {
-          console.log('📋 Continue existing session:', conversation.id);
-          await setupRealtimeSubscription(conversation.id);
-        } else {
-          console.log('🤖 Create new conversation');
-          await createNewConversation();
-        }
-      } catch (error) {
-        console.error('❌ Initialization error:', error);
-        hasInitialized.current = false; // Reset para permitir retry
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-
-    // Delay para evitar race conditions
-    setTimeout(initializeConversation, 800);
-
-    // Cleanup
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-        subscriptionRef.current = null;
-      }
-    };
-  }, [user?.id]); // Solo depende de user.id para evitar re-ejecuciones
-
-  // Scroll to bottom when messages update
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Handle resume by conversation ID
+  // Reanudar conversación por ID
   const handleResumeById = async (conversationId: string) => {
     if (!user) return;
 
@@ -509,7 +442,7 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle continue paused conversation
+  // Continuar conversación pausada
   const handleContinuePausedConversation = async () => {
     if (!user) return;
 
@@ -572,7 +505,7 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle pause session
+  // Pausar sesión
   const handlePauseSession = async () => {
     if (!conversation || !user) return;
 
@@ -593,78 +526,215 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // Handle resume session
+  // Reanudar sesión
   const handleResumeSession = () => {
     if (!conversation || !user) return;
     resumePausedSession();
   };
 
-  // Handle end session
+  // Finalizar sesión
   const handleEndSession = async () => {
-    if (!conversation) return;
+    if (!conversation) {
+      console.log('❌ No conversation found');
+      return;
+    }
 
     const userMessageCount = messages.filter(msg => msg.role === 'user').length;
     
-    if (userMessageCount < 5) {
+    console.log('🏁 Attempting to end session:', {
+      conversationId: conversation.id,
+      userMessageCount,
+      totalMessages: messages.length,
+      status: conversation.status
+    });
+    
+    // Reducir requisito mínimo para testing - cambiar a 3 mensajes
+    if (userMessageCount < 3) {
       toast({
         title: "Minimum Messages Required",
-        description: `You need to send at least 5 messages before ending the session. You've sent ${userMessageCount} message${userMessageCount === 1 ? '' : 's'}.`,
+        description: `You need to send at least 3 messages before ending the session. You've sent ${userMessageCount} message${userMessageCount === 1 ? '' : 's'}.`,
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
-      const shouldGenerateInsights = actualDuration >= 1 && userMessageCount >= 5;
-
-      const success = await completeSession();
+      setIsLoading(true);
       
-      if (success && shouldGenerateInsights) {
+      const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
+      const shouldGenerateInsights = actualDuration >= 1 && userMessageCount >= 3;
+
+      console.log('🔄 Completing session...', {
+        actualDuration,
+        shouldGenerateInsights
+      });
+
+      // Llamar directamente a la función de finalización sin esperar el hook
+      const success = await completeSessionDirectly(conversation.id);
+      
+      if (success) {
         toast({
           title: "Session Complete!",
-          description: `Session completed (${actualDuration} min). Generating insights...`,
+          description: `Session completed (${actualDuration} min)${shouldGenerateInsights ? '. Generating insights...' : ''}`,
         });
 
-        try {
-          const response = await supabase.functions.invoke('session-analysis', {
-            body: {
-              conversationId: conversation.id,
-              userId: user?.id
+        if (shouldGenerateInsights) {
+          try {
+            console.log('🧠 Generating session insights...');
+            const response = await supabase.functions.invoke('session-analysis', {
+              body: {
+                conversationId: conversation.id,
+                userId: user?.id
+              }
+            });
+
+            if (response.data && !response.error) {
+              console.log('✅ Insights generated, navigating to summary');
+              navigate(`/session-summary?conversation_id=${conversation.id}`);
+              return;
+            } else {
+              console.log('⚠️ Insights generation failed:', response.error);
             }
-          });
-
-          if (response.data) {
-            navigate(`/session-summary?conversation_id=${conversation.id}`);
-          } else {
-            navigate('/dashboard');
+          } catch (analysisError) {
+            console.error('❌ Analysis error:', analysisError);
           }
-        } catch (analysisError) {
-          toast({
-            title: "Session Completed",
-            description: "Session saved but analysis failed. Check dashboard for insights.",
-            variant: "default",
-          });
-          navigate('/dashboard');
         }
-      } else if (success) {
-        toast({
-          title: "Session Complete",
-          description: `Session completed but was too brief for detailed insights`,
-        });
+        
+        // Si no hay insights o fallback
+        console.log('📊 Navigating to dashboard');
         navigate('/dashboard');
+      } else {
+        throw new Error('Failed to complete session');
       }
     } catch (error) {
       console.error('❌ Error completing session:', error);
       toast({
-        title: "Completion Issues", 
-        description: "Session may not be fully processed, but navigating to dashboard.",
+        title: "Session Ending", 
+        description: "Processing session completion. Redirecting to dashboard...",
         variant: "default",
       });
-      setTimeout(() => navigate('/dashboard'), 1000);
+      
+      // Force navigation después de un breve delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Función directa para completar sesión
+  const completeSessionDirectly = async (conversationId: string): Promise<boolean> => {
+    if (!user?.id) return false;
+
+    try {
+      const actualDuration = Math.ceil((Date.now() - new Date(conversation!.started_at).getTime()) / (1000 * 60));
+
+      // Actualizar estado en la base de datos
+      const { error: updateError } = await supabase
+        .from('conversations')
+        .update({ 
+          status: 'completed',
+          duration_minutes: actualDuration,
+          session_data: {
+            completedAt: new Date().toISOString(),
+            finalMessageCount: messages.length,
+            actualDuration
+          }
+        })
+        .eq('id', conversationId)
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        console.error('❌ Database update error:', updateError);
+        throw updateError;
+      }
+
+      // Limpiar localStorage
+      localStorage.removeItem('therapeutic_session');
+      localStorage.removeItem('therapeutic_messages');
+      localStorage.removeItem('therapeutic_last_activity');
+
+      // Limpiar conversaciones pausadas
+      await supabase
+        .from('paused_conversations')
+        .delete()
+        .eq('user_id', user.id);
+
+      console.log('✅ Session completed successfully in database');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error in completeSessionDirectly:', error);
+      return false;
+    }
+  };
+
+  // Inicialización controlada
+  useEffect(() => {
+    if (!user?.id) return;
+    if (hasInitialized.current) {
+      console.log('⚠️ Already initialized, preventing duplicate initialization');
+      return;
+    }
+    
+    hasInitialized.current = true;
+    
+    const initializeConversation = async () => {
+      setIsInitializing(true);
+      
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const resumeId = urlParams.get('resume');
+        
+        console.log('🔍 Controlled initialization:', {
+          userId: user.id,
+          continueConversation,
+          resumeId,
+          hasActiveSession,
+          conversationId: conversation?.id
+        });
+        
+        if (continueConversation === 'true') {
+          console.log('🔄 Continue paused conversation');
+          await handleContinuePausedConversation();
+        } else if (resumeId) {
+          console.log('🔄 Resume by ID:', resumeId);
+          await handleResumeById(resumeId);
+        } else if (hasActiveSession && conversation?.id) {
+          console.log('📋 Continue existing session:', conversation.id);
+          await setupRealtimeSubscription(conversation.id);
+        } else {
+          console.log('🤖 Create new conversation');
+          await createNewConversation();
+        }
+      } catch (error) {
+        console.error('❌ Initialization error:', error);
+        hasInitialized.current = false; // Reset para permitir retry
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    // Delay para evitar race conditions
+    setTimeout(initializeConversation, 500);
+
+    // Cleanup
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+        subscriptionRef.current = null;
+      }
+    };
+  }, [user?.id]); // Solo depende de user.id
+
+  // Scroll a la parte inferior cuando se actualizan los mensajes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Mostrar loading durante inicialización
   if (isInitializing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -678,7 +748,7 @@ const ChatConversation: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* MOBILE LAYOUT ARREGLADO: Header */}
+      {/* Header */}
       <header className="bg-background border-b px-4 py-3 sticky top-0 z-10">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-3">
@@ -693,7 +763,7 @@ const ChatConversation: React.FC = () => {
             <h1 className="text-base font-medium sm:hidden">Chat</h1>
           </div>
           
-          {/* Desktop: Status y botones juntos */}
+          {/* Desktop: Status y botones */}
           <div className="hidden sm:flex items-center space-x-2">
             {hasActiveSession && !isPaused && (
               <>
@@ -711,7 +781,7 @@ const ChatConversation: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={handleEndSession}
-                  disabled={messages.filter(msg => msg.role === 'user').length < 5}
+                  disabled={messages.filter(msg => msg.role === 'user').length < 3 || isLoading}
                   className="text-sm text-red-600 hover:text-red-700 disabled:text-gray-400"
                 >
                   <Power className="h-4 w-4 mr-1" />
@@ -834,9 +904,9 @@ const ChatConversation: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* MOBILE LAYOUT ARREGLADO: Input y botones */}
+            {/* Input Area */}
             <div className="border-t bg-background p-4 sticky bottom-0 z-10">
-              {/* Input de mensaje */}
+              {/* Message Input */}
               <div className="flex space-x-2 mb-4 sm:mb-0">
                 <input
                   type="text"
@@ -861,10 +931,51 @@ const ChatConversation: React.FC = () => {
                 </Button>
               </div>
 
-              {/* MOBILE: Botones de control en línea separada */}
+              {/* Mobile: Control buttons */}
               <div className="sm:hidden">
                 {hasActiveSession && !isPaused && (
                   <div className="flex flex-wrap justify-center gap-2 pt-3 border-t border-border">
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={handlePauseSession}
+                      className="text-sm"
+                    >
+                      <Pause className="h-4 w-4 mr-1" />
+                      Pause
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEndSession}
+                      disabled={messages.filter(msg => msg.role === 'user').length < 3 || isLoading}
+                      className="text-sm text-red-600 hover:text-red-700 disabled:text-gray-400"
+                    >
+                      <Power className="h-4 w-4 mr-1" />
+                      Finish
+                    </Button>
+                  </div>
+                )}
+                {isPaused && (
+                  <div className="flex justify-center pt-3 border-t border-border">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResumeSession}
+                      className="text-sm"
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      Resume
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ChatConversation;
