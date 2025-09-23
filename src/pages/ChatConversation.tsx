@@ -170,6 +170,9 @@ const ChatConversation: React.FC = () => {
       setIsLoading(true);
       setIsWaitingForAI(true);
       
+      // Reset AI message flag for new conversation
+      aiMessageSentRef.current = false;
+      
       console.log('🚀 SINGLE CALL - Creating new conversation for user:', user.id);
       
       // Clean up existing state
@@ -244,8 +247,16 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // FIXED: Send AI first message with proper parameter validation
+  // FIXED: Send AI first message with protection against double calls
+  const aiMessageSentRef = useRef(false);
+  
   const sendAIFirstMessage = async (conversationId: string) => {
+    // CRITICAL: Prevent double calls to AI
+    if (aiMessageSentRef.current) {
+      console.log('⚠️ AI message already sent for this session, skipping duplicate call');
+      return;
+    }
+    
     // CRITICAL: Validate conversationId before making request
     if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
       console.error('❌ Invalid conversationId for AI message:', conversationId);
@@ -280,46 +291,96 @@ const ChatConversation: React.FC = () => {
     }
 
     try {
-      console.log('🤖 Sending AI first message...');
+      // Mark as sending to prevent duplicates
+      aiMessageSentRef.current = true;
+      
+      console.log('🤖 SINGLE AI CALL - Sending first message...');
       console.log('📝 ConversationId:', conversationId);
       console.log('👤 UserId:', user.id);
       console.log('🔍 Session state verified:', conversation.id);
       
       setIsWaitingForAI(true);
       
-      // Get session context
+      // Get session context - CORRECT LOGIC
       const { data: allConversations } = await supabase
         .from('conversations')
         .select('id, title, status, ended_at, insights, ocean_signals')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
+      console.log('📊 All conversations found:', allConversations?.length || 0);
+
+      // CORRECT: Only count COMPLETED conversations for first session detection
       const completedConversations = allConversations?.filter(c => c.status === 'completed') || [];
       const isFirstSessionEver = completedConversations.length === 0;
+      
+      console.log('🔍 Session analysis:', {
+        totalConversations: allConversations?.length || 0,
+        completedConversations: completedConversations.length,
+        isFirstSessionEver
+      });
+
+      // Analyze conversation types from ALL conversations (not just completed)
+      const voiceConversations = allConversations?.filter(c => 
+        c.title?.toLowerCase().includes('voice') || 
+        c.title?.toLowerCase().includes('session')
+      ) || [];
+      const chatConversations = allConversations?.filter(c => 
+        c.title?.toLowerCase().includes('conversation') && 
+        !c.title?.toLowerCase().includes('voice')
+      ) || [];
+
+      const hasUsedVoice = voiceConversations.length > 0;
+      const hasUsedChat = chatConversations.length > 1; // > 1 because current chat is included
+      
+      console.log('🔍 Conversation types:', {
+        voiceConversations: voiceConversations.length,
+        chatConversations: chatConversations.length,
+        hasUsedVoice,
+        hasUsedChat
+      });
 
       let initialMessage;
       let sessionContext;
       
       if (isFirstSessionEver) {
+        console.log('🎯 First session ever - using introduction protocol');
         initialMessage = "Start the first conversation with this user using the standard Glai introduction and personality discovery protocol.";
         sessionContext = {
           isFirstSession: true,
           sessionNumber: 1,
+          totalSessions: allConversations?.length || 1,
           modalityExperience: 'new_user'
         };
       } else {
-        const voiceConversations = completedConversations.filter(c => 
-          c.title?.toLowerCase().includes('voice') || 
-          c.title?.toLowerCase().includes('session')
-        );
-        const hasUsedVoice = voiceConversations.length > 0;
+        console.log('🔄 Returning user with completed sessions - using continuation protocol');
+        const sessionNumber = allConversations?.length || 1;
         
-        initialMessage = `This is session ${allConversations?.length || 1} with this returning user (${completedConversations.length} completed sessions). ${hasUsedVoice ? 'The user has previously used voice conversations and is now trying chat mode.' : 'Welcome them back to chat mode.'} Ask if there are new topics they'd like to explore today.`;
+        // Determine modality experience
+        let modalityExperience = 'chat_only';
+        let modalityMessage = 'Welcome back to chat mode.';
+        
+        if (hasUsedVoice && !hasUsedChat) {
+          modalityExperience = 'voice_to_chat';
+          modalityMessage = `You've previously used voice conversations with me (${voiceConversations.length} voice sessions) and this is your first time trying chat mode.`;
+        } else if (hasUsedVoice && hasUsedChat) {
+          modalityExperience = 'cross_modal';
+          modalityMessage = `You have experience with both voice (${voiceConversations.length} sessions) and chat modes.`;
+        } else if (hasUsedChat) {
+          modalityExperience = 'chat_returning';
+          modalityMessage = `Welcome back to chat mode. You've had ${chatConversations.length - 1} previous chat sessions.`;
+        }
+        
+        initialMessage = `This is session ${sessionNumber} with this returning user (${completedConversations.length} completed sessions). ${modalityMessage} Ask if there are new topics they'd like to explore today.`;
+        
         sessionContext = {
           isFirstSession: false,
-          sessionNumber: allConversations?.length || 1,
+          sessionNumber: sessionNumber,
+          totalSessions: allConversations?.length || 1,
           completedSessions: completedConversations.length,
-          hasUsedVoice
+          hasUsedVoice,
+          hasUsedChat,
+          modalityExperience
         };
       }
 
@@ -389,6 +450,7 @@ const ChatConversation: React.FC = () => {
 
     } catch (error) {
       console.error('❌ Error in sendAIFirstMessage:', error);
+      aiMessageSentRef.current = false; // Reset on error so it can retry
       setIsWaitingForAI(false);
       toast({
         title: "Error",
