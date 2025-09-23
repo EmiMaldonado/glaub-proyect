@@ -419,10 +419,7 @@ const ChatConversation: React.FC = () => {
       await setupRealtimeSubscription(conversationId);
 
       const resumeMessage = generateResumeMessage(
-        { 
-          lastTopic: conversation.title, 
-          pausedAt: conversation.session_data?.pausedAt 
-        },
+        conversation.session_data || { lastTopic: conversation.title, pausedAt: conversation.session_data?.pausedAt },
         user.email?.split('@')[0] || 'there'
       );
       

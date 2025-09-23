@@ -1,7 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
   id: string;
@@ -20,565 +19,420 @@ interface Conversation {
   started_at: string;
   insights?: any;
   ocean_signals?: any;
+  session_data?: any;
 }
 
 interface SessionState {
   conversation: Conversation | null;
   messages: Message[];
-  lastActivity: string;
-  sessionStartTime: string;
-  autoSaveEnabled: boolean;
+  hasActiveSession: boolean;
   isPaused: boolean;
+  lastActivity: number;
 }
 
-const SESSION_STORAGE_KEY = 'chat_session_state';
-const AUTOSAVE_INTERVAL = 30000; // 30 seconds
-const SESSION_TIMEOUT = 300000; // 5 minutes
+interface SessionManagerHook extends SessionState {
+  startNewSession: (conversation: Conversation) => void;
+  resumeSession: (conversation: Conversation, messages: Message[]) => void;
+  addMessageToSession: (message: Message) => void;
+  pauseSession: () => Promise<boolean>;
+  resumePausedSession: () => void;
+  completeSession: () => Promise<boolean>;
+  endSession: () => void;
+  updateActivity: () => void;
+  loadSessionFromLocal: () => void;
+  updateSessionState: (updates: Partial<SessionState>) => void;
+  syncWithDatabaseState: (conversationId: string) => Promise<void>;
+}
 
-export const useSessionManager = () => {
+const STORAGE_KEYS = {
+  SESSION: 'therapeutic_session',
+  MESSAGES: 'therapeutic_messages',
+  LAST_ACTIVITY: 'therapeutic_last_activity'
+} as const;
+
+export const useSessionManager = (): SessionManagerHook => {
   const { user } = useAuth();
-  const [sessionState, setSessionState] = useState<SessionState>({
-    conversation: null,
-    messages: [],
-    lastActivity: new Date().toISOString(),
-    sessionStartTime: new Date().toISOString(),
-    autoSaveEnabled: true,
-    isPaused: false
-  });
   
-  const autoSaveTimerRef = useRef<NodeJS.Timeout>();
-  const sessionTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastSaveRef = useRef<string>('');
-
-  // Save session to localStorage
-  const saveSessionToLocal = useCallback((state: SessionState) => {
-    if (!user) return;
-    
-    try {
-      const sessionData = {
-        ...state,
-        userId: user.id,
-        timestamp: new Date().toISOString()
-      };
-      
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
-      sessionStorage.setItem(`${SESSION_STORAGE_KEY}_backup`, JSON.stringify(sessionData));
-      lastSaveRef.current = sessionData.timestamp;
-      
-      console.log('💾 Session saved to local storage');
-    } catch (error) {
-      console.error('Error saving session to localStorage:', error);
-    }
-  }, [user]);
-
-  // Load session from localStorage
-  const loadSessionFromLocal = useCallback((): SessionState | null => {
-    if (!user) return null;
-    
-    try {
-      // Try localStorage first, then sessionStorage as backup
-      let sessionData = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!sessionData) {
-        sessionData = sessionStorage.getItem(`${SESSION_STORAGE_KEY}_backup`);
-      }
-      
-      if (!sessionData) return null;
-      
-      const parsed = JSON.parse(sessionData);
-      
-      // Verify session belongs to current user and isn't too old
-      if (parsed.userId !== user.id) return null;
-      
-      const sessionAge = Date.now() - new Date(parsed.timestamp).getTime();
-      if (sessionAge > SESSION_TIMEOUT) {
-        clearLocalSession();
-        return null;
-      }
-      
-      console.log('📂 Session loaded from local storage');
-      return {
-        conversation: parsed.conversation,
-        messages: parsed.messages || [],
-        lastActivity: parsed.lastActivity,
-        sessionStartTime: parsed.sessionStartTime,
-        autoSaveEnabled: parsed.autoSaveEnabled ?? true,
-        isPaused: parsed.isPaused ?? false
-      };
-    } catch (error) {
-      console.error('Error loading session from localStorage:', error);
-      return null;
-    }
-  }, [user]);
-
-  // Clear local session
-  const clearLocalSession = useCallback(() => {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-    sessionStorage.removeItem(`${SESSION_STORAGE_KEY}_backup`);
-    console.log('🗑️ Local session cleared');
-  }, []);
-
-  // Save session to database
-  const saveSessionToDatabase = useCallback(async (state: SessionState, isEmergencySave = false) => {
-    if (!user || !state.conversation || state.messages.length === 0) return;
-
-    try {
-      await supabase
-        .from('paused_conversations')
-        .upsert({
-          user_id: user.id,
-          message_history: JSON.stringify(state.messages),
-          conversation_title: state.conversation.title,
-          created_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (!isEmergencySave) {
-        console.log('💽 Session saved to database');
-      }
-    } catch (error) {
-      console.error('Error saving session to database:', error);
-    }
-  }, [user]);
-
-  // Update session activity
-  const updateActivity = useCallback(() => {
-    const now = new Date().toISOString();
-    setSessionState(prev => {
-      const newState = { ...prev, lastActivity: now };
-      saveSessionToLocal(newState);
-      return newState;
-    });
-    
-    // Reset session timeout
-    if (sessionTimeoutRef.current) {
-      clearTimeout(sessionTimeoutRef.current);
-    }
-    sessionTimeoutRef.current = setTimeout(() => {
-      handleSessionTimeout();
-    }, SESSION_TIMEOUT);
-  }, [saveSessionToLocal]);
-
-  // Handle session timeout
-  const handleSessionTimeout = useCallback(async () => {
-    if (sessionState.conversation && sessionState.messages.length > 0) {
-      await saveSessionToDatabase(sessionState, true);
-      toast({
-        title: "Session Auto-Saved",
-        description: "Your conversation was automatically saved due to inactivity",
-      });
-    }
-    
-      setSessionState(prev => ({
-        ...prev,
-        conversation: null,
-        messages: [],
-        isPaused: false
-      }));
-    clearLocalSession();
-  }, [sessionState, saveSessionToDatabase, clearLocalSession]);
-
-  // Start new session
-  const startNewSession = useCallback((conversation: Conversation) => {
-    const newState: SessionState = {
-      conversation,
-      messages: [],
-      lastActivity: new Date().toISOString(),
-      sessionStartTime: new Date().toISOString(),
-      autoSaveEnabled: true,
-      isPaused: false
-    };
-    
-    setSessionState(newState);
-    saveSessionToLocal(newState);
-    updateActivity();
-    
-    console.log('🚀 New session started');
-  }, [saveSessionToLocal, updateActivity]);
-
-  // Resume existing session
-  const resumeSession = useCallback((conversation: Conversation, messages: Message[]) => {
-    const newState: SessionState = {
-      conversation,
-      messages,
-      lastActivity: new Date().toISOString(),
-      sessionStartTime: new Date().toISOString(),
-      autoSaveEnabled: true,
-      isPaused: false
-    };
-    
-    setSessionState(newState);
-    saveSessionToLocal(newState);
-    updateActivity();
-    
-    console.log('▶️ Session resumed with', messages.length, 'messages');
-  }, [saveSessionToLocal, updateActivity]);
-
-  // Add message to session
-  const addMessageToSession = useCallback((message: Message) => {
-    setSessionState(prev => {
-      const newState = {
-        ...prev,
-        messages: [...prev.messages, message],
-        lastActivity: new Date().toISOString()
-      };
-      saveSessionToLocal(newState);
-      return newState;
-    });
-    updateActivity();
-  }, [saveSessionToLocal, updateActivity]);
-
-  // Pause current session with bulletproof error handling and guaranteed navigation
-  const pauseSession = useCallback(async () => {
-    if (!sessionState.conversation) {
-      console.log('🚫 pauseSession: No active conversation to pause');
-      return false;
-    }
-
-    console.log('🔄 pauseSession: Starting comprehensive pause operation');
-    let audioStopped = false;
-    let dbUpdateSuccess = false;
-    let localStateUpdated = false;
-
-    try {
-      // STEP 1: Stop all voice audio IMMEDIATELY (highest priority)
-      try {
-        console.log('🔇 pauseSession: Stopping all voice audio...');
-        const { stopAllVoiceAudio } = await import('./useTextToSpeech');
-        stopAllVoiceAudio();
-        audioStopped = true;
-        console.log('✅ pauseSession: Voice audio stopped successfully');
-      } catch (audioError) {
-        console.error('⚠️ pauseSession: Audio stop failed:', audioError);
-        // Continue with pause operation even if audio stop fails
-      }
-
-      // STEP 2: Validate conversation state before database operations
-      if (!sessionState.conversation?.id) {
-        throw new Error('Invalid conversation ID - cannot update database');
-      }
-
-      // STEP 3: Update conversation status with timeout protection
-      console.log('💾 pauseSession: Updating conversation status in database...');
-      const dbUpdatePromise = supabase
-        .from('conversations')
-        .update({
-          status: 'paused',
-          session_data: {
-            messages: sessionState.messages || [] as any,
-            lastActivity: new Date().toISOString(),
-            pauseReason: 'manual',
-            pausedAt: new Date().toISOString(),
-            messageCount: sessionState.messages?.length || 0
-          } as any
-        })
-        .eq('id', sessionState.conversation.id);
-
-      // Add 10-second timeout for database operations
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Database update timeout after 10 seconds')), 10000);
-      });
-
-      await Promise.race([dbUpdatePromise, timeoutPromise]);
-      dbUpdateSuccess = true;
-      console.log('✅ pauseSession: Database update completed');
-
-      // STEP 4: Save session data (optional - failure won't block pause)
-      try {
-        console.log('💾 pauseSession: Saving session to database...');
-        await saveSessionToDatabase(sessionState);
-        console.log('✅ pauseSession: Session data saved');
-      } catch (saveError) {
-        console.warn('⚠️ pauseSession: Session save failed (non-critical):', saveError);
-        // Continue - this is not critical for pause operation
-      }
-
-      // STEP 5: Update local state
-      setSessionState(prev => ({
-        ...prev,
-        isPaused: true,
-        lastActivity: new Date().toISOString()
-      }));
-      localStateUpdated = true;
-      console.log('✅ pauseSession: Local state updated');
-
-      // STEP 6: Success feedback
-      toast({
-        title: "🔄 Session Paused",
-        description: "Voice stopped and conversation paused. You can resume anytime.",
-      });
-
-      console.log('🎉 pauseSession: Complete success - audio stopped, DB updated, state synced');
-      return true;
-
-    } catch (error) {
-      console.error('❌ pauseSession: Critical error occurred:', error);
-      
-      // Comprehensive error recovery
-      const errorDetails = {
-        audioStopped,
-        dbUpdateSuccess,
-        localStateUpdated,
-        conversationId: sessionState.conversation?.id,
-        messageCount: sessionState.messages?.length || 0,
-        errorMessage: error instanceof Error ? error.message : String(error)
-      };
-      
-      console.error('🔍 pauseSession: Error context:', errorDetails);
-
-      // Even on failure, ensure local state reflects pause attempt
-      if (!localStateUpdated) {
-        try {
-          setSessionState(prev => ({
-            ...prev,
-            isPaused: true,
-            lastActivity: new Date().toISOString(),
-            hasErrors: true
-          }));
-          console.log('🔧 pauseSession: Emergency local state update applied');
-        } catch (stateError) {
-          console.error('💥 pauseSession: Emergency state update failed:', stateError);
-        }
-      }
-
-      // User feedback with recovery guidance
-      toast({
-        title: "⚠️ Pause Operation Issues",
-        description: audioStopped 
-          ? "Audio stopped but session data may not be fully saved. You can still navigate to dashboard."
-          : "Could not pause session completely. Try again or restart the app.",
-        variant: audioStopped ? "default" : "destructive",
-      });
-
-      // Return true if audio was stopped (partial success allows navigation)
-      return audioStopped;
-    }
-  }, [sessionState, saveSessionToDatabase]);
-
-  // Resume current session
-  const resumePausedSession = useCallback(() => {
-    if (!sessionState.isPaused) return false;
-
-    toast({
-      title: "Session Resumed",
-      description: "Welcome back! Your conversation continues.",
-    });
-
-    setSessionState(prev => ({
-      ...prev,
-      isPaused: false,
-      lastActivity: new Date().toISOString()
-    }));
-
-    updateActivity();
-    return true;
-  }, [sessionState.isPaused, updateActivity]);
-
-  // Complete session (for explicit finish actions)
-  const completeSession = useCallback(async () => {
-    if (!sessionState.conversation) return false;
-
-    try {
-      const durationMinutes = Math.floor(
-        (Date.now() - new Date(sessionState.sessionStartTime).getTime()) / 60000
-      );
-
-      // Check minimum duration requirement for insights (1 minute)
-      const shouldGenerateInsights = durationMinutes >= 1 && sessionState.messages.length > 2;
-
-      await supabase
-        .from('conversations')
-        .update({
-          status: 'completed',
-          ended_at: new Date().toISOString(),
-          duration_minutes: durationMinutes
-        })
-        .eq('id', sessionState.conversation.id);
-
-      // Generate insights via session-analysis if conversation meets requirements
-      if (shouldGenerateInsights) {
-        console.log('✅ Session completed - calling session-analysis function');
-        
-        try {
-          const analysisResponse = await supabase.functions.invoke('session-analysis', {
-            body: {
-              conversationId: sessionState.conversation.id,
-              userId: user?.id
-            }
-          });
-
-          if (analysisResponse.error) {
-            console.error('❌ Session analysis failed:', analysisResponse.error);
-            throw new Error(analysisResponse.error.message);
-          }
-
-          console.log('✅ Session analysis completed successfully');
-          toast({
-            title: "Session Completed",
-            description: "Your conversation has been saved and analyzed successfully",
-          });
-        } catch (analysisError) {
-          console.error('❌ Session analysis failed:', analysisError);
-          toast({
-            title: "Session Completed",
-            description: "Session saved but analysis failed. You can retry analysis from the dashboard.",
-            variant: "default",
-          });
-        }
-      } else {
-        console.log('⚠️ Session completed but too short for insights');
-        toast({
-          title: "Session Completed", 
-          description: `Session was too brief (${durationMinutes} min) to generate meaningful insights`,
-        });
-      }
-
-      // Clear paused conversation if exists
-      await supabase
-        .from('paused_conversations')
-        .delete()
-        .eq('user_id', user?.id);
-
-      clearLocalSession();
-      setSessionState(prev => ({
-        ...prev,
-        conversation: null,
-        messages: [],
-        isPaused: false
-      }));
-
-      return true;
-    } catch (error) {
-      console.error('Error completing session:', error);
-      return false;
-    }
-  }, [sessionState, user, clearLocalSession]);
-
-  // End session (for pause scenarios - renamed for clarity)
-  const endSession = useCallback(async () => {
-    console.log('⚠️ endSession called - this should only be used for pauses now');
-    return await pauseSession();
-  }, [pauseSession]);
-
-  // Check for existing session on mount
+  // Cargar sesión al inicializar (solo una vez)
   useEffect(() => {
-    if (!user) return;
+    loadSessionFromLocal();
+  }, [loadSessionFromLocal]);
 
-    const existingSession = loadSessionFromLocal();
-    if (existingSession) {
-      setSessionState(existingSession);
-      updateActivity();
-    }
-  }, [user, loadSessionFromLocal, updateActivity]);
-
-  // Setup auto-save
-  useEffect(() => {
-    if (!sessionState.autoSaveEnabled || !sessionState.conversation) return;
-
-    autoSaveTimerRef.current = setInterval(() => {
-      if (sessionState.messages.length > 0) {
-        saveSessionToDatabase(sessionState);
-      }
-    }, AUTOSAVE_INTERVAL);
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearInterval(autoSaveTimerRef.current);
-      }
-    };
-  }, [sessionState, saveSessionToDatabase]);
-
-  // Handle page unload (emergency save)
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (sessionState.conversation && sessionState.messages.length > 0) {
-        // Synchronous save to localStorage (database save might not complete)
-        saveSessionToLocal(sessionState);
-        
-        // Try emergency database save (may not complete)
-        saveSessionToDatabase(sessionState, true);
-        
-        // Show warning if user tries to leave with unsaved changes
-        const message = "You have an active conversation. Are you sure you want to leave?";
-        event.returnValue = message;
-        return message;
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && sessionState.conversation) {
-        saveSessionToLocal(sessionState);
-        saveSessionToDatabase(sessionState, true);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [sessionState, saveSessionToLocal, saveSessionToDatabase]);
-
-  // Cleanup on unmount
+  // Cleanup al desmontar
   useEffect(() => {
     return () => {
-      if (autoSaveTimerRef.current) {
-        clearInterval(autoSaveTimerRef.current);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
-      if (sessionTimeoutRef.current) {
-        clearTimeout(sessionTimeoutRef.current);
-      }
+      isProcessingRef.current = false;
     };
-  }, []);
-
-  // Sync with database state
-  const syncWithDatabaseState = useCallback(async (conversationId: string) => {
-    try {
-      const { data } = await supabase
-        .from('conversations')
-        .select('status')
-        .eq('id', conversationId)
-        .single();
-        
-      if (data) {
-        setSessionState(prev => ({
-          ...prev,
-          isPaused: data.status === 'paused',
-          lastActivity: new Date().toISOString()
-        }));
-      }
-    } catch (error) {
-      console.error('Error syncing with database state:', error);
-    }
   }, []);
 
   return {
-    // State
     conversation: sessionState.conversation,
     messages: sessionState.messages,
-    hasActiveSession: !!sessionState.conversation && !sessionState.isPaused,
+    hasActiveSession: sessionState.hasActiveSession,
     isPaused: sessionState.isPaused,
-    sessionStartTime: sessionState.sessionStartTime,
-    lastActivity: sessionState.lastActivity,
-    
-    // Actions
     startNewSession,
     resumeSession,
     addMessageToSession,
     pauseSession,
     resumePausedSession,
     completeSession,
-    endSession, // Deprecated: use completeSession or pauseSession directly
+    endSession,
     updateActivity,
-    clearLocalSession,
-    syncWithDatabaseState,
-    
-    // State management
-    updateSessionState: setSessionState,
-    
-    // Utils
-    loadSessionFromLocal
+    loadSessionFromLocal,
+    updateSessionState,
+    syncWithDatabaseState
   };
-};
+}; Estado principal
+  const [sessionState, setSessionState] = useState<SessionState>({
+    conversation: null,
+    messages: [],
+    hasActiveSession: false,
+    isPaused: false,
+    lastActivity: Date.now()
+  });
+
+  // Referencias para evitar stale closures y re-renders
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isProcessingRef = useRef<boolean>(false);
+  const lastSyncTime = useRef<number>(0);
+
+  // Debounced save para evitar writes excesivos
+  const debouncedSave = useCallback((state: SessionState) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        if (state.conversation) {
+          localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(state.conversation));
+          localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(state.messages));
+          localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, state.lastActivity.toString());
+        }
+      } catch (error) {
+        console.error('❌ Error saving to localStorage:', error);
+      }
+    }, 1000); // Debounce de 1 segundo
+  }, []);
+
+  // Actualizar estado de manera controlada
+  const updateSessionState = useCallback((updates: Partial<SessionState>) => {
+    setSessionState(prevState => {
+      const newState = { ...prevState, ...updates };
+      
+      // Actualizar flags derivados
+      newState.hasActiveSession = newState.conversation?.status === 'active';
+      newState.isPaused = newState.conversation?.status === 'paused';
+      
+      // Guardar en localStorage si hay una conversación activa
+      if (newState.conversation) {
+        debouncedSave(newState);
+      }
+      
+      return newState;
+    });
+  }, [debouncedSave]);
+
+  // Iniciar nueva sesión
+  const startNewSession = useCallback((conversation: Conversation) => {
+    console.log('🚀 Starting new session:', conversation.id);
+    
+    updateSessionState({
+      conversation,
+      messages: [],
+      hasActiveSession: true,
+      isPaused: false,
+      lastActivity: Date.now()
+    });
+  }, [updateSessionState]);
+
+  // Reanudar sesión existente
+  const resumeSession = useCallback((conversation: Conversation, messages: Message[]) => {
+    console.log('🔄 Resuming session:', conversation.id, 'with', messages.length, 'messages');
+    
+    updateSessionState({
+      conversation,
+      messages: [...messages], // Crear nueva referencia
+      hasActiveSession: conversation.status === 'active',
+      isPaused: conversation.status === 'paused',
+      lastActivity: Date.now()
+    });
+  }, [updateSessionState]);
+
+  // Añadir mensaje a la sesión
+  const addMessageToSession = useCallback((message: Message) => {
+    setSessionState(prevState => {
+      // Evitar duplicados
+      const messageExists = prevState.messages.some(m => m.id === message.id);
+      if (messageExists) {
+        console.log('⚠️ Message already exists:', message.id);
+        return prevState;
+      }
+
+      const newMessages = [...prevState.messages, message];
+      const newState = {
+        ...prevState,
+        messages: newMessages,
+        lastActivity: Date.now()
+      };
+
+      // Guardar cambios
+      if (prevState.conversation) {
+        debouncedSave(newState);
+      }
+
+      console.log('📝 Added message:', message.role, message.id, 'Total:', newMessages.length);
+      return newState;
+    });
+  }, [debouncedSave]);
+
+  // Pausar sesión
+  const pauseSession = useCallback(async (): Promise<boolean> => {
+    if (!sessionState.conversation || !user?.id || isProcessingRef.current) {
+      return false;
+    }
+
+    try {
+      isProcessingRef.current = true;
+      console.log('⏸️ Pausing session:', sessionState.conversation.id);
+
+      // Actualizar en la base de datos
+      const { error: updateError } = await supabase
+        .from('conversations')
+        .update({ 
+          status: 'paused',
+          session_data: {
+            ...sessionState.conversation.session_data,
+            pausedAt: new Date().toISOString(),
+            messageCount: sessionState.messages.length
+          }
+        })
+        .eq('id', sessionState.conversation.id);
+
+      if (updateError) throw updateError;
+
+      // Guardar en paused_conversations
+      const { error: pausedError } = await supabase
+        .from('paused_conversations')
+        .upsert({
+          user_id: user.id,
+          conversation_id: sessionState.conversation.id,
+          conversation_title: sessionState.conversation.title,
+          message_history: sessionState.messages,
+          created_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (pausedError) throw pausedError;
+
+      // Actualizar estado local
+      updateSessionState({
+        conversation: {
+          ...sessionState.conversation,
+          status: 'paused'
+        },
+        isPaused: true,
+        hasActiveSession: false
+      });
+
+      console.log('✅ Session paused successfully');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error pausing session:', error);
+      return false;
+    } finally {
+      isProcessingRef.current = false;
+    }
+  }, [sessionState.conversation, sessionState.messages, user?.id, updateSessionState]);
+
+  // Reanudar sesión pausada
+  const resumePausedSession = useCallback(() => {
+    if (!sessionState.conversation) return;
+
+    console.log('▶️ Resuming paused session:', sessionState.conversation.id);
+    
+    updateSessionState({
+      conversation: {
+        ...sessionState.conversation,
+        status: 'active'
+      },
+      hasActiveSession: true,
+      isPaused: false,
+      lastActivity: Date.now()
+    });
+  }, [sessionState.conversation, updateSessionState]);
+
+  // Completar sesión
+  const completeSession = useCallback(async (): Promise<boolean> => {
+    if (!sessionState.conversation || !user?.id || isProcessingRef.current) {
+      return false;
+    }
+
+    try {
+      isProcessingRef.current = true;
+      console.log('🏁 Completing session:', sessionState.conversation.id);
+
+      const actualDuration = Math.ceil(
+        (Date.now() - new Date(sessionState.conversation.started_at).getTime()) / (1000 * 60)
+      );
+
+      // Actualizar en la base de datos
+      const { error } = await supabase
+        .from('conversations')
+        .update({ 
+          status: 'completed',
+          duration_minutes: actualDuration,
+          session_data: {
+            ...sessionState.conversation.session_data,
+            completedAt: new Date().toISOString(),
+            finalMessageCount: sessionState.messages.length,
+            actualDuration
+          }
+        })
+        .eq('id', sessionState.conversation.id);
+
+      if (error) throw error;
+
+      // Limpiar localStorage
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
+      localStorage.removeItem(STORAGE_KEYS.MESSAGES);
+      localStorage.removeItem(STORAGE_KEYS.LAST_ACTIVITY);
+
+      // Limpiar paused_conversations si existe
+      await supabase
+        .from('paused_conversations')
+        .delete()
+        .eq('user_id', user.id);
+
+      console.log('✅ Session completed successfully');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error completing session:', error);
+      return false;
+    } finally {
+      isProcessingRef.current = false;
+    }
+  }, [sessionState.conversation, sessionState.messages, user?.id]);
+
+  // Terminar sesión sin completar
+  const endSession = useCallback(() => {
+    console.log('🛑 Ending session');
+    
+    // Limpiar localStorage
+    localStorage.removeItem(STORAGE_KEYS.SESSION);
+    localStorage.removeItem(STORAGE_KEYS.MESSAGES);
+    localStorage.removeItem(STORAGE_KEYS.LAST_ACTIVITY);
+    
+    // Resetear estado
+    updateSessionState({
+      conversation: null,
+      messages: [],
+      hasActiveSession: false,
+      isPaused: false,
+      lastActivity: Date.now()
+    });
+  }, [updateSessionState]);
+
+  // Actualizar actividad
+  const updateActivity = useCallback(() => {
+    setSessionState(prevState => ({
+      ...prevState,
+      lastActivity: Date.now()
+    }));
+  }, []);
+
+  // Cargar sesión desde localStorage
+  const loadSessionFromLocal = useCallback(() => {
+    try {
+      const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
+      const savedMessages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
+      const savedActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
+
+      if (savedSession && savedMessages) {
+        const conversation: Conversation = JSON.parse(savedSession);
+        const messages: Message[] = JSON.parse(savedMessages);
+        const lastActivity = savedActivity ? parseInt(savedActivity) : Date.now();
+
+        console.log('📱 Loading session from localStorage:', conversation.id);
+
+        updateSessionState({
+          conversation,
+          messages,
+          hasActiveSession: conversation.status === 'active',
+          isPaused: conversation.status === 'paused',
+          lastActivity
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error loading from localStorage:', error);
+    }
+  }, [updateSessionState]);
+
+  // Sincronizar con estado de base de datos
+  const syncWithDatabaseState = useCallback(async (conversationId: string): Promise<void> => {
+    if (!user?.id) return;
+    
+    const now = Date.now();
+    if (now - lastSyncTime.current < 5000) { // Throttle a 5 segundos
+      return;
+    }
+    lastSyncTime.current = now;
+
+    try {
+      console.log('🔄 Syncing with database state:', conversationId);
+
+      // Obtener estado actualizado de la conversación
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (convError || !conversation) {
+        console.error('❌ Error fetching conversation:', convError);
+        return;
+      }
+
+      // Obtener mensajes actualizados
+      const { data: dbMessages, error: msgError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (msgError) {
+        console.error('❌ Error fetching messages:', msgError);
+        return;
+      }
+
+      const messages: Message[] = (dbMessages || []).map((msg: any) => ({
+        id: msg.id,
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        created_at: msg.created_at,
+        metadata: msg.metadata
+      }));
+
+      // Actualizar estado local con datos de la base de datos
+      updateSessionState({
+        conversation: conversation as Conversation,
+        messages,
+        hasActiveSession: conversation.status === 'active',
+        isPaused: conversation.status === 'paused'
+      });
+
+      console.log('✅ Successfully synced with database');
+
+    } catch (error) {
+      console.error('❌ Error syncing with database:', error);
+    }
+  }, [user?.id, updateSessionState]);
+
+  //
