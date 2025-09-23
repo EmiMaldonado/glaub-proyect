@@ -54,17 +54,20 @@ const ChatConversation: React.FC = () => {
 
   const { generateResumeMessage, refetchConversationState } = useConversationState();
   
+  // TEMPORARILY DISABLE auto-pause during initialization to avoid conflicts
+  const [autoResumeEnabled, setAutoResumeEnabled] = useState(false);
+  
   // Enhanced auto-pause system with unified state management and audio control
   const { pauseConversationWithContext } = useAutoPause({
-    conversation,
-    messages,
-    userId: user?.id,
+    conversation: autoResumeEnabled ? conversation : null, // Disable during init
+    messages: autoResumeEnabled ? messages : [],
+    userId: autoResumeEnabled ? user?.id : undefined,
     onPause: () => {
       navigate('/dashboard');
     },
     updateSessionState,
     onConversationPaused: (conversationId) => {
-      if (user?.id) {
+      if (user?.id && autoResumeEnabled) {
         syncWithDatabaseState(conversationId);
         refetchConversationState(user.id);
       }
@@ -542,40 +545,42 @@ const ChatConversation: React.FC = () => {
     }
   };
 
-  // FIXED: Initialize conversation with proper dependency management to prevent multiple calls
+  // FIXED: Initialize conversation with complete isolation from other hooks
   const hasInitializedRef = useRef(false);
+  const isCreatingConversationRef = useRef(false);
   
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
     if (hasInitializedRef.current) {
       console.log('⚠️ Initialization already completed, skipping...');
       return;
     }
+    if (isCreatingConversationRef.current) {
+      console.log('⚠️ Already creating conversation, skipping...');
+      return;
+    }
     
     const initializeConversation = async () => {
-      if (hasInitializedRef.current) return; // Double-check
+      if (hasInitializedRef.current || isCreatingConversationRef.current) return;
       
-      hasInitializedRef.current = true; // Mark as started immediately
+      hasInitializedRef.current = true;
+      isCreatingConversationRef.current = true;
       setIsInitializing(true);
       
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const resumeId = urlParams.get('resume');
         
-        console.log('🔍 INITIALIZATION STATE:', {
-          user: !!user,
-          userId: user?.id,
-          hasActiveSession,
-          conversationExists: !!conversation,
-          conversationId: conversation?.id,
+        console.log('🔍 ISOLATED INITIALIZATION:', {
+          userId: user.id,
           continueConversation,
           resumeId,
           url: window.location.href,
-          timestamp: new Date().toISOString(),
-          isInitializing
+          timestamp: new Date().toISOString()
         });
         
-        checkSupabaseConnection();
+        // DISABLE OTHER HOOKS TEMPORARILY
+        console.log('🛑 Disabling other hooks during initialization');
         
         if (continueConversation === 'true') {
           console.log('🔄 Handling continue paused conversation');
@@ -584,13 +589,13 @@ const ChatConversation: React.FC = () => {
           console.log('🔄 Handling resume by ID:', resumeId);
           await handleResumeById(resumeId);
         } else {
-          // For new chat tabs, always create new conversation
-          console.log('🤖 Creating new chat conversation - SINGLE CALL');
+          console.log('🤖 Creating ISOLATED new chat conversation');
           await createNewConversation();
         }
       } catch (error) {
         console.error('❌ Initialization error:', error);
-        hasInitializedRef.current = false; // Reset on error so it can retry
+        hasInitializedRef.current = false;
+        isCreatingConversationRef.current = false;
         toast({
           title: "Error", 
           description: "Could not initialize conversation",
@@ -598,12 +603,22 @@ const ChatConversation: React.FC = () => {
         });
       } finally {
         setIsInitializing(false);
-        console.log('✅ Initialization completed at:', new Date().toISOString());
+        isCreatingConversationRef.current = false;
+        console.log('✅ Isolated initialization completed');
+        
+        // ENABLE OTHER HOOKS AFTER INITIALIZATION
+        setTimeout(() => {
+          console.log('🔓 Re-enabling hooks after successful initialization');
+          setAutoResumeEnabled(true);
+        }, 2000);
       }
     };
 
-    initializeConversation();
-  }, [user?.id]); // FIXED: Only depend on user.id, not user object or other changing values
+    // DELAY INITIALIZATION to avoid conflicts with other components
+    console.log('⏰ Delaying initialization to avoid hook conflicts...');
+    setTimeout(initializeConversation, 1000);
+    
+  }, [user?.id]); // Only depend on user.id
 
   // Setup subscription when conversation changes
   useEffect(() => {
