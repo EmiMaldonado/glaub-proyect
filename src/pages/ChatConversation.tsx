@@ -221,9 +221,9 @@ const ChatConversation: React.FC = () => {
       // Setup subscription
       await setupRealtimeSubscription(newConversation.id);
 
-      // CRITICAL: Add delay before AI message to ensure session is fully established
+      // CRITICAL: Add longer delay before AI message to ensure session is fully established
       console.log('⏰ Waiting for session to stabilize before AI message...');
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 3000)); // Increased to 3 seconds
 
       // Send AI first message with VALIDATED conversationId
       await sendAIFirstMessage(newConversation.id);
@@ -261,10 +261,26 @@ const ChatConversation: React.FC = () => {
       return;
     }
 
+    // CRITICAL: Verify conversation exists in session manager
+    if (!conversation || conversation.id !== conversationId) {
+      console.error('❌ Conversation state mismatch:', {
+        sessionConversationId: conversation?.id,
+        requestedId: conversationId
+      });
+      setIsWaitingForAI(false);
+      toast({
+        title: "Error",
+        description: "Conversation state not ready. Please refresh and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       console.log('🤖 Sending AI first message...');
       console.log('📝 ConversationId:', conversationId);
       console.log('👤 UserId:', user.id);
+      console.log('🔍 Session state verified:', conversation.id);
       
       setIsWaitingForAI(true);
       
@@ -338,11 +354,6 @@ const ChatConversation: React.FC = () => {
       console.log('✅ AI function called successfully');
 
       // Check for AI response with backoff
-      // Permitir llamadas del sistema sin conversationId
-      const isSystemCall = requestBody.systemContext && requestBody.skipDatabase;
-      if (!conversationId && !isSystemCall) {
-        throw new Error('Missing required field: conversationId');
-      }
       let checkAttempts = 0;
       const maxAttempts = 8;
       
