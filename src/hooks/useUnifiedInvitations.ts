@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ExtendedProfile, ExtendedProfileUpdate } from '@/types/extended-database';
+import { ExtendedProfile } from '@/types/extended-database';
 
 export interface InvitationRequest {
   email: string;
@@ -20,11 +20,13 @@ export interface UnifiedInvitation {
   expires_at: string;
   manager_id: string;
   invited_by_id?: string;
+  token?: string;
   manager?: {
     id: string;
     display_name?: string;
     full_name?: string;
     email?: string;
+    team_name?: string;
   };
   inviter?: {
     id: string;
@@ -39,7 +41,7 @@ export const useUnifiedInvitations = () => {
   const [loading, setLoading] = useState(false);
   const [invitations, setInvitations] = useState<UnifiedInvitation[]>([]);
 
-  // Check user permissions using type assertion for missing fields
+  // Check user permissions
   const checkUserPermissions = useCallback(async () => {
     try {
       if (!user) return { canManageTeams: false, canBeManaged: false };
@@ -54,7 +56,7 @@ export const useUnifiedInvitations = () => {
       
       return {
         canManageTeams: extendedProfile?.can_manage_teams || false,
-        canBeManaged: extendedProfile?.can_be_managed || true
+        canBeManaged: extendedProfile?.can_be_managed ?? true // Use nullish coalescing for boolean
       };
     } catch (error) {
       console.error('Error checking user permissions:', error);
@@ -62,7 +64,7 @@ export const useUnifiedInvitations = () => {
     }
   }, [user]);
 
-  // Send invitation with permission check
+  // Send invitation
   const sendInvitation = useCallback(async (request: InvitationRequest) => {
     setLoading(true);
     
@@ -98,7 +100,7 @@ export const useUnifiedInvitations = () => {
         body: {
           email: request.email,
           invitationType: request.invitationType,
-          teamId: request.teamId,
+          teamId: request.teamId || currentProfile.id,
           message: request.message
         }
       });
@@ -127,51 +129,91 @@ export const useUnifiedInvitations = () => {
     setLoading(true);
     
     try {
-      // Get current user's profile to find invitations
+      // Get current user's profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('id, email')
         .eq('user_id', user.id)
         .single();
 
-      if (!profile) return;
+      if (!profile) {
+        console.log('No profile found for user');
+        setInvitations([]);
+        return;
+      }
 
-      // Get sent invitations (where user is the inviter)
+      console.log('Loading invitations for profile:', profile.email);
+
+      // Get sent invitations (where current user is the inviter)
       const { data: sentInvitations, error: sentError } = await supabase
         .from('invitations')
         .select(`
           *,
           manager:profiles!invitations_manager_id_fkey (
-            id, display_name, full_name, email
+            id, display_name, full_name, email, team_name
           )
         `)
-        .eq('invited_by_id', profile.id);
+        .eq('invited_by_id', profile.id)
+        .order('created_at', { ascending: false });
 
-      if (sentError) throw sentError;
+      if (sentError) {
+        console.error('Error loading sent invitations:', sentError);
+      }
 
-      // Get received invitations (where user is the target)
+      // Get received invitations (where current user is the target)
       const { data: receivedInvitations, error: receivedError } = await supabase
         .from('invitations')
         .select(`
           *,
           inviter:profiles!invitations_invited_by_id_fkey (
             id, display_name, full_name, email
+          ),
+          manager:profiles!invitations_manager_id_fkey (
+            id, display_name, full_name, email, team_name
           )
         `)
-        .eq('email', profile.email);
+        .eq('email', profile.email)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
 
-      if (receivedError) throw receivedError;
+      if (receivedError) {
+        console.error('Error loading received invitations:', receivedError);
+      }
 
-      // Combine and deduplicate
-      const allInvitations = [...(sentInvitations || []), ...(receivedInvitations || [])];
+      console.log('📤 Sent invitations:', sentInvitations?.length || 0);
+      console.log('📥 Received invitations:', receivedInvitations?.length || 0);
+
+      // Combine and deduplicate invitations
+      const allInvitations = [
+        ...(sentInvitations || []), 
+        ...(receivedInvitations || [])
+      ];
+      
       const uniqueInvitations = allInvitations.filter((invitation, index, self) => 
         index === self.findIndex(inv => inv.id === invitation.id)
       );
 
-      setInvitations(uniqueInvitations as UnifiedInvitation[]);
+      // Type assertion to ensure correct typing
+      const typedInvitations: UnifiedInvitation[] = uniqueInvitations.map(inv => ({
+        id: inv.id,
+        email: inv.email,
+        status: inv.status as 'pending' | 'accepted' | 'declined',
+        invitation_type: inv.invitation_type,
+        invited_at: inv.invited_at || inv.created_at,
+        accepted_at: inv.accepted_at || undefined,
+        expires_at: inv.expires_at,
+        manager_id: inv.manager_id,
+        invited_by_id: inv.invited_by_id || undefined,
+        token: inv.token || undefined,
+        manager: inv.manager || undefined,
+        inviter: inv.inviter || undefined
+      }));
+
+      setInvitations(typedInvitations);
 
     } catch (error) {
       console.error('Error loading invitations:', error);
+      setInvitations([]);
     } finally {
       setLoading(false);
     }
@@ -182,35 +224,84 @@ export const useUnifiedInvitations = () => {
     setLoading(true);
     
     try {
-      // Call unified accept invitation edge function
-      const { data, error } = await supabase.functions.invoke('unified-accept-invitation', {
-        body: { token }
-      });
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
-      if (error) throw error;
+      // Get invitation details first
+      const { data: invitation } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('token', token)
+        .eq('status', 'pending')
+        .single();
 
-      console.log('✅ Invitation accepted successfully:', data);
-      
-      // Update profile with manager permissions if needed
-      if (data.invitation?.invitation_type === 'manager_request') {
-        const { data: profile } = await supabase
+      if (!invitation) {
+        throw new Error('Invitation not found or already processed');
+      }
+
+      console.log('Accepting invitation:', invitation);
+
+      // Get user profile
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userProfile) {
+        throw new Error('User profile not found');
+      }
+
+      // Insert into team_members table
+      const { error: memberError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: invitation.manager_id,
+          member_id: userProfile.id,
+          role: invitation.invitation_type === 'manager_request' ? 'leader' : 'member'
+        });
+
+      if (memberError) {
+        console.error('Error adding team member:', memberError);
+        throw new Error('Failed to join team');
+      }
+
+      console.log('✅ Added to team_members successfully');
+
+      // If manager_request, update can_manage_teams
+      if (invitation.invitation_type === 'manager_request') {
+        const { error: updateError } = await supabase
           .from('profiles')
-          .select('id')
-          .eq('user_id', user?.id)
-          .single();
+          .update({ can_manage_teams: true } as any)
+          .eq('id', userProfile.id);
 
-        if (profile) {
-          await supabase
-            .from('profiles')
-            .update({ can_manage_teams: true } as any)
-            .eq('id', profile.id);
+        if (updateError) {
+          console.error('Error updating manager permissions:', updateError);
+        } else {
+          console.log('✅ Updated can_manage_teams to true');
         }
       }
+
+      // Mark invitation as accepted
+      const { error: updateInvitationError } = await supabase
+        .from('invitations')
+        .update({ 
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', invitation.id);
+
+      if (updateInvitationError) {
+        console.error('Error updating invitation status:', updateInvitationError);
+      }
+
+      console.log('✅ Invitation accepted successfully');
       
       // Reload invitations to reflect changes
       await loadInvitations();
       
-      return data;
+      return { success: true, invitation };
 
     } catch (error: any) {
       console.error('❌ Error accepting invitation:', error);
@@ -221,14 +312,18 @@ export const useUnifiedInvitations = () => {
   }, [user, loadInvitations]);
 
   // Decline invitation
-  const declineInvitation = useCallback(async (invitationId: string) => {
+  const declineInvitation = useCallback(async (token: string) => {
     setLoading(true);
     
     try {
       const { error } = await supabase
         .from('invitations')
-        .update({ status: 'declined' })
-        .eq('id', invitationId);
+        .update({ 
+          status: 'declined',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('token', token)
+        .eq('status', 'pending');
 
       if (error) throw error;
 
@@ -253,7 +348,7 @@ export const useUnifiedInvitations = () => {
         .select(`
           *,
           profile:profiles!team_members_member_id_fkey (
-            id, display_name, full_name, email, avatar_url, job_position, job_level, role
+            id, display_name, full_name, email, avatar_url, job_position, job_level
           )
         `)
         .eq('team_id', teamId);

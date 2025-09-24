@@ -184,8 +184,8 @@ serve(async (req: Request) => {
           ? 'Team Invitation Received' 
           : 'Manager Request Received';
         const notificationMessage = invitationType === 'team_join'
-          ? `${profile.display_name || profile.full_name} has invited you to join their team on EmpathAI.`
-          : `${profile.display_name || profile.full_name} has requested you to be their manager on EmpathAI.`;
+          ? `${profile.display_name || profile.full_name} has invited you to join their team on Gläub.`
+          : `${profile.display_name || profile.full_name} has requested you to be their manager on Gläub.`;
         
         await supabase
           .from("notifications")
@@ -209,8 +209,8 @@ serve(async (req: Request) => {
       console.log("User doesn't exist, sending auth invitation");
       // Send auth invitation for new users
       const emailSubject = invitationType === 'team_join'
-        ? `Join ${profile.team_name || `${profile.display_name || profile.full_name}'s Team`} on EmpathAI`
-        : `${profile.display_name || profile.full_name} wants you to be their manager on EmpathAI`;
+        ? `Join ${profile.team_name || `${profile.display_name || profile.full_name}'s Team`} on Gläub`
+        : `${profile.display_name || profile.full_name} wants you to be their manager on Gläub`;
 
       const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
         email,
