@@ -576,6 +576,34 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
           <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       )}
+
+      {/* Debug Component - Remove this in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="mt-6 border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="text-yellow-800">Debug Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <p><strong>Current User Email:</strong> {user?.email}</p>
+              <p><strong>Total Invitations Loaded:</strong> {invitations.length}</p>
+              <p><strong>Pending Received:</strong> {pendingReceivedInvitations.length}</p>
+              <p><strong>Accepted Received:</strong> {acceptedReceivedInvitations.length}</p>
+              <p><strong>Sent Invitations:</strong> {sentInvitations.length}</p>
+              <p><strong>User Profile can_manage_teams:</strong> {userProfile?.can_manage_teams ? 'true' : 'false'}</p>
+              
+              {invitations.length > 0 && (
+                <details className="mt-4">
+                  <summary className="cursor-pointer font-medium">View Raw Invitations Data</summary>
+                  <pre className="text-xs bg-white p-2 rounded border mt-2 overflow-auto max-h-40">
+                    {JSON.stringify(invitations, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
