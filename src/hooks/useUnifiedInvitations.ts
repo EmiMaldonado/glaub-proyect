@@ -96,13 +96,20 @@ export const useUnifiedInvitations = () => {
       }
 
       // Check for existing pending invitations first
-      const { data: existingInvitation } = await supabase
+      const { data: existingInvitations, error: checkError } = await supabase
         .from('invitations')
-        .select('id, email, status, invitation_type')
+        .select('id, email, status, invitation_type, expires_at')
         .eq('email', request.email)
         .eq('invitation_type', request.invitationType)
         .eq('status', 'pending')
-        .single();
+        .gt('expires_at', new Date().toISOString());
+
+      // Ignore the error if it's just "no rows found"
+      if (checkError && !checkError.message.includes('No rows')) {
+        console.warn('Error checking existing invitations:', checkError);
+      }
+
+      const existingInvitation = existingInvitations && existingInvitations.length > 0 ? existingInvitations[0] : null;
 
       if (existingInvitation) {
         throw new Error(`A ${request.invitationType === 'manager_request' ? 'manager request' : 'team invitation'} is already pending for ${request.email}`);
@@ -120,9 +127,15 @@ export const useUnifiedInvitations = () => {
 
       if (error) {
         // Handle specific edge function errors
-        if (error.message && error.message.includes('already sent')) {
+        if (error.message && (error.message.includes('already sent') || error.message.includes('already exists'))) {
           throw new Error(`A ${request.invitationType === 'manager_request' ? 'manager request' : 'team invitation'} is already pending for ${request.email}`);
         }
+        
+        // Handle FunctionsHttpError with event_message
+        if (error.event_message && (error.event_message.includes('already exists') || error.event_message.includes('already sent'))) {
+          throw new Error(`A ${request.invitationType === 'manager_request' ? 'manager request' : 'team invitation'} is already pending for ${request.email}`);
+        }
+        
         throw error;
       }
 
@@ -137,8 +150,13 @@ export const useUnifiedInvitations = () => {
       console.error('❌ Error sending invitation:', error);
       
       // Provide user-friendly error messages
-      if (error.message?.includes('already sent') || error.message?.includes('already pending')) {
+      if (error.message?.includes('already sent') || 
+          error.message?.includes('already pending') ||
+          error.message?.includes('already exists')) {
         throw new Error(error.message);
+      } else if (error.event_message?.includes('already exists') || 
+                 error.event_message?.includes('already sent')) {
+        throw new Error(`A ${request.invitationType === 'manager_request' ? 'manager request' : 'team invitation'} is already pending for ${request.email}`);
       } else if (error.message?.includes('FunctionsHttpError')) {
         throw new Error('There was an error sending the invitation. Please try again.');
       }
@@ -187,7 +205,7 @@ export const useUnifiedInvitations = () => {
         console.error('Error loading sent invitations:', sentError);
       }
 
-      // Get received invitations (where current user is the target)
+      // Get received invitations (where current user is the target) - include all statuses
       const { data: receivedInvitations, error: receivedError } = await supabase
         .from('invitations')
         .select(`
@@ -200,7 +218,7 @@ export const useUnifiedInvitations = () => {
           )
         `)
         .eq('email', profile.email)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'accepted'])  // Include both pending and accepted
         .order('created_at', { ascending: false });
 
       if (receivedError) {
