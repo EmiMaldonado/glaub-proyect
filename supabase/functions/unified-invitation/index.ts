@@ -4,16 +4,15 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 interface UnifiedInvitationRequest {
   email: string;
-  invitationType: 'team_member' | 'manager_request';
-  teamId?: string; // Solo para invitaciones de team_member
-  message?: string; // Mensaje opcional
+  invitationType: 'team_join' | 'manager_request';
+  teamId?: string;
+  message?: string;
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -21,39 +20,49 @@ serve(async (req: Request) => {
   try {
     console.log("Processing unified invitation request");
     
-    // Get the authorization header
+    // JWT decode authentication (replace auth.getUser())
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("No authorization header");
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    // Create Supabase client
+    const jwt = authHeader.replace('Bearer ', '');
+    let payload;
+    try {
+      payload = JSON.parse(atob(jwt.split('.')[1]));
+      if (payload.exp < Date.now() / 1000) {
+        throw new Error('Token expired');
+      }
+    } catch (error) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const userId = payload.sub;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify the JWT and get user
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-
-    if (userError || !user) {
-      throw new Error("Invalid token");
-    }
-
-    // Get user's profile or create one if it doesn't exist
+    // Get user profile and check can_manage_teams permission
     let { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (!profile && !profileError) {
-      // Profile doesn't exist, create one using service role to bypass RLS
+      // Create profile if doesn't exist
       const { data: newProfile, error: createError } = await supabase
         .from("profiles")
         .insert({
-          user_id: user.id,
-          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          display_name: user.user_metadata?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          user_id: userId,
+          full_name: payload.user_metadata?.full_name || payload.email?.split('@')[0] || 'User',
+          display_name: payload.user_metadata?.display_name || payload.user_metadata?.full_name || payload.email?.split('@')[0] || 'User',
+          can_manage_teams: false,
+          can_be_managed: true
         })
         .select()
         .single();
@@ -62,14 +71,18 @@ serve(async (req: Request) => {
         console.error("Error creating profile:", createError);
         throw new Error(`Failed to create user profile: ${createError.message}`);
       }
-
       profile = newProfile;
-      console.log("Created new profile for user:", user.id);
     } else if (profileError) {
       console.error("Error fetching profile:", profileError);
       throw new Error(`Profile error: ${profileError.message}`);
-    } else if (!profile) {
-      throw new Error("Profile not found and could not be created");
+    }
+
+    // Check permission using can_manage_teams (not role)
+    if (!profile?.can_manage_teams) {
+      return new Response(JSON.stringify({ error: 'No permission to send invitations' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     const { email, invitationType, teamId, message }: UnifiedInvitationRequest = await req.json();
@@ -82,9 +95,7 @@ serve(async (req: Request) => {
       throw new Error("Invitation type is required");
     }
 
-    console.log("Processing invitation:", { email, invitationType, teamId });
-
-    // Check if invitation already exists for this email and sender
+    // Check for existing invitation
     const { data: existingInvitation } = await supabase
       .from("invitations")
       .select("*")
@@ -98,13 +109,10 @@ serve(async (req: Request) => {
       throw new Error("Invitation already sent to this email");
     }
 
-    // Generate unique token
+    // Generate token and create invitation
     const token = crypto.randomUUID();
+    const managerIdForInvitation = invitationType === 'team_join' ? (teamId || profile.id) : profile.id;
 
-    // For team_member invitations, use the teamId, otherwise use profile.id (manager_request)
-    const managerIdForInvitation = invitationType === 'team_member' ? (teamId || profile.id) : profile.id;
-
-    // Create invitation record
     const { data: invitation, error: invitationError } = await supabase
       .from("invitations")
       .insert({
@@ -113,7 +121,7 @@ serve(async (req: Request) => {
         email,
         token,
         invitation_type: invitationType,
-        expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString() // 72 horas
+        expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
       })
       .select()
       .single();
@@ -123,124 +131,15 @@ serve(async (req: Request) => {
       throw new Error(`Failed to create invitation: ${invitationError.message}`);
     }
 
-    console.log("Invitation created successfully:", invitation.id);
-
-    // Generate invitation URL based on type
-    let acceptUrl: string;
-    let emailSubject: string;
-    let emailContent: string;
+    // Generate invitation URL
+    const acceptUrl = `${supabaseUrl}/functions/v1/accept-invitation?token=${token}`;
     
-    if (invitationType === 'team_member') {
-      acceptUrl = `${supabaseUrl}/functions/v1/accept-invitation?token=${token}`;
-      emailSubject = `Join ${profile.team_name || `${profile.display_name || profile.full_name}'s Team`} on EmpathAI`;
-      
-      emailContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2563eb; text-align: center;">You're Invited to Join ${profile.team_name || `${profile.display_name || profile.full_name}'s Team`}!</h1>
-          
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
-              Hello! You've been invited by <strong>${profile.display_name || profile.full_name}</strong> to join their team on EmpathAI.
-            </p>
-            
-            ${message ? `<p style="font-size: 16px; line-height: 1.6; margin-bottom: 16px; background: #e0f2fe; padding: 10px; border-radius: 4px;">
-              <strong>Personal message:</strong> ${message}
-            </p>` : ''}
-            
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              EmpathAI is an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being.
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${acceptUrl}" 
-                 style="background-color: #2563eb; color: white; padding: 12px 24px; 
-                        text-decoration: none; border-radius: 6px; font-weight: bold; 
-                        display: inline-block;">
-                Accept Invitation & Join Team
-              </a>
-            </div>
-            
-            <p style="font-size: 14px; color: #64748b; margin-top: 20px;">
-              If the button doesn't work, you can also copy and paste this link into your browser:
-              <br><a href="${acceptUrl}" style="color: #2563eb;">${acceptUrl}</a>
-            </p>
-            
-            <p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">
-              This invitation expires in 72 hours.
-            </p>
-          </div>
-          
-          <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px;">
-            <p style="font-size: 12px; color: #94a3b8; text-align: center;">
-              This invitation was sent by ${profile.display_name || profile.full_name}. If you believe this was sent in error, you can safely ignore this email.
-            </p>
-          </div>
-        </div>
-      `;
-    } else { // manager_request
-      acceptUrl = `${supabaseUrl}/functions/v1/accept-invitation?token=${token}`;
-      emailSubject = `${profile.display_name || profile.full_name} wants you to be their manager on EmpathAI`;
-      
-      emailContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2563eb; text-align: center;">You've been requested as a manager on EmpathAI!</h1>
-          
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
-              Hello! <strong>${profile.display_name || profile.full_name}</strong> has requested you to be their manager on EmpathAI.
-            </p>
-            
-            ${message ? `<p style="font-size: 16px; line-height: 1.6; margin-bottom: 16px; background: #e0f2fe; padding: 10px; border-radius: 4px;">
-              <strong>Personal message:</strong> ${message}
-            </p>` : ''}
-            
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              EmpathAI is an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being.
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0; display: flex; gap: 10px; justify-content: center;">
-              <a href="${acceptUrl}&action=accept" 
-                 style="background-color: #16a34a; color: white; padding: 12px 24px; 
-                        text-decoration: none; border-radius: 6px; font-weight: bold; 
-                        display: inline-block;">
-                Accept Manager Role
-              </a>
-              <a href="${acceptUrl}&action=decline" 
-                 style="background-color: #dc2626; color: white; padding: 12px 24px; 
-                        text-decoration: none; border-radius: 6px; font-weight: bold; 
-                        display: inline-block;">
-                Decline Request
-              </a>
-            </div>
-            
-            <p style="font-size: 14px; color: #64748b; margin-top: 20px;">
-              Accept link: <a href="${acceptUrl}&action=accept" style="color: #2563eb;">${acceptUrl}&action=accept</a><br>
-              Decline link: <a href="${acceptUrl}&action=decline" style="color: #2563eb;">${acceptUrl}&action=decline</a>
-            </p>
-            
-            <p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">
-              This invitation expires in 72 hours.
-            </p>
-          </div>
-          
-          <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px;">
-            <p style="font-size: 12px; color: #94a3b8; text-align: center;">
-              This request was sent by ${profile.display_name || profile.full_name}. If you believe this was sent in error, you can safely ignore this email.
-            </p>
-          </div>
-        </div>
-      `;
-    }
-
-    // Check if the user already exists in the system
-    console.log("Checking if user already exists...");
+    // Check if user exists
     const { data: existingUserCheck } = await supabase.auth.admin.listUsers();
     const existingUser = existingUserCheck?.users?.find(u => u.email === email);
     
     if (existingUser) {
-      console.log("User already exists, creating notification instead of auth invitation");
-      
-      // User already exists, create notification instead of sending auth invitation
+      // Create notification for existing user
       const { data: recipientProfile } = await supabase
         .from("profiles")
         .select("user_id")
@@ -248,47 +147,12 @@ serve(async (req: Request) => {
         .maybeSingle();
         
       if (recipientProfile) {
-        let notificationTitle: string;
-        let notificationMessage: string;
-        
-        if (invitationType === 'team_member') {
-          notificationTitle = 'Team Invitation Received';
-          notificationMessage = `${profile.display_name || profile.full_name} has invited you to join their team on EmpathAI. Check your dashboard to accept or decline.`;
-        } else {
-          notificationTitle = 'Manager Request Received';
-          notificationMessage = `${profile.display_name || profile.full_name} has requested you to be their manager on EmpathAI. Check your dashboard to accept or decline.`;
-        }
-        
-        await supabase
-          .from("notifications")
-          .insert({
-            user_id: existingUser.id,
-            type: 'invitation_received',
-            title: notificationTitle,
-            message: notificationMessage,
-            data: {
-              invitation_id: invitation.id,
-              invitation_token: token,
-              invited_by: profile.display_name || profile.full_name,
-              invitation_type: invitationType,
-              accept_url: acceptUrl
-            }
-          });
-          
-        console.log("Notification created for existing user:", existingUser.id);
-      } else {
-        console.log("Existing user found but no profile, creating profile notification");
-        // User exists but no profile, still send notification to their user ID
-        let notificationTitle: string;
-        let notificationMessage: string;
-        
-        if (invitationType === 'team_member') {
-          notificationTitle = 'Team Invitation Received';
-          notificationMessage = `${profile.display_name || profile.full_name} has invited you to join their team on EmpathAI. Check your dashboard to accept or decline.`;
-        } else {
-          notificationTitle = 'Manager Request Received';
-          notificationMessage = `${profile.display_name || profile.full_name} has requested you to be their manager on EmpathAI. Check your dashboard to accept or decline.`;
-        }
+        const notificationTitle = invitationType === 'team_join' 
+          ? 'Team Invitation Received' 
+          : 'Manager Request Received';
+        const notificationMessage = invitationType === 'team_join'
+          ? `${profile.display_name || profile.full_name} has invited you to join their team on EmpathAI.`
+          : `${profile.display_name || profile.full_name} has requested you to be their manager on EmpathAI.`;
         
         await supabase
           .from("notifications")
@@ -307,10 +171,12 @@ serve(async (req: Request) => {
           });
       }
     } else {
-      // User doesn't exist, use Supabase's auth invitation system
-      console.log("User doesn't exist, sending auth invitation...");
-      
-      const { data: authInvitation, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+      // Send auth invitation for new users
+      const emailSubject = invitationType === 'team_join'
+        ? `Join ${profile.team_name || `${profile.display_name || profile.full_name}'s Team`} on EmpathAI`
+        : `${profile.display_name || profile.full_name} wants you to be their manager on EmpathAI`;
+
+      const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
         email,
         {
           redirectTo: acceptUrl,
@@ -326,13 +192,7 @@ serve(async (req: Request) => {
 
       if (inviteError) {
         console.error("Error sending invitation email:", inviteError);
-        // Still throw error for new users since they need the email
         throw new Error(`Failed to send invitation email: ${inviteError.message}`);
-      } else {
-        console.log("Invitation sent successfully via Supabase auth:", { 
-          invitationId: invitation.id, 
-          authInvitation 
-        });
       }
     }
 
