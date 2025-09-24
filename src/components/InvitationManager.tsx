@@ -59,19 +59,27 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
     }
   }, [user, loadInvitations]);
 
-  // Separate invitations by type with proper type safety
+  // CORRECTED FILTERS: Based on the actual data structure we saw
+  // The system currently works with inverted logic, so we adapt to it
+  
+  // Received invitations: Where someone wants YOU to be THEIR manager
+  // In the current system: invited_by_id = sender, email = receiver (who becomes manager)
   const receivedInvitations = invitations.filter((inv: UnifiedInvitation) => 
     inv.invitation_type === 'manager_request' && 
-    inv.email === user?.email
-    // Show both pending and accepted invitations
+    inv.email === user?.email  // You are being invited to be someone's manager
   );
   
   const pendingReceivedInvitations = receivedInvitations.filter(inv => inv.status === 'pending');
   const acceptedReceivedInvitations = receivedInvitations.filter(inv => inv.status === 'accepted');
   
-  const sentInvitations = invitations.filter((inv: UnifiedInvitation) => 
-    inv.invited_by_id // Invitations sent by current user (where current user is the inviter)
-  );
+  // Sent invitations: Where YOU are asking someone to be your manager  
+  // This logic needs to be corrected because current system is inverted
+  const sentInvitations = invitations.filter((inv: UnifiedInvitation) => {
+    // Get current user's profile ID to match with invited_by_id
+    return inv.invited_by_id && 
+           inv.invitation_type === 'manager_request' &&
+           inv.email !== user?.email; // You sent this to someone else
+  });
 
   // Step 1: Employee requests someone to be their manager
   const handleRequestManager = async () => {
@@ -341,7 +349,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
                   </div>
                   
                   <p className="text-sm text-muted-foreground mb-3">
-                    {invitation.inviter?.full_name || invitation.inviter?.display_name || 'Someone'} wants you to be their manager
+                    {invitation.inviter?.full_name || invitation.inviter?.display_name || 'Someone'} is asking you to be their manager
                   </p>
                   
                   {invitation.status === 'pending' && (
@@ -397,7 +405,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
                 </div>
                 
                 <p className="text-sm text-green-700 mb-3">
-                  You accepted to be the manager for {invitation.inviter?.full_name || invitation.inviter?.display_name || 'someone'}
+                  You are now the manager for {invitation.inviter?.full_name || invitation.inviter?.display_name || 'someone'}
                 </p>
               </div>
             ))}
@@ -587,10 +595,19 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
             <div className="space-y-2 text-sm">
               <p><strong>Current User Email:</strong> {user?.email}</p>
               <p><strong>Total Invitations Loaded:</strong> {invitations.length}</p>
-              <p><strong>Pending Received:</strong> {pendingReceivedInvitations.length}</p>
-              <p><strong>Accepted Received:</strong> {acceptedReceivedInvitations.length}</p>
-              <p><strong>Sent Invitations:</strong> {sentInvitations.length}</p>
+              <p><strong>Pending Received (you become manager):</strong> {pendingReceivedInvitations.length}</p>
+              <p><strong>Accepted Received (you are manager):</strong> {acceptedReceivedInvitations.length}</p>
+              <p><strong>Sent Invitations (asking others):</strong> {sentInvitations.length}</p>
               <p><strong>User Profile can_manage_teams:</strong> {userProfile?.can_manage_teams ? 'true' : 'false'}</p>
+              
+              <div className="mt-3 p-2 bg-blue-50 rounded">
+                <p className="text-xs font-medium text-blue-800">Expected Flow:</p>
+                <p className="text-xs text-blue-700">
+                  1. If you see "Pending Received" invitations, you can accept them to become a manager<br/>
+                  2. Once accepted, "can_manage_teams" should become true<br/>
+                  3. Then you can invite team members
+                </p>
+              </div>
               
               {invitations.length > 0 && (
                 <details className="mt-4">
