@@ -1047,28 +1047,4 @@ const ChatConversation: React.FC = () => {
   );
 };
 
-export default ChatConversation;="sm"
-                  onClick={handlePauseSession}
-                  className="text-sm"
-                >
-                  <Pause className="h-4 w-4 mr-1" />
-                  Pause
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleEndSession}
-                  disabled={messages.filter(msg => msg.role === 'user').length < 5}
-                  className="text-sm text-red-600 hover:text-red-700 disabled:text-gray-400"
-                >
-                  <Power className="h-4 w-4 mr-1" />
-                  End
-                </Button>
-              </>
-            )}
-            {isPaused && (
-              <>
-                <span className="text-sm text-amber-600 font-medium">⏸ Paused Session</span>
-                <Button
-                  variant="ghost"
-                  size
+export default Conversation;

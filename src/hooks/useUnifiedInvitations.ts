@@ -369,3 +369,4 @@ export const useUnifiedInvitations = () => {
     removeTeamMember,
     checkUserPermissions
   };
+};

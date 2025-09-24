@@ -570,5 +570,8 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
     </CardContent>
   </Card>
 )}
+    </div>
+  );
+};
 
 export default InvitationManager;

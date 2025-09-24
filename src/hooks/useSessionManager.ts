@@ -85,7 +85,7 @@ export const useSessionManager = (): SessionManagerHook => {
     updateSessionState,
     syncWithDatabaseState
   };
-}; Estado principal
+};
   const [sessionState, setSessionState] = useState<SessionState>({
     conversation: null,
     messages: [],

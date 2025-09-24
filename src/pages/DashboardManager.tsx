@@ -203,12 +203,6 @@ const DashboardManager = () => {
             Authorization: `Bearer ${session.access_token}`
           }
         });
-        body: {
-          email: memberEmail.trim().toLowerCase(),
-          invitationType: 'team_member',
-          teamId: userProfile?.id
-        }
-      });
 
       if (error) throw error;
 
