@@ -16,7 +16,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Send
+  Send,
+  AlertCircle
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -56,6 +57,8 @@ interface Invitation {
   status: string;
   invited_at: string;
   expires_at: string;
+  invitation_type?: string;
+  token?: string;
 }
 
 interface TeamManagementInterfaceProps {
@@ -72,12 +75,14 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
   const [teamName, setTeamName] = useState(managerProfile.team_name || '');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [updatingName, setUpdatingName] = useState(false);
 
   useEffect(() => {
     loadInvitations();
+    loadReceivedInvitations();
   }, [managerProfile.id]);
 
   const loadInvitations = async () => {
@@ -93,6 +98,92 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
       setInvitations(data || []);
     } catch (error: any) {
       console.error('Error loading invitations:', error);
+    }
+  };
+
+  const loadReceivedInvitations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('email', managerProfile.email)
+        .eq('status', 'pending')
+        .eq('invitation_type', 'manager_request');
+      
+      if (error) throw error;
+      setReceivedInvitations(data || []);
+      console.log('Received invitations for', managerProfile.email, ':', data);
+    } catch (error: any) {
+      console.error('Error loading received invitations:', error);
+    }
+  };
+
+  const handleAcceptManagerRequest = async (invitation: Invitation) => {
+    try {
+      // Insert into team_members table
+      const { error: memberError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: managerProfile.id,
+          member_id: invitation.email, // This needs to be the profile ID, not email
+          role: 'member'
+        });
+
+      // Mark invitation as accepted
+      await supabase
+        .from('invitations')
+        .update({ 
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', invitation.id);
+
+      // Update manager profile to have can_manage_teams = true
+      await supabase
+        .from('profiles')
+        .update({ can_manage_teams: true })
+        .eq('id', managerProfile.id);
+
+      toast({
+        title: "Manager request accepted!",
+        description: "You are now managing this team member",
+      });
+
+      loadReceivedInvitations();
+      onTeamUpdate();
+    } catch (error: any) {
+      console.error('Error accepting manager request:', error);
+      toast({
+        title: "Error accepting request",
+        description: error.message || "Failed to accept manager request",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeclineManagerRequest = async (invitation: Invitation) => {
+    try {
+      await supabase
+        .from('invitations')
+        .update({ 
+          status: 'declined',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', invitation.id);
+
+      toast({
+        title: "Request declined",
+        description: "The manager request has been declined",
+      });
+
+      loadReceivedInvitations();
+    } catch (error: any) {
+      console.error('Error declining manager request:', error);
+      toast({
+        title: "Error declining request",
+        description: error.message || "Failed to decline manager request",
+        variant: "destructive"
+      });
     }
   };
 
@@ -157,7 +248,7 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
       const { data, error } = await supabase.functions.invoke('unified-invitation', {
         body: {
           email: newMemberEmail.trim(),
-          invitationType: 'team_member',
+          invitationType: 'team_join',
           teamId: managerProfile.id
         }
       });
@@ -254,6 +345,45 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Manager Requests Received */}
+      {receivedInvitations.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-800">
+              <AlertCircle className="h-5 w-5" />
+              Manager Requests Received ({receivedInvitations.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {receivedInvitations.map(invitation => (
+              <div key={invitation.id} className="p-4 bg-white border border-blue-100 rounded-lg">
+                <p className="text-sm text-gray-600 mb-3">
+                  Someone wants you to be their manager
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleAcceptManagerRequest(invitation)}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Accept & Become Manager
+                  </Button>
+                  <Button
+                    onClick={() => handleDeclineManagerRequest(invitation)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Decline
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Team Settings */}
       <Card>
         <CardHeader>

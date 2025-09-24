@@ -311,3 +311,28 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
     </Card>;
 };
 export default ManageTeamSection;
+
+// Después de loadInvitations, agregar:
+const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
+
+const loadReceivedInvitations = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('email', managerProfile.email) // Email de Emilia
+      .eq('status', 'pending')
+      .eq('invitation_type', 'manager_request'); // Jonas pidiendo ser gestionado
+    
+    if (error) throw error;
+    setReceivedInvitations(data || []);
+  } catch (error: any) {
+    console.error('Error loading received invitations:', error);
+  }
+};
+
+// En useEffect:
+useEffect(() => {
+  loadInvitations();
+  loadReceivedInvitations(); // Agregar esta línea
+}, [managerProfile.id]);
