@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 interface InvitationRequest {
   email: string;
-  invitationType: 'team_member' | 'manager_request';
+  invitationType: 'team_join' | 'manager_request'; // Updated type names
   teamId?: string;
   message?: string;
 }
@@ -13,8 +13,8 @@ interface InvitationRequest {
 interface UnifiedInvitation {
   id: string;
   email: string;
-  invitation_type: string; // Changed to string to match database response
-  status: string; // Changed to string to match database response
+  invitation_type: string;
+  status: string;
   invited_at: string;
   expires_at: string;
   invited_by?: {
@@ -33,35 +33,53 @@ export const useUnifiedInvitations = () => {
   const [loading, setLoading] = useState(false);
   const [invitations, setInvitations] = useState<UnifiedInvitation[]>([]);
 
-  // Send invitation (both team member and manager request)
+  // Check user permissions using can_manage_teams
+  const checkUserPermissions = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { canManageTeams: false, canBeManaged: false };
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('can_manage_teams, can_be_managed')
+        .eq('user_id', user.id)
+        .single();
+
+      return {
+        canManageTeams: profile?.can_manage_teams || false,
+        canBeManaged: profile?.can_be_managed || true
+      };
+    } catch (error) {
+      console.error('Error checking user permissions:', error);
+      return { canManageTeams: false, canBeManaged: false };
+    }
+  }, []);
+
+  // Send invitation with permission check
   const sendInvitation = useCallback(async (request: InvitationRequest) => {
     setLoading(true);
     try {
       console.log('Sending unified invitation:', request);
       
-// Obtener sesión del usuario actual
-const { data: { session } } = await supabase.auth.getSession();
-
-if (!session) {
-  throw new Error('Debes estar autenticado para enviar invitaciones');
-}
-
-// Crear cliente con token del usuario
-const userSupabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-  {
-    global: {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
+      // Check permissions first
+      const permissions = await checkUserPermissions();
+      if (!permissions.canManageTeams) {
+        throw new Error('You do not have permission to send invitations');
       }
-    }
-  }
-);
 
-const { data, error } = await userSupabase.functions.invoke('unified-invitation', {
-  body: request
-});
+      // Get session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('You must be authenticated to send invitations');
+      }
+
+      // Call edge function with JWT token
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+        body: request,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
 
       if (error) {
         console.error('Error sending invitation:', error);
@@ -72,7 +90,7 @@ const { data, error } = await userSupabase.functions.invoke('unified-invitation'
         throw new Error(data.error || 'Failed to send invitation');
       }
 
-      const invitationType = request.invitationType === 'team_member' ? 'team member' : 'manager';
+      const invitationType = request.invitationType === 'team_join' ? 'team member' : 'manager';
       toast.success(`${invitationType} invitation sent successfully to ${request.email}`);
       
       // Refresh invitations list
@@ -87,7 +105,7 @@ const { data, error } = await userSupabase.functions.invoke('unified-invitation'
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [checkUserPermissions]);
 
   // Load invitations (sent and received)
   const loadInvitations = useCallback(async () => {
@@ -163,26 +181,73 @@ const { data, error } = await userSupabase.functions.invoke('unified-invitation'
     try {
       console.log('Accepting invitation with token:', token);
       
-      // Call the accept endpoint directly
-      const acceptUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/unified-accept-invitation?token=${token}&action=accept`;
-      
-      const response = await fetch(acceptUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to accept invitation');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('You must be logged in to accept invitations');
       }
+
+      // Get invitation details
+      const { data: invitation } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('token', token)
+        .eq('status', 'pending')
+        .single();
+
+      if (!invitation) {
+        throw new Error('Invitation not found or already processed');
+      }
+
+      // Get user profile
+      let { data: userProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userProfile) {
+        throw new Error('User profile not found');
+      }
+
+      // Insert into team_members table
+      const { error: memberError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: invitation.manager_id,
+          member_id: userProfile.id,
+          role: invitation.invitation_type === 'manager_request' ? 'leader' : 'member'
+        });
+
+      if (memberError) {
+        console.error('Error adding team member:', memberError);
+        throw new Error('Failed to join team');
+      }
+
+      // If manager_request, update can_manage_teams
+      if (invitation.invitation_type === 'manager_request') {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ can_manage_teams: true })
+          .eq('id', userProfile.id);
+
+        if (updateError) {
+          console.error('Error updating manager permissions:', updateError);
+        }
+      }
+
+      // Mark invitation as accepted
+      await supabase
+        .from('invitations')
+        .update({ 
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', invitation.id);
 
       toast.success('Invitation accepted successfully!');
       
-      // Refresh invitations
+      // Refresh invitations and reload page to reflect changes
       await loadInvitations();
-      
-      // Optionally redirect or refresh page data
       window.location.reload();
       
     } catch (error: any) {
@@ -200,17 +265,17 @@ const { data, error } = await userSupabase.functions.invoke('unified-invitation'
     try {
       console.log('Declining invitation with token:', token);
       
-      // Call the decline endpoint directly
-      const declineUrl = `https://bmrifufykczudfxomenr.supabase.co/functions/v1/unified-accept-invitation?token=${token}&action=decline`;
-      
-      const response = await fetch(declineUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-      });
+      // Mark invitation as declined
+      const { error } = await supabase
+        .from('invitations')
+        .update({ 
+          status: 'declined',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('token', token)
+        .eq('status', 'pending');
 
-      if (!response.ok) {
+      if (error) {
         throw new Error('Failed to decline invitation');
       }
 
@@ -243,8 +308,9 @@ const { data, error } = await userSupabase.functions.invoke('unified-invitation'
             display_name,
             full_name,
             email,
-            role,
-            avatar_url
+            avatar_url,
+            can_manage_teams,
+            can_be_managed
           )
         `)
         .eq('team_id', teamId)
@@ -274,7 +340,7 @@ const { data, error } = await userSupabase.functions.invoke('unified-invitation'
         .delete()
         .eq('team_id', teamId)
         .eq('member_id', memberId)
-        .neq('role', 'manager'); // Don't allow removing the manager
+        .neq('role', 'leader'); // Don't allow removing the team leader
 
       if (error) {
         console.error('Error removing team member:', error);
@@ -282,8 +348,6 @@ const { data, error } = await userSupabase.functions.invoke('unified-invitation'
       }
 
       toast.success('Team member removed successfully');
-      
-      // The trigger will handle manager demotion if needed
       
     } catch (error: any) {
       console.error('Remove team member error:', error);
@@ -302,6 +366,6 @@ const { data, error } = await userSupabase.functions.invoke('unified-invitation'
     acceptInvitation,
     declineInvitation,
     getTeamMembers,
-    removeTeamMember
+    removeTeamMember,
+    checkUserPermissions
   };
-};
