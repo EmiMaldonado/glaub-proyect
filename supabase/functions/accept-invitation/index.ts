@@ -76,35 +76,103 @@ serve(async (req: Request) => {
         }
       }
 
-      // Call complete-invitation function
-      const { data: result, error: completeError } = await supabase.functions.invoke(
-        'complete-invitation',
-        {
-          body: {
-            token: token,
-            action: formAction,
-            user_id: userId,
-          }
+      if (formAction === "accept") {
+        if (!userId) {
+          return new Response(getErrorHTML("User not found. Please make sure you're signed up with the correct email address."), {
+            headers: { "Content-Type": "text/html" },
+            status: 400,
+          });
         }
-      );
 
-      if (completeError) {
-        console.error("Error completing invitation:", completeError);
-        return new Response(getErrorHTML(`Error: ${completeError.message}`), {
+        // Get or create user profile
+        let { data: userProfile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (!userProfile) {
+          // Create profile for user with boolean fields
+          const { data: newProfile, error: profileError } = await supabase
+            .from("profiles")
+            .insert({
+              user_id: userId,
+              full_name: userEmail?.split('@')[0] || 'User',
+              display_name: userEmail?.split('@')[0] || 'User',
+              can_manage_teams: invitation.invitation_type === 'manager_request',
+              can_be_managed: true
+            })
+            .select()
+            .single();
+
+          if (profileError) {
+            console.error("Error creating user profile:", profileError);
+            return new Response(getErrorHTML("Failed to create user profile"), {
+              headers: { "Content-Type": "text/html" },
+              status: 500,
+            });
+          }
+          userProfile = newProfile;
+        }
+
+        // Insert into team_members table ONLY (no more dual table logic)
+        const { error: memberError } = await supabase
+          .from('team_members')
+          .insert({
+            team_id: invitation.manager_id,
+            member_id: userProfile.id,
+            role: invitation.invitation_type === 'manager_request' ? 'leader' : 'member'
+          });
+
+        if (memberError) {
+          console.error('Error adding team member:', memberError);
+          return new Response(getErrorHTML("Failed to add team member"), {
+            headers: { "Content-Type": "text/html" },
+            status: 500,
+          });
+        }
+
+        // If manager_request, update can_manage_teams boolean
+        if (invitation.invitation_type === 'manager_request') {
+          await supabase
+            .from('profiles')
+            .update({ can_manage_teams: true })
+            .eq('id', userProfile.id);
+        }
+
+        // Mark invitation as accepted
+        await supabase
+          .from('invitations')
+          .update({ 
+            status: 'accepted',
+            accepted_at: new Date().toISOString()
+          })
+          .eq('id', invitation.id);
+
+        const successMessage = invitation.invitation_type === 'manager_request'
+          ? `Successfully accepted manager request from ${managerName}!`
+          : `Successfully joined ${teamName}!`;
+          
+        return new Response(getSuccessHTML(successMessage), {
           headers: { "Content-Type": "text/html" },
-          status: 400,
+          status: 200,
+        });
+
+      } else if (formAction === "decline") {
+        // Mark invitation as declined
+        await supabase
+          .from('invitations')
+          .update({ 
+            status: 'declined',
+            accepted_at: new Date().toISOString()
+          })
+          .eq('id', invitation.id);
+
+        return new Response(getSuccessHTML("Successfully declined the invitation."), {
+          headers: { "Content-Type": "text/html" },
+          status: 200,
         });
       }
-
-      // Success response
-      const successMessage = formAction === "accept" 
-        ? `Successfully accepted invitation to join ${teamName}!`
-        : "Successfully declined the invitation.";
-        
-      return new Response(getSuccessHTML(successMessage), {
-        headers: { "Content-Type": "text/html" },
-        status: 200,
-      });
     }
 
     // GET request - show invitation details and form
