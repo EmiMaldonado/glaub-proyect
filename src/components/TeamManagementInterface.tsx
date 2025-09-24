@@ -141,7 +141,7 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
       // Update manager profile to have can_manage_teams = true
       await supabase
         .from('profiles')
-        .update({ can_manage_teams: true })
+        .update({ can_manage_teams: true } as any)
         .eq('id', managerProfile.id);
 
       toast({

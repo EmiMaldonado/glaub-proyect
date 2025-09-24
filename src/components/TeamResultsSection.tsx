@@ -245,7 +245,7 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
                       </div>
                       <div className="p-3 bg-muted/50 rounded-lg text-center">
                         <div className="text-lg font-semibold text-primary">
-                          {selectedMember.can_manage_teams === true ? 'Manager' : 'Team Member'}
+                          {(selectedMember as any).can_manage_teams === true ? 'Manager' : 'Team Member'}
                         </div>
                         <div className="text-xs text-muted-foreground">Role</div>
                       </div>

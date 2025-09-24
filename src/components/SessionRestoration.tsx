@@ -16,12 +16,12 @@ const SessionRestoration: React.FC<SessionRestorationProps> = ({
   onDismiss
 }) => {
   const { user } = useAuth();
-  const { loadSessionFromLocal, hasActiveSession, conversation, messages } = useSessionManager();
+  const { loadSessionFromLocal, hasActiveSession } = useSessionManager();
   const navigate = useNavigate();
   const [showRestorePrompt, setShowRestorePrompt] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<{
     messageCount: number;
-    lastActivity: string;
+    lastActivity: number;
     conversationTitle: string;
   } | null>(null);
 
@@ -29,14 +29,18 @@ const SessionRestoration: React.FC<SessionRestorationProps> = ({
     if (!user) return;
 
     // Check for restorable session
-    const session = loadSessionFromLocal();
-    if (session && session.conversation && session.messages.length > 0) {
-      setSessionInfo({
-        messageCount: session.messages.length,
-        lastActivity: session.lastActivity,
-        conversationTitle: session.conversation.title
-      });
-      setShowRestorePrompt(true);
+    try {
+      const sessionData = loadSessionFromLocal();
+      if (sessionData && typeof sessionData === 'object' && 'conversation' in sessionData && 'messages' in sessionData) {
+        setSessionInfo({
+          messageCount: sessionData.messages?.length || 0,
+          lastActivity: sessionData.lastActivity || Date.now(),
+          conversationTitle: sessionData.conversation?.title || 'Conversation'
+        });
+        setShowRestorePrompt(true);
+      }
+    } catch (error) {
+      console.error('Error loading session:', error);
     }
   }, [user, loadSessionFromLocal]);
 
@@ -55,7 +59,7 @@ const SessionRestoration: React.FC<SessionRestorationProps> = ({
     return null;
   }
 
-  const timeSinceActivity = new Date().getTime() - new Date(sessionInfo.lastActivity).getTime();
+  const timeSinceActivity = new Date().getTime() - sessionInfo.lastActivity;
   const minutesAgo = Math.floor(timeSinceActivity / 60000);
   const hoursAgo = Math.floor(minutesAgo / 60);
 

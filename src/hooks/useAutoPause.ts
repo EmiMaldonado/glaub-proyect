@@ -61,7 +61,7 @@ export const useAutoPause = (config: AutoPauseConfig): AutoPauseHook => {
 
       // Crear contexto de la conversación
       const conversationContext = {
-        lastTopic: conversation.title || 'Ongoing conversation',
+        lastTopic: 'Ongoing conversation',
         messageCount: messages.length,
         lastMessageTime: messages.length > 0 ? messages[messages.length - 1].created_at : null,
         sessionDuration: Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / 60000)
@@ -72,10 +72,8 @@ export const useAutoPause = (config: AutoPauseConfig): AutoPauseHook => {
         .from('paused_conversations')
         .upsert({
           user_id: userId,
-          conversation_id: conversation.id,
-          conversation_title: conversation.title || 'Chat Session',
-          message_history: messages,
-          context: conversationContext,
+          conversation_title: 'Chat Session',
+          message_history: messages as any,
           created_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'

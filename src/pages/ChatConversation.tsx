@@ -53,12 +53,6 @@ const ChatConversation: React.FC = () => {
     });
   }, [hasActiveSession, isPaused, conversation, messages]);
   
-  // Referencias
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<any>(null);
-  const subscriptionRef = useRef<string | null>(null);
-  const hasInitialized = useRef(false);
-
   // Hooks personalizados
   const {
     conversation,

@@ -53,39 +53,6 @@ const STORAGE_KEYS = {
 export const useSessionManager = (): SessionManagerHook => {
   const { user } = useAuth();
   
-  // Cargar sesión al inicializar (solo una vez)
-  useEffect(() => {
-    loadSessionFromLocal();
-  }, [loadSessionFromLocal]);
-
-  // Cleanup al desmontar
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      isProcessingRef.current = false;
-    };
-  }, []);
-
-  return {
-    conversation: sessionState.conversation,
-    messages: sessionState.messages,
-    hasActiveSession: sessionState.hasActiveSession,
-    isPaused: sessionState.isPaused,
-    startNewSession,
-    resumeSession,
-    addMessageToSession,
-    pauseSession,
-    resumePausedSession,
-    completeSession,
-    endSession,
-    updateActivity,
-    loadSessionFromLocal,
-    updateSessionState,
-    syncWithDatabaseState
-  };
-};
   const [sessionState, setSessionState] = useState<SessionState>({
     conversation: null,
     messages: [],
@@ -135,6 +102,37 @@ export const useSessionManager = (): SessionManagerHook => {
       return newState;
     });
   }, [debouncedSave]);
+
+  // Cargar sesión desde localStorage
+  const loadSessionFromLocal = useCallback(() => {
+    try {
+      const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
+      const savedMessages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
+      const savedActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
+
+      if (savedSession && savedMessages) {
+        const conversation: Conversation = JSON.parse(savedSession);
+        const messages: Message[] = JSON.parse(savedMessages);
+        const lastActivity = savedActivity ? parseInt(savedActivity) : Date.now();
+
+        console.log('📱 Loading session from localStorage:', conversation.id);
+
+        updateSessionState({
+          conversation,
+          messages,
+          hasActiveSession: conversation.status === 'active',
+          isPaused: conversation.status === 'paused',
+          lastActivity
+        });
+
+        return { conversation, messages, lastActivity };
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Error loading from localStorage:', error);
+      return null;
+    }
+  }, [updateSessionState]);
 
   // Iniciar nueva sesión
   const startNewSession = useCallback((conversation: Conversation) => {
@@ -219,9 +217,8 @@ export const useSessionManager = (): SessionManagerHook => {
         .from('paused_conversations')
         .upsert({
           user_id: user.id,
-          conversation_id: sessionState.conversation.id,
           conversation_title: sessionState.conversation.title,
-          message_history: sessionState.messages,
+          message_history: sessionState.messages as any,
           created_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
@@ -347,33 +344,6 @@ export const useSessionManager = (): SessionManagerHook => {
     }));
   }, []);
 
-  // Cargar sesión desde localStorage
-  const loadSessionFromLocal = useCallback(() => {
-    try {
-      const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
-      const savedMessages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
-      const savedActivity = localStorage.getItem(STORAGE_KEYS.LAST_ACTIVITY);
-
-      if (savedSession && savedMessages) {
-        const conversation: Conversation = JSON.parse(savedSession);
-        const messages: Message[] = JSON.parse(savedMessages);
-        const lastActivity = savedActivity ? parseInt(savedActivity) : Date.now();
-
-        console.log('📱 Loading session from localStorage:', conversation.id);
-
-        updateSessionState({
-          conversation,
-          messages,
-          hasActiveSession: conversation.status === 'active',
-          isPaused: conversation.status === 'paused',
-          lastActivity
-        });
-      }
-    } catch (error) {
-      console.error('❌ Error loading from localStorage:', error);
-    }
-  }, [updateSessionState]);
-
   // Sincronizar con estado de base de datos
   const syncWithDatabaseState = useCallback(async (conversationId: string): Promise<void> => {
     if (!user?.id) return;
@@ -435,4 +405,37 @@ export const useSessionManager = (): SessionManagerHook => {
     }
   }, [user?.id, updateSessionState]);
 
-  //
+  // Cargar sesión al inicializar (solo una vez)
+  useEffect(() => {
+    loadSessionFromLocal();
+  }, [loadSessionFromLocal]);
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      isProcessingRef.current = false;
+    };
+  }, []);
+
+  return {
+    conversation: sessionState.conversation,
+    messages: sessionState.messages,
+    hasActiveSession: sessionState.hasActiveSession,
+    isPaused: sessionState.isPaused,
+    lastActivity: sessionState.lastActivity,
+    startNewSession,
+    resumeSession,
+    addMessageToSession,
+    pauseSession,
+    resumePausedSession,
+    completeSession,
+    endSession,
+    updateActivity,
+    loadSessionFromLocal,
+    updateSessionState,
+    syncWithDatabaseState
+  };
+};

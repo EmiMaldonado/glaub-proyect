@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { ExtendedProfile } from '@/types/extended-database';
 
 interface ManagerCapabilities {
   isManager: boolean;
@@ -15,54 +16,57 @@ export const useManagerCapabilities = (): ManagerCapabilities => {
     isManager: false,
     hasTeamMembers: false,
     canAccessManagerDashboard: false,
-    loading: true,
+    loading: true
   });
 
   useEffect(() => {
-    const checkManagerCapabilities = async () => {
-      if (!user) {
-        setCapabilities({
-          isManager: false,
-          hasTeamMembers: false,
-          canAccessManagerDashboard: false,
-          loading: false,
-        });
-        return;
-      }
+    if (!user) {
+      setCapabilities({
+        isManager: false,
+        hasTeamMembers: false,
+        canAccessManagerDashboard: false,
+        loading: false
+      });
+      return;
+    }
 
+    const checkManagerCapabilities = async () => {
       try {
-        // Check if user is a manager
+        setCapabilities(prev => ({ ...prev, loading: true }));
+
+        // Get user profile with extended fields
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, role, team_name')
+          .select('*')
           .eq('user_id', user.id)
-          .maybeSingle();
+          .single();
 
-        if (profileError) throw profileError;
-
-        if (!profile) {
-          // Profile doesn't exist, user is not a manager
+        if (profileError) {
+          console.error('Error fetching user profile:', profileError);
           setCapabilities({
             isManager: false,
             hasTeamMembers: false,
             canAccessManagerDashboard: false,
-            loading: false,
+            loading: false
           });
           return;
         }
 
-        const isManager = profile?.can_manage_teams === true;
+        const extendedProfile = profile as any as ExtendedProfile;
+        const isManager = extendedProfile?.can_manage_teams === true;
         let hasTeamMembers = false;
 
         if (isManager) {
           // Check if manager has team members using the new team_members table
           const { data: teamMembers, error: teamError } = await supabase
             .from('team_members')
-            .select('member_id')
+            .select('id')
             .eq('team_id', profile.id)
-            .neq('member_id', profile.id); // Exclude the manager themselves
+            .eq('role', 'member');
 
-          if (!teamError) {
+          if (teamError) {
+            console.error('Error checking team members:', teamError);
+          } else {
             hasTeamMembers = (teamMembers?.length || 0) > 0;
           }
         }
@@ -70,16 +74,17 @@ export const useManagerCapabilities = (): ManagerCapabilities => {
         setCapabilities({
           isManager,
           hasTeamMembers,
-          canAccessManagerDashboard: isManager && hasTeamMembers,
-          loading: false,
+          canAccessManagerDashboard: isManager,
+          loading: false
         });
+
       } catch (error) {
         console.error('Error checking manager capabilities:', error);
         setCapabilities({
           isManager: false,
           hasTeamMembers: false,
           canAccessManagerDashboard: false,
-          loading: false,
+          loading: false
         });
       }
     };
