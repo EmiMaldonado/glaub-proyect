@@ -278,7 +278,7 @@ serve(async (req: Request) => {
           const { error: promoteManagerError } = await supabase
             .from("profiles")
             .update({ 
-              role: "manager",
+              can_manage_teams: true,
               team_name: teamName
             })
             .eq("id", invitation.manager_id);
@@ -301,7 +301,7 @@ serve(async (req: Request) => {
               .insert({
                 team_id: invitation.manager_id,
                 member_id: invitation.manager_id,
-                role: 'manager'
+                can_manage_teams: true
               });
           }
         }
@@ -355,7 +355,7 @@ serve(async (req: Request) => {
           const { error: promoteError } = await supabase
             .from("profiles")
             .update({ 
-              role: "manager",
+              can_manage_teams: true,
               team_name: teamName
             })
             .eq("id", invitation.manager_id);
@@ -372,7 +372,7 @@ serve(async (req: Request) => {
           .insert({
             team_id: invitation.manager_id,
             member_id: invitation.manager_id,
-            role: 'manager'
+            can_manage_teams: true
           });
 
         // Then add employee to manager's team

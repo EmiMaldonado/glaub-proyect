@@ -111,7 +111,7 @@ const TeamOverview: React.FC = () => {
     try {
       setLoading(true);
       
-      if (userProfile?.role === 'manager') {
+      if (userProfile?.can_manage_teams === true) {
         // Fetch teams managed by this user
         const { data, error } = await supabase
           .from('team_memberships')
@@ -337,7 +337,7 @@ const TeamOverview: React.FC = () => {
     );
   }
 
-  const isManager = userProfile?.role === 'manager';
+  const isManager = userProfile?.can_manage_teams === true;
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">

@@ -42,7 +42,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
   const [fetchingData, setFetchingData] = useState(true);
   const { teamLimits, validateTeamLimits, loadTeamLimits } = useAutoConfig(userProfile?.id);
 
-  const isManager = userProfile?.role === 'manager';
+  const isManager = userProfile?.can_manage_teams === true;
 
   useEffect(() => {
     if (user && userProfile) {

@@ -51,7 +51,7 @@ export const useManagerCapabilities = (): ManagerCapabilities => {
           return;
         }
 
-        const isManager = profile?.role === 'manager';
+        const isManager = profile?.can_manage_teams === true;
         let hasTeamMembers = false;
 
         if (isManager) {

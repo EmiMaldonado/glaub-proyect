@@ -418,7 +418,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
         )}
 
         {/* Step 3: Add Team Members (For Managers) */}
-        {userProfile?.role === 'manager' && (
+        {userProfile?.can_manage_teams === true && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

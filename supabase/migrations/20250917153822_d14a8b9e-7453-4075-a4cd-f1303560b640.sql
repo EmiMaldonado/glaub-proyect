@@ -115,7 +115,7 @@ BEGIN
         'role_change',
         'Role Changed to Employee',
         'You have been automatically changed from manager to employee as you no longer have any team members.',
-        '{"previous_role": "manager", "new_role": "employee"}'::jsonb
+        '{"can_manage_teams = false, "new_role": "employee"}'::jsonb
       FROM public.profiles p
       WHERE p.id = COALESCE(OLD.manager_id, NEW.manager_id);
     END IF;

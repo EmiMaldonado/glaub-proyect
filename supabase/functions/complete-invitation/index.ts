@@ -189,7 +189,7 @@ serve(async (req: Request) => {
         const { error: promoteError } = await supabase
           .from("profiles")
           .update({ 
-            role: 'manager',
+            can_manage_teams: true,
             team_name: finalTeamName
           })
           .eq("id", userProfile.id);
@@ -207,7 +207,7 @@ serve(async (req: Request) => {
           .insert({
             team_id: userProfile.id,
             member_id: userProfile.id,
-            role: 'manager'
+            can_manage_teams: true
           });
 
         if (addManagerError && addManagerError.code !== '23505') { // Ignore duplicate key errors
@@ -360,7 +360,7 @@ serve(async (req: Request) => {
           const { error: promoteManagerError } = await supabase
             .from("profiles")
             .update({ 
-              role: "manager",
+              can_manage_teams: true,
               team_name: defaultTeamName
             })
             .eq("id", invitation.manager_id);

@@ -56,7 +56,7 @@ const TeamManagementModern: React.FC<TeamManagementModernProps> = ({ userProfile
   const [editingTeamName, setEditingTeamName] = useState(false);
   const [newTeamName, setNewTeamName] = useState(userProfile?.team_name || '');
 
-  const isManager = userProfile?.role === 'manager';
+  const isManager = userProfile?.can_manage_teams === true;
 
   useEffect(() => {
     if (user && userProfile) {

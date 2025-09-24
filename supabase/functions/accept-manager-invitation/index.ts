@@ -198,7 +198,7 @@ serve(async (req: Request) => {
             user_id: managerUser.id,
             full_name: managerUser.user_metadata?.full_name || managerUser.email?.split('@')[0] || 'Manager',
             display_name: managerUser.user_metadata?.display_name || managerUser.user_metadata?.full_name || managerUser.email?.split('@')[0] || 'Manager',
-            role: 'manager'
+            can_manage_teams: true
           })
           .select()
           .single();
@@ -218,7 +218,7 @@ serve(async (req: Request) => {
         await supabase
           .from("profiles")
           .update({ 
-            role: 'manager',
+            can_manage_teams: true,
             team_name: teamName
           })
           .eq("id", managerProfile.id);
@@ -242,7 +242,7 @@ serve(async (req: Request) => {
         .insert({
           team_id: managerProfile.id,
           member_id: managerProfile.id,
-          role: 'manager'
+          can_manage_teams: true
         });
 
       if (managerInsertError && managerInsertError.code !== '23505') { // Ignore duplicate key errors
