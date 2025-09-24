@@ -98,11 +98,10 @@ export const useUnifiedInvitations = () => {
       // Check for existing pending invitations first
       const { data: existingInvitations, error: checkError } = await supabase
         .from('invitations')
-        .select('id, email, status, invitation_type, expires_at')
+        .select('id, email, status, invitation_type')
         .eq('email', request.email)
         .eq('invitation_type', request.invitationType)
-        .eq('status', 'pending')
-        .gt('expires_at', new Date().toISOString());
+        .eq('status', 'pending');
 
       // Ignore the error if it's just "no rows found"
       if (checkError && !checkError.message.includes('No rows')) {
@@ -167,10 +166,11 @@ export const useUnifiedInvitations = () => {
     }
   }, [user, checkUserPermissions]);
 
-  // Load invitations for current user
+  // Load invitations for current user - FORCE RELOAD VERSION
   const loadInvitations = useCallback(async () => {
     if (!user) return;
     
+    console.log('🔄 Loading invitations with updated hook...');
     setLoading(true);
     
     try {
@@ -187,7 +187,7 @@ export const useUnifiedInvitations = () => {
         return;
       }
 
-      console.log('Loading invitations for profile:', profile.email);
+      console.log('📧 Loading invitations for email:', profile.email);
 
       // Get sent invitations (where current user is the inviter)
       const { data: sentInvitations, error: sentError } = await supabase
@@ -205,7 +205,7 @@ export const useUnifiedInvitations = () => {
         console.error('Error loading sent invitations:', sentError);
       }
 
-      // Get received invitations (where current user is the target) - include all statuses
+      // Get received invitations - UPDATED QUERY WITHOUT STATUS FILTER
       const { data: receivedInvitations, error: receivedError } = await supabase
         .from('invitations')
         .select(`
@@ -218,15 +218,14 @@ export const useUnifiedInvitations = () => {
           )
         `)
         .eq('email', profile.email)
-        .in('status', ['pending', 'accepted'])  // Include both pending and accepted
         .order('created_at', { ascending: false });
 
       if (receivedError) {
         console.error('Error loading received invitations:', receivedError);
       }
 
-      console.log('📤 Sent invitations:', sentInvitations?.length || 0);
-      console.log('📥 Received invitations:', receivedInvitations?.length || 0);
+      console.log('📤 Sent invitations loaded:', sentInvitations?.length || 0);
+      console.log('📥 Received invitations loaded:', receivedInvitations?.length || 0);
 
       // Combine and deduplicate invitations
       const allInvitations = [
@@ -237,6 +236,8 @@ export const useUnifiedInvitations = () => {
       const uniqueInvitations = allInvitations.filter((invitation, index, self) => 
         index === self.findIndex(inv => inv.id === invitation.id)
       );
+
+      console.log('✅ Total unique invitations:', uniqueInvitations.length);
 
       // Type assertion to ensure correct typing
       const typedInvitations: UnifiedInvitation[] = uniqueInvitations.map(inv => ({
@@ -257,7 +258,7 @@ export const useUnifiedInvitations = () => {
       setInvitations(typedInvitations);
 
     } catch (error) {
-      console.error('Error loading invitations:', error);
+      console.error('❌ Error loading invitations:', error);
       setInvitations([]);
     } finally {
       setLoading(false);
