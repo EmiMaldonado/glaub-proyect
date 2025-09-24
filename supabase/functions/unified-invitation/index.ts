@@ -77,9 +77,16 @@ serve(async (req: Request) => {
       throw new Error(`Profile error: ${profileError.message}`);
     }
 
-    // Check permission using can_manage_teams (not role)
-    if (!profile?.can_manage_teams) {
-      return new Response(JSON.stringify({ error: 'No permission to send invitations' }), {
+    // Check permissions based on invitation type
+    if (invitationType === 'team_join' && !profile?.can_manage_teams) {
+      return new Response(JSON.stringify({ error: 'Only managers can invite team members' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (invitationType === 'manager_request' && !profile?.can_be_managed) {
+      return new Response(JSON.stringify({ error: 'You cannot request managers' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
