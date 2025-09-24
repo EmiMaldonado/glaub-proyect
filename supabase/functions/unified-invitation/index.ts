@@ -77,7 +77,17 @@ serve(async (req: Request) => {
       throw new Error(`Profile error: ${profileError.message}`);
     }
 
-    // Check permissions based on invitation type
+    // Check permissions based on invitation type    
+    const { email, invitationType, teamId, message }: UnifiedInvitationRequest = await req.json();
+
+    if (!email) {
+      throw new Error("Email is required");
+    }
+
+    if (!invitationType) {
+      throw new Error("Invitation type is required");
+    }
+
     if (invitationType === 'team_join' && !profile?.can_manage_teams) {
       return new Response(JSON.stringify({ error: 'Only managers can invite team members' }), {
         status: 403,
@@ -91,17 +101,7 @@ serve(async (req: Request) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
-
-    const { email, invitationType, teamId, message }: UnifiedInvitationRequest = await req.json();
-
-    if (!email) {
-      throw new Error("Email is required");
-    }
-
-    if (!invitationType) {
-      throw new Error("Invitation type is required");
-    }
-
+    
     // Check for existing invitation
     const { data: existingInvitation } = await supabase
       .from("invitations")
