@@ -56,7 +56,7 @@ export const useUnifiedInvitations = () => {
       
       return {
         canManageTeams: extendedProfile?.can_manage_teams || false,
-        canBeManaged: extendedProfile?.can_be_managed ?? true // Use nullish coalescing for boolean
+        canBeManaged: extendedProfile?.can_be_managed ?? true
       };
     } catch (error) {
       console.error('Error checking user permissions:', error);
@@ -95,6 +95,19 @@ export const useUnifiedInvitations = () => {
         throw new Error('Profile not found');
       }
 
+      // Check for existing pending invitations first
+      const { data: existingInvitation } = await supabase
+        .from('invitations')
+        .select('id, email, status, invitation_type')
+        .eq('email', request.email)
+        .eq('invitation_type', request.invitationType)
+        .eq('status', 'pending')
+        .single();
+
+      if (existingInvitation) {
+        throw new Error(`A ${request.invitationType === 'manager_request' ? 'manager request' : 'team invitation'} is already pending for ${request.email}`);
+      }
+
       // Call unified invitation edge function
       const { data, error } = await supabase.functions.invoke('unified-invitation', {
         body: {
@@ -105,7 +118,13 @@ export const useUnifiedInvitations = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific edge function errors
+        if (error.message && error.message.includes('already sent')) {
+          throw new Error(`A ${request.invitationType === 'manager_request' ? 'manager request' : 'team invitation'} is already pending for ${request.email}`);
+        }
+        throw error;
+      }
 
       console.log('✅ Invitation sent successfully:', data);
       
@@ -116,6 +135,14 @@ export const useUnifiedInvitations = () => {
 
     } catch (error: any) {
       console.error('❌ Error sending invitation:', error);
+      
+      // Provide user-friendly error messages
+      if (error.message?.includes('already sent') || error.message?.includes('already pending')) {
+        throw new Error(error.message);
+      } else if (error.message?.includes('FunctionsHttpError')) {
+        throw new Error('There was an error sending the invitation. Please try again.');
+      }
+      
       throw error;
     } finally {
       setLoading(false);
