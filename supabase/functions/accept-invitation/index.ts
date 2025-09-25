@@ -204,7 +204,7 @@ function getInvitationHTML(invitation: any, managerName: string, teamName: strin
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EmpathAI Invitation</title>
+    <title>Gläub Invitation</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -304,7 +304,7 @@ function getInvitationHTML(invitation: any, managerName: string, teamName: strin
 <body>
     <div class="container">
         <div class="header">
-            <h1>EmpathAI Invitation</h1>
+            <h1>Gläub Invitation</h1>
             <p>You've been invited to ${actionText}</p>
         </div>
         
@@ -313,8 +313,8 @@ function getInvitationHTML(invitation: any, managerName: string, teamName: strin
                 <h3>${managerName} has sent you a ${invitationType}</h3>
                 <p>
                     ${isManagerRequest 
-                      ? `They would like you to become their manager on EmpathAI, an AI-powered therapeutic conversation platform.`
-                      : `They've invited you to join "${teamName}" on EmpathAI, an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being.`
+                      ? `They would like you to become their manager on Gläub, an AI-powered therapeutic conversation platform.`
+                      : `They've invited you to join "${teamName}" on Gläub, an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being.`
                     }
                 </p>
             </div>
@@ -342,7 +342,7 @@ function getInvitationHTML(invitation: any, managerName: string, teamName: strin
                 </div>
 
                 <div class="note">
-                    <strong>Note:</strong> To accept this invitation, make sure you use the same email address (${invitation.email}) when creating your EmpathAI account.
+                    <strong>Note:</strong> To accept this invitation, make sure you use the same email address (${invitation.email}) when creating your Gläub account.
                 </div>
             </form>
         </div>
@@ -376,7 +376,7 @@ function getSuccessHTML(message: string) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Success - EmpathAI</title>
+    <title>Success - Gläub</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -431,7 +431,7 @@ function getSuccessHTML(message: string) {
         <div class="success-icon"></div>
         <h1>Success!</h1>
         <p>${message}</p>
-        <a href="https://gläub-thesis.com" class="btn">Continue to EmpathAI</a>
+        <a href="https://gläub-thesis.com" class="btn">Continue to Gläub</a>
     </div>
 </body>
 </html>
@@ -445,7 +445,7 @@ function getErrorHTML(message: string) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error - EmpathAI</title>
+    <title>Error - Gläub</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -500,7 +500,7 @@ function getErrorHTML(message: string) {
         <div class="error-icon"></div>
         <h1>Error</h1>
         <p>${message}</p>
-        <a href="https://gläub-thesis.com" class="btn">Return to EmpathAI</a>
+        <a href="https://gläub-thesis.com" class="btn">Return to Gläub</a>
     </div>
 </body>
 </html>

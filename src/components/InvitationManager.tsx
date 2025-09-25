@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { useUnifiedInvitations } from '@/hooks/useUnifiedInvitations';
+import { 
+  useUnifiedInvitations, 
+  type UnifiedInvitation 
+} from '@/hooks/useUnifiedInvitations';
 import { 
   UserPlus, 
   Users, 
@@ -58,14 +59,27 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
     }
   }, [user, loadInvitations]);
 
-  // Separate invitations by type
-  const receivedInvitations = invitations.filter(inv => 
-    inv.invitation_type === 'manager_request' && inv.email === user?.email
+  // CORRECTED FILTERS: Based on the actual data structure we saw
+  // The system currently works with inverted logic, so we adapt to it
+  
+  // Received invitations: Where someone wants YOU to be THEIR manager
+  // In the current system: invited_by_id = sender, email = receiver (who becomes manager)
+  const receivedInvitations = invitations.filter((inv: UnifiedInvitation) => 
+    inv.invitation_type === 'manager_request' && 
+    inv.email === user?.email  // You are being invited to be someone's manager
   );
   
-  const sentInvitations = invitations.filter(inv => 
-    inv.invited_by || inv.manager // Invitations sent by current user
-  );
+  const pendingReceivedInvitations = receivedInvitations.filter(inv => inv.status === 'pending');
+  const acceptedReceivedInvitations = receivedInvitations.filter(inv => inv.status === 'accepted');
+  
+  // Sent invitations: Where YOU are asking someone to be your manager  
+  // This logic needs to be corrected because current system is inverted
+  const sentInvitations = invitations.filter((inv: UnifiedInvitation) => {
+    // Get current user's profile ID to match with invited_by_id
+    return inv.invited_by_id && 
+           inv.invitation_type === 'manager_request' &&
+           inv.email !== user?.email; // You sent this to someone else
+  });
 
   // Step 1: Employee requests someone to be their manager
   const handleRequestManager = async () => {
@@ -87,6 +101,16 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
       return;
     }
 
+    // Check if it's the user's own email
+    if (managerEmail.trim().toLowerCase() === user?.email?.toLowerCase()) {
+      toast({
+        title: "Invalid Request",
+        description: "You cannot request yourself to be your manager",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await sendInvitation({
         email: managerEmail.trim(),
@@ -102,9 +126,21 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
       setShowManagerDialog(false);
     } catch (error: any) {
       console.error('Error requesting manager:', error);
+      
+      // Handle specific error messages
+      let errorMessage = "Failed to send manager request";
+      
+      if (error.message?.includes('already pending')) {
+        errorMessage = error.message;
+      } else if (error.message?.includes('permission')) {
+        errorMessage = "You don't have permission to request a manager";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
-        title: "Error Sending Request",
-        description: error.message || "Failed to send manager request",
+        title: "Cannot Send Request",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -116,6 +152,25 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
       toast({
         title: "Email Required",
         description: "Please enter the team member's email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!teamMemberEmail.includes('@')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if it's the user's own email
+    if (teamMemberEmail.trim().toLowerCase() === user?.email?.toLowerCase()) {
+      toast({
+        title: "Invalid Invitation",
+        description: "You cannot invite yourself to your own team",
         variant: "destructive"
       });
       return;
@@ -136,16 +191,37 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
       setTeamMemberEmail('');
     } catch (error: any) {
       console.error('Error inviting team member:', error);
+      
+      // Handle specific error messages
+      let errorMessage = "Failed to send team invitation";
+      
+      if (error.message?.includes('already pending')) {
+        errorMessage = error.message;
+      } else if (error.message?.includes('permission')) {
+        errorMessage = "You don't have permission to invite team members";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
-        title: "Error Sending Invitation",
-        description: error.message || "Failed to send team invitation",
+        title: "Cannot Send Invitation",
+        description: errorMessage,
         variant: "destructive"
       });
     }
   };
 
   // Handle accepting manager request (Step 2)
-  const handleAcceptManagerRequest = async (invitation: any) => {
+  const handleAcceptManagerRequest = async (invitation: UnifiedInvitation) => {
+    if (!invitation.token) {
+      toast({
+        title: "Error",
+        description: "Invalid invitation token",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await acceptInvitation(invitation.token);
       
@@ -166,7 +242,16 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
   };
 
   // Handle declining manager request
-  const handleDeclineManagerRequest = async (invitation: any) => {
+  const handleDeclineManagerRequest = async (invitation: UnifiedInvitation) => {
+    if (!invitation.token) {
+      toast({
+        title: "Error",
+        description: "Invalid invitation token",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await declineInvitation(invitation.token);
 
@@ -238,16 +323,16 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
   return (
     <div className="space-y-6">
       {/* Received Invitations (Manager Requests to Accept) */}
-      {receivedInvitations.length > 0 ? (
+      {pendingReceivedInvitations.length > 0 && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <AlertCircle className="h-5 w-5" />
-              Manager Requests Received ({receivedInvitations.length})
+              Manager Requests Received ({pendingReceivedInvitations.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {receivedInvitations.map((invitation) => {
+            {pendingReceivedInvitations.map((invitation: UnifiedInvitation) => {
               const typeInfo = getInvitationTypeDisplay(invitation.invitation_type);
               
               return (
@@ -264,36 +349,72 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
                   </div>
                   
                   <p className="text-sm text-muted-foreground mb-3">
-                    {invitation.invited_by?.full_name || 'Someone'} wants you to be their manager
+                    {invitation.inviter?.full_name || invitation.inviter?.display_name || 'Someone'} is asking you to be their manager
                   </p>
                   
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleAcceptManagerRequest(invitation)}
-                      disabled={loading}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Accept & Become Manager
-                    </Button>
-                    <Button
-                      onClick={() => handleDeclineManagerRequest(invitation)}
-                      disabled={loading}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Decline
-                    </Button>
-                  </div>
+                  {invitation.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleAcceptManagerRequest(invitation)}
+                        disabled={loading}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Accept & Become Manager
+                      </Button>
+                      <Button
+                        onClick={() => handleDeclineManagerRequest(invitation)}
+                        disabled={loading}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Decline
+                      </Button>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </CardContent>
         </Card>
-      ) : (
-        /* Info Card - only show when no invitations */
+      )}
+
+      {/* Accepted Manager Requests (Show what you've accepted) */}
+      {acceptedReceivedInvitations.length > 0 && (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-700">
+              <CheckCircle className="h-5 w-5" />
+              Manager Roles Accepted ({acceptedReceivedInvitations.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {acceptedReceivedInvitations.map((invitation: UnifiedInvitation) => (
+              <div key={invitation.id} className="p-4 border border-green-200 rounded-lg bg-white shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    <span className="font-medium">You are now a manager</span>
+                    {getStatusBadge(invitation.status)}
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    Accepted {invitation.accepted_at ? new Date(invitation.accepted_at).toLocaleDateString() : 'recently'}
+                  </span>
+                </div>
+                
+                <p className="text-sm text-green-700 mb-3">
+                  You are now the manager for {invitation.inviter?.full_name || invitation.inviter?.display_name || 'someone'}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Info Card - only show when no invitations */}
+      {pendingReceivedInvitations.length === 0 && acceptedReceivedInvitations.length === 0 && (
         <Card className="bg-muted/50">
           <CardContent className="pt-6">
             <div className="space-y-3">
@@ -350,6 +471,12 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
                         placeholder="manager@company.com"
                         value={managerEmail}
                         onChange={(e) => setManagerEmail(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleRequestManager();
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -391,7 +518,12 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
                     placeholder="colleague@company.com"
                     value={teamMemberEmail}
                     onChange={(e) => setTeamMemberEmail(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleInviteTeamMember()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleInviteTeamMember();
+                      }
+                    }}
                   />
                 </div>
                 <Button
@@ -418,7 +550,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {sentInvitations.map((invitation) => {
+            {sentInvitations.map((invitation: UnifiedInvitation) => {
               const typeInfo = getInvitationTypeDisplay(invitation.invitation_type);
               
               return (
@@ -442,6 +574,50 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-4">
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      )}
+
+      {/* Debug Component - Remove this in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="mt-6 border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="text-yellow-800">Debug Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <p><strong>Current User Email:</strong> {user?.email}</p>
+              <p><strong>Total Invitations Loaded:</strong> {invitations.length}</p>
+              <p><strong>Pending Received (you become manager):</strong> {pendingReceivedInvitations.length}</p>
+              <p><strong>Accepted Received (you are manager):</strong> {acceptedReceivedInvitations.length}</p>
+              <p><strong>Sent Invitations (asking others):</strong> {sentInvitations.length}</p>
+              <p><strong>User Profile can_manage_teams:</strong> {userProfile?.can_manage_teams ? 'true' : 'false'}</p>
+              
+              <div className="mt-3 p-2 bg-blue-50 rounded">
+                <p className="text-xs font-medium text-blue-800">Expected Flow:</p>
+                <p className="text-xs text-blue-700">
+                  1. If you see "Pending Received" invitations, you can accept them to become a manager<br/>
+                  2. Once accepted, "can_manage_teams" should become true<br/>
+                  3. Then you can invite team members
+                </p>
+              </div>
+              
+              {invitations.length > 0 && (
+                <details className="mt-4">
+                  <summary className="cursor-pointer font-medium">View Raw Invitations Data</summary>
+                  <pre className="text-xs bg-white p-2 rounded border mt-2 overflow-auto max-h-40">
+                    {JSON.stringify(invitations, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

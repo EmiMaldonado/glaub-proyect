@@ -31,11 +31,11 @@ const SessionRestoration: React.FC<SessionRestorationProps> = ({
     // Check for restorable session
     try {
       const sessionData = loadSessionFromLocal();
-      if (sessionData && typeof sessionData === 'object' && 'conversation' in sessionData && 'messages' in sessionData) {
+      if (sessionData && typeof sessionData === 'object') {
         setSessionInfo({
-          messageCount: sessionData.messages?.length || 0,
-          lastActivity: sessionData.lastActivity || Date.now(),
-          conversationTitle: sessionData.conversation?.title || 'Conversation'
+          messageCount: (sessionData as any).messages?.length || 0,
+          lastActivity: (sessionData as any).lastActivity || Date.now(),
+          conversationTitle: (sessionData as any).conversation?.title || 'Conversation'
         });
         setShowRestorePrompt(true);
       }
