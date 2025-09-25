@@ -206,9 +206,21 @@ export const useUnifiedInvitations = () => {
       }
 
       // Get received invitations - UPDATED QUERY WITHOUT STATUS FILTER
-      const { data: receivedInvitations, error: receivedError } = await supabase
-        .from('invitations')
-        .select(`
+        // En loadInvitations, cambia esta línea:
+        const { data: receivedInvitations, error: receivedError } = await supabase
+          .from('invitations')
+          .select(`
+            *,
+            inviter:profiles!invitations_invited_by_id_fkey (
+              id, display_name, full_name, email
+            ),
+            manager:profiles!invitations_manager_id_fkey (
+              id, display_name, full_name, email, team_name
+            )
+          `)
+          .eq('email', profile.email)
+          .order('created_at', { ascending: false });
+          // ↑ Quitar cualquier filtro por status aquí
           *,
           inviter:profiles!invitations_invited_by_id_fkey (
             id, display_name, full_name, email
@@ -219,6 +231,8 @@ export const useUnifiedInvitations = () => {
         `)
         .eq('email', profile.email)
         .order('created_at', { ascending: false });
+                .from('invitations')
+        .select(`
 
       if (receivedError) {
         console.error('Error loading received invitations:', receivedError);
