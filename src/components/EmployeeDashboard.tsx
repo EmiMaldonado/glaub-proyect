@@ -21,8 +21,6 @@ import {
 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import SharingPreferences from '@/components/SharingPreferences';
-// Al principio del archivo, agregar el import
-import InvitationDebugger from './InvitationDebugger';
 
 interface EmployeeProfile {
   id: string;
@@ -537,10 +535,7 @@ const EmployeeDashboard: React.FC = () => {
             />
           </TabsContent>
         </Tabs>
-      // Al final del componente, dentro del último </div>
-      {process.env.NODE_ENV === 'development' && (
-        <InvitationDebugger />
-      )}
+
       </div>
     </div>
   );
