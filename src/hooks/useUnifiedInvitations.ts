@@ -167,45 +167,46 @@ export const useUnifiedInvitations = () => {
   }, [user, checkUserPermissions]);
 
   // Load invitations for current user - FORCE RELOAD VERSION
-    const loadInvitations = useCallback(async () => {
-      if (!user) return;
-      
-      console.log('🔄 Loading invitations...');
-      setLoading(true);
-      
-      try {
-        // Get current user's profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .eq('user_id', user.id)
-          .single();
+  const loadInvitations = useCallback(async () => {
+    if (!user) return;
     
-        if (!profile) {
-          console.log('No profile found for user');
-          setInvitations([]);
-          return;
-        }
+    console.log('🔄 Loading invitations with updated hook...');
+    setLoading(true);
     
-        console.log('📧 Loading invitations for email:', profile.email);
-    
-        // Get sent invitations (where current user is the inviter)
-        const { data: sentInvitations, error: sentError } = await supabase
-          .from('invitations')
-          .select(`
-            *,
-            manager:profiles!invitations_manager_id_fkey (
-              id, display_name, full_name, email, team_name
-            )
-          `)
-          .eq('invited_by_id', profile.id)
-          .order('created_at', { ascending: false });
-    
-        if (sentError && !sentError.message.includes('No rows')) {
-          console.error('Error loading sent invitations:', sentError);
-        }
-    
-        // Get received invitations - SIN FILTRO DE STATUS
+    try {
+      // Get current user's profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile) {
+        console.log('No profile found for user');
+        setInvitations([]);
+        return;
+      }
+
+      console.log('📧 Loading invitations for email:', profile.email);
+
+      // Get sent invitations (where current user is the inviter)
+      const { data: sentInvitations, error: sentError } = await supabase
+        .from('invitations')
+        .select(`
+          *,
+          manager:profiles!invitations_manager_id_fkey (
+            id, display_name, full_name, email, team_name
+          )
+        `)
+        .eq('invited_by_id', profile.id)
+        .order('created_at', { ascending: false });
+
+      if (sentError) {
+        console.error('Error loading sent invitations:', sentError);
+      }
+
+      // Get received invitations - UPDATED QUERY WITHOUT STATUS FILTER
+        // En loadInvitations, cambia esta línea:
         const { data: receivedInvitations, error: receivedError } = await supabase
           .from('invitations')
           .select(`
@@ -219,51 +220,64 @@ export const useUnifiedInvitations = () => {
           `)
           .eq('email', profile.email)
           .order('created_at', { ascending: false });
-    
-        if (receivedError && !receivedError.message.includes('No rows')) {
-          console.error('Error loading received invitations:', receivedError);
-        }
-    
-        console.log('📤 Sent invitations loaded:', sentInvitations?.length || 0);
-        console.log('📥 Received invitations loaded:', receivedInvitations?.length || 0);
-    
-        // Combine and deduplicate invitations
-        const allInvitations = [
-          ...(sentInvitations || []), 
-          ...(receivedInvitations || [])
-        ];
-        
-        const uniqueInvitations = allInvitations.filter((invitation, index, self) => 
-          index === self.findIndex(inv => inv.id === invitation.id)
-        );
-    
-        console.log('✅ Total unique invitations:', uniqueInvitations.length);
-    
-        // Type assertion to ensure correct typing
-        const typedInvitations: UnifiedInvitation[] = uniqueInvitations.map(inv => ({
-          id: inv.id,
-          email: inv.email,
-          status: inv.status as 'pending' | 'accepted' | 'declined',
-          invitation_type: inv.invitation_type,
-          invited_at: inv.invited_at || inv.created_at,
-          accepted_at: inv.accepted_at || undefined,
-          expires_at: inv.expires_at,
-          manager_id: inv.manager_id,
-          invited_by_id: inv.invited_by_id || undefined,
-          token: inv.token || undefined,
-          manager: inv.manager || undefined,
-          inviter: (inv as any).inviter || undefined
-        }));
-    
-        setInvitations(typedInvitations);
-    
-      } catch (error) {
-        console.error('❌ Error loading invitations:', error);
-        setInvitations([]);
-      } finally {
-        setLoading(false);
+          // ↑ Quitar cualquier filtro por status aquí
+          *,
+          inviter:profiles!invitations_invited_by_id_fkey (
+            id, display_name, full_name, email
+          ),
+          manager:profiles!invitations_manager_id_fkey (
+            id, display_name, full_name, email, team_name
+          )
+        `)
+        .eq('email', profile.email)
+        .order('created_at', { ascending: false });
+                .from('invitations')
+        .select(`
+
+      if (receivedError) {
+        console.error('Error loading received invitations:', receivedError);
       }
-    }, [user]);
+
+      console.log('📤 Sent invitations loaded:', sentInvitations?.length || 0);
+      console.log('📥 Received invitations loaded:', receivedInvitations?.length || 0);
+
+      // Combine and deduplicate invitations
+      const allInvitations = [
+        ...(sentInvitations || []), 
+        ...(receivedInvitations || [])
+      ];
+      
+      const uniqueInvitations = allInvitations.filter((invitation, index, self) => 
+        index === self.findIndex(inv => inv.id === invitation.id)
+      );
+
+      console.log('✅ Total unique invitations:', uniqueInvitations.length);
+
+      // Type assertion to ensure correct typing
+      const typedInvitations: UnifiedInvitation[] = uniqueInvitations.map(inv => ({
+        id: inv.id,
+        email: inv.email,
+        status: inv.status as 'pending' | 'accepted' | 'declined',
+        invitation_type: inv.invitation_type,
+        invited_at: inv.invited_at || inv.created_at,
+        accepted_at: inv.accepted_at || undefined,
+        expires_at: inv.expires_at,
+        manager_id: inv.manager_id,
+        invited_by_id: inv.invited_by_id || undefined,
+        token: inv.token || undefined,
+        manager: inv.manager || undefined,
+        inviter: inv.inviter || undefined
+      }));
+
+      setInvitations(typedInvitations);
+
+    } catch (error) {
+      console.error('❌ Error loading invitations:', error);
+      setInvitations([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   // Accept invitation
   const acceptInvitation = useCallback(async (token: string) => {
