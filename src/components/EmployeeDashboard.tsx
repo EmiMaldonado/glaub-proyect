@@ -537,10 +537,7 @@ const EmployeeDashboard: React.FC = () => {
             />
           </TabsContent>
         </Tabs>
-      // Al final del componente, dentro del último </div>
-      {process.env.NODE_ENV === 'development' && (
-        <InvitationDebugger />
-      )}
+      {/* Development debugging removed for now */}
       </div>
     </div>
   );

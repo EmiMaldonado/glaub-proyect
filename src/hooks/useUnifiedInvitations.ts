@@ -1,3 +1,15 @@
+import { useState, useCallback, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { ExtendedProfile } from '@/types/extended-database';
+
+export interface InvitationRequest {
+  email: string;
+  invitationType: 'team_join' | 'manager_request';
+  teamId?: string;
+  message?: string;
+}
+
 export interface UnifiedInvitation {
   id: string;
   email: string;

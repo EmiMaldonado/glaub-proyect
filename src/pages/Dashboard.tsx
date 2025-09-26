@@ -710,57 +710,47 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Variables Profile and Team Management Row */}
-      <div className="grid lg:grid-cols-10 gap-8">
-        {/* Left Column - 70% - Variables Profile */}
-        <div className="lg:col-span-7">
-          <Card className="shadow-soft h-full">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+      {/* Variables Profile - Only show if oceanProfile exists */}
+      {oceanProfile && (
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-secondary" />
+              Your Variables Profile
+            </CardTitle>
+            <CardDescription>Based on your conversation patterns</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="grid grid-cols-5 gap-4 text-center">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-secondary" />
-                    Your Variables Profile
-                  </CardTitle>
-                  <CardDescription>
-                    Personality dimensions based on your conversations
-                  </CardDescription>
+                  <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Openness</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Conscientiousness</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Extraversion</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Agreeableness</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
+                  <div className="text-xs text-muted-foreground">Stability</div>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="h-full flex flex-col">
-              {oceanProfile ? (
-                <div className="space-y-8 flex-1">
-                  {/* Prominent percentage display */}
-                  <div className="flex flex-wrap justify-center gap-6 text-center">
-                    <div className="p-4 rounded-lg">
-                      <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.openness || 0}%</div>
-                      <div className="text-sm text-muted-foreground font-medium">Openness</div>
-                    </div>
-                    <div className="p-4 rounded-lg">
-                      <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.conscientiousness || 0}%</div>
-                      <div className="text-sm text-muted-foreground font-medium">Conscientiousness</div>
-                    </div>
-                    <div className="p-4 rounded-lg">
-                      <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.extraversion || 0}%</div>
-                      <div className="text-sm text-muted-foreground font-medium">Extraversion</div>
-                    </div>
-                    <div className="p-4 rounded-lg">
-                      <div className="text-4xl font-bold text-primary mb-2">{oceanProfile.agreeableness || 0}%</div>
-                      <div className="text-sm text-muted-foreground font-medium">Agreeableness</div>
-                    </div>
-                    <div className="p-4 rounded-lg">
-                      <div className="text-4xl font-bold text-primary mb-2">{100 - (oceanProfile.neuroticism || 0)}%</div>
-                      <div className="text-sm text-muted-foreground font-medium">Stability</div>
-                    </div>
-                  </div>
-                  
-                  {/* Detailed description */}
-                  <div className="bg-muted/50 rounded-lg p-8 flex-1 min-h-[120px] flex items-center">
-                    {isLoadingDescription ? (
-                      <div className="flex items-center gap-2 w-full justify-center">
-                        <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full"></div>
-                        <p className="text-sm text-muted-foreground">ai thinking...</p>
-                      </div>
-                    ) : (
-                      <p className="text-base text-foreground/90 leading
+              {/* Personality description placeholder */}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default Dashboard;
