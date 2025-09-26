@@ -216,12 +216,19 @@ const Dashboard = () => {
         });
       }
 
-      // Load current manager if user has one
-      if (profile?.manager_id) {
+      // Load current manager if user is in a team
+      const { data: teamMembership } = await supabase
+        .from('team_members')
+        .select('team_id, role')
+        .eq('member_id', profile?.id)
+        .eq('role', 'employee')
+        .maybeSingle();
+
+      if (teamMembership) {
         const { data: manager } = await supabase
           .from('profiles')
           .select('*, user_id')
-          .eq('id', profile.manager_id)
+          .eq('id', teamMembership.team_id)
           .maybeSingle();
         setCurrentManager(manager);
       }

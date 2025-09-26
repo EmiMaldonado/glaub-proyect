@@ -69,14 +69,22 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
   const fetchTeamMembers = async () => {
     try {
       setFetchingData(true);
+      // ✅ FIXED: Get team members from team_members table
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('manager_id', userProfile.id)
+        .from('team_members')
+        .select(`
+          member_id,
+          profiles!inner(*)
+        `)
+        .eq('team_id', userProfile.id)
+        .eq('role', 'employee')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTeamMembers(data || []);
+      
+      // Transform the data to match expected format
+      const members = data?.map(item => item.profiles).filter(Boolean) || [];
+      setTeamMembers(members);
     } catch (error) {
       console.error('Error fetching team members:', error);
     } finally {
@@ -148,10 +156,12 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
     if (!isManager) return;
     
     try {
+      // ✅ FIXED: Remove from team_members table instead of manager_id
       const { error } = await supabase
-        .from('profiles')
-        .update({ manager_id: null })
-        .eq('id', memberId);
+        .from('team_members')
+        .delete()
+        .eq('member_id', memberId)
+        .eq('role', 'employee');
 
       if (error) throw error;
 

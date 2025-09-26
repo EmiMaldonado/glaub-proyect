@@ -15,7 +15,6 @@ interface Profile {
   organization: string | null;
   created_at: string;
   updated_at: string;
-  manager_id: string | null;
   team_name: string | null;
   email: string | null;
   age: number | null;
@@ -23,6 +22,8 @@ interface Profile {
   job_position: string | null;
   onboarding_completed: boolean | null;
   job_level: string | null;
+  can_manage_teams: boolean | null;
+  can_be_managed: boolean | null;
 }
 
 interface AuthContextType {

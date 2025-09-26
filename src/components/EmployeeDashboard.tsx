@@ -107,12 +107,21 @@ const EmployeeDashboard: React.FC = () => {
       if (profileError) throw profileError;
       setProfile(profileData);
 
-      // Get manager info if employee has a manager
-      if (profileData.manager_id) {
+      // ✅ FIXED: Manager relationship now handled via team_members table
+      // Instead of manager_id, we'll get manager info from team relationships
+      const { data: teamMembership, error: teamError } = await supabase
+        .from('team_members')
+        .select('team_id, role')
+        .eq('member_id', profileData.id)
+        .eq('role', 'employee')
+        .single();
+
+      if (!teamError && teamMembership) {
+        // Get manager info from team
         const { data: managerData, error: managerError } = await supabase
           .from('profiles')
           .select('id, full_name, display_name, avatar_url, team_name')
-          .eq('id', profileData.manager_id)
+          .eq('id', teamMembership.team_id)
           .single();
 
         if (!managerError && managerData) {

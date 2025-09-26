@@ -79,17 +79,7 @@ const DashboardManager = () => {
 
       if (teamError) {
         console.error('Error loading team members:', teamError);
-        // Fallback to profiles table for backward compatibility
-        const { data: fallbackMembers } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('manager_id', profile?.id)
-          .order('created_at', { ascending: false });
-        
-        setTeamMembers(fallbackMembers?.map(member => ({
-          ...member,
-          email: member.email || 'Email not accessible'
-        })) || []);
+        setTeamMembers([]);
       } else {
         // Extract member profiles from the join
         const members = (teamMemberData || [])
