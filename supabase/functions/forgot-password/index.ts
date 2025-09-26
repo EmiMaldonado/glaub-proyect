@@ -82,12 +82,15 @@ const handler = async (req: Request): Promise<Response> => {
         userId = profile.user_id;
         console.log(`✅ User found via profiles table in ${Date.now() - lookupStart}ms`);
       } else {
-        // Fallback: Direct auth user lookup (still more efficient than listUsers)
-        const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(email);
-        if (!authError && authUser?.user) {
-          userExists = true;
-          userId = authUser.user.id;
-          console.log(`✅ User found via auth lookup in ${Date.now() - lookupStart}ms`);
+        // Fallback: List all users and find by email
+        const { data: allUsers, error: listError } = await supabase.auth.admin.listUsers();
+        if (!listError && allUsers?.users) {
+          const authUser = allUsers.users.find((u: any) => u.email === email);
+          if (authUser) {
+            userExists = true;
+            userId = authUser.id;
+            console.log(`✅ User found via auth lookup in ${Date.now() - lookupStart}ms`);
+          }
         } else {
           console.log(`ℹ️ User not found (security: continuing anyway) in ${Date.now() - lookupStart}ms`);
         }

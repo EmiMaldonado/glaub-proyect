@@ -27,9 +27,12 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let user: any = null;
+  let email_data: any = null;
+
   try {
     const emailData: AuthEmailData = await req.json();
-    const { user, email_data } = emailData;
+    ({ user, email_data } = emailData);
     const { email_action_type, token, token_hash, redirect_to, site_url } = email_data;
 
     console.log('Auth email triggered:', { 

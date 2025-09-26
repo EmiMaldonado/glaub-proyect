@@ -93,12 +93,13 @@ serve(async (req: Request) => {
 
         if (!userProfile) {
           // Create profile for user with boolean fields
+          const emailString = typeof userEmail === 'string' ? userEmail : '';
           const { data: newProfile, error: profileError } = await supabase
             .from("profiles")
             .insert({
               user_id: userId,
-              full_name: userEmail?.split('@')[0] || 'User',
-              display_name: userEmail?.split('@')[0] || 'User',
+              full_name: emailString?.split('@')[0] || 'User',
+              display_name: emailString?.split('@')[0] || 'User',
               can_manage_teams: invitation.invitation_type === 'manager_request',
               can_be_managed: true
             })

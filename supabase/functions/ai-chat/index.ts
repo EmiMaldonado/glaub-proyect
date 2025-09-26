@@ -234,13 +234,14 @@ serve(async (req) => {
     } catch (error) {
       console.error('❌ Health check failed:', error);
       
+      const err = error as Error;
       return new Response(JSON.stringify({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
-        error: error.message,
+        error: err.message,
         debug: {
           message: 'Service health check failed',
-          error_type: error.constructor.name
+          error_type: err.constructor.name
         }
       }), {
         status: 503,
@@ -250,7 +251,12 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  let debugInfo = {
+  let debugInfo: {
+    request_received_at: string;
+    processing_steps: string[];
+    timing: { [key: string]: number };
+    metadata: { [key: string]: any };
+  } = {
     request_received_at: new Date().toISOString(),
     processing_steps: [],
     timing: {},
@@ -264,13 +270,14 @@ serve(async (req) => {
     console.log('📥 Request body received:', JSON.stringify(requestBody, null, 2));
   } catch (error) {
     console.error('❌ Failed to parse request body:', error);
+    const err = error as Error;
     return new Response(JSON.stringify({
       error: 'Invalid request body',
       debug: {
         success: false,
         error_category: 'request_parsing',
         error_message: 'Failed to parse JSON request body',
-        error_type: error.constructor.name,
+        error_type: err.constructor.name,
         processing_time_ms: Date.now() - startTime,
         steps_completed: [],
         timing_breakdown: {},
@@ -293,7 +300,7 @@ serve(async (req) => {
       const analysisPrompt = `You are an expert therapeutic session analyst. Analyze the following conversation between a user and an AI therapeutic assistant to generate a comprehensive session summary.
 
 CONVERSATION MESSAGES:
-${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')}
+${messages.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')}
 
 Please provide your analysis in the following JSON format:
 {
@@ -681,32 +688,33 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     const totalTime = Date.now() - startTime;
     
     // 5. Enhanced error handling with clear messages
+    const err = error as Error;
     console.error('❌ Error in ai-chat function:', {
-      error: error.message,
-      errorType: error.constructor.name,
+      error: err.message,
+      errorType: err.constructor.name,
       conversationId: debugInfo.metadata?.conversation_id || 'unknown',
       userId: debugInfo.metadata?.user_id || 'unknown',
       processingTimeMs: totalTime,
       stepsCompleted: debugInfo.processing_steps?.length || 0,
       lastStep: debugInfo.processing_steps?.[debugInfo.processing_steps.length - 1] || 'none',
       timestamp: new Date().toISOString(),
-      stack: error.stack?.split('\n').slice(0, 5).join('\n') // First 5 lines of stack trace
+      stack: err.stack?.split('\n').slice(0, 5).join('\n') // First 5 lines of stack trace
     });
 
     // Determine error category for better debugging
     let errorCategory = 'unknown';
     let userFriendlyMessage = 'An unexpected error occurred';
     
-    if (error.message.includes('Missing required fields')) {
+    if (err.message.includes('Missing required fields')) {
       errorCategory = 'validation';
       userFriendlyMessage = 'Request is missing required information';
-    } else if (error.message.includes('OpenAI')) {
+    } else if (err.message.includes('OpenAI')) {
       errorCategory = 'openai_api';
       userFriendlyMessage = 'AI service is temporarily unavailable';
-    } else if (error.message.includes('Failed to fetch') || error.message.includes('Database')) {
+    } else if (err.message.includes('Failed to fetch') || err.message.includes('Database')) {
       errorCategory = 'database';
       userFriendlyMessage = 'Database connection issue';
-    } else if (error.message.includes('Failed to save')) {
+    } else if (err.message.includes('Failed to save')) {
       errorCategory = 'storage';
       userFriendlyMessage = 'Unable to save conversation data';
     }
@@ -716,8 +724,8 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
       debug: {
         success: false,
         error_category: errorCategory,
-        error_message: error.message,
-        error_type: error.constructor.name,
+        error_message: err.message,
+        error_type: err.constructor.name,
         processing_time_ms: totalTime,
         steps_completed: debugInfo.processing_steps || [],
         timing_breakdown: debugInfo.timing || {},
