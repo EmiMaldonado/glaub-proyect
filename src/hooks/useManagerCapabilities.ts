@@ -34,10 +34,10 @@ export const useManagerCapabilities = (): ManagerCapabilities => {
       try {
         setCapabilities(prev => ({ ...prev, loading: true }));
 
-        // Get user profile with extended fields
+        // Get user profile
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, can_manage_teams, role')
           .eq('user_id', user.id)
           .single();
 
@@ -52,31 +52,38 @@ export const useManagerCapabilities = (): ManagerCapabilities => {
           return;
         }
 
-        const extendedProfile = profile as any as ExtendedProfile;
-        const isManager = extendedProfile?.can_manage_teams === true;
-        let hasTeamMembers = false;
+        // Use the new enhanced capabilities check function
+        const { data: capabilitiesData, error: capabilitiesError } = await supabase
+          .rpc('check_manager_capabilities', { profile_id: profile.id });
 
-        if (isManager) {
-          // Check if manager has team members using the new team_members table
-          const { data: teamMembers, error: teamError } = await supabase
-            .from('team_members')
+        if (capabilitiesError) {
+          console.error('Error checking manager capabilities:', capabilitiesError);
+          // Fallback to basic checks
+          const isManager = profile?.can_manage_teams === true;
+          const { data: employeeRelations } = await supabase
+            .from('manager_employee_relationships')
             .select('id')
-            .eq('team_id', profile.id)
-            .eq('role', 'member');
+            .eq('manager_id', profile.id)
+            .limit(1);
 
-          if (teamError) {
-            console.error('Error checking team members:', teamError);
-          } else {
-            hasTeamMembers = (teamMembers?.length || 0) > 0;
-          }
+          const hasTeamMembers = (employeeRelations?.length || 0) > 0;
+          
+          setCapabilities({
+            isManager,
+            hasTeamMembers,
+            canAccessManagerDashboard: isManager && hasTeamMembers,
+            loading: false
+          });
+        } else {
+          // Use enhanced capabilities data from database function
+          const capabilities = capabilitiesData[0];
+          setCapabilities({
+            isManager: capabilities.is_manager,
+            hasTeamMembers: capabilities.has_employees,
+            canAccessManagerDashboard: capabilities.can_access_dashboard,
+            loading: false
+          });
         }
-
-        setCapabilities({
-          isManager,
-          hasTeamMembers,
-          canAccessManagerDashboard: isManager,
-          loading: false
-        });
 
       } catch (error) {
         console.error('Error checking manager capabilities:', error);
