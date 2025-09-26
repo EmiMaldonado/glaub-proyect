@@ -22,7 +22,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
 import { requestLimiter } from "@/utils/requestLimiter";
-import { EmergencyStatus } from "@/components/EmergencyStatus";
+import MyTeams from "@/components/ui/MyTeams";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -764,14 +764,196 @@ const Dashboard = () => {
                   <div className="text-xs text-muted-foreground">Stability</div>
                 </div>
               </div>
-              {/* Personality description placeholder */}
+              {/* OCEAN Personality Description */}
+              {oceanDescription && (
+                <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                  <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-secondary" />
+                    Your Personality Analysis
+                  </h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {oceanDescription}
+                  </p>
+                  {isLoadingDescription && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span className="text-xs text-muted-foreground">Updating analysis...</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
-      
-      {/* ✅ EMERGENCY: Status monitor for repair verification */}
-      <EmergencyStatus />
+
+      {/* Personal Recommendations */}
+      {allInsights && allInsights.length > 0 && (
+        <PersonalRecommendations
+          context="last_session"
+          period="last_week"
+          recommendations={{
+            development: allInsights.flatMap(insight => insight.next_steps || []).slice(0, 4),
+            wellness: allInsights.flatMap(insight => insight.insights || []).slice(0, 3),
+            skills: allInsights.flatMap(insight => insight.insights || []).slice(3, 6),
+            goals: allInsights.flatMap(insight => insight.next_steps || []).slice(4, 7)
+          }}
+          oceanProfile={oceanProfile}
+          onShareToggle={(category, shared) => {
+            console.log(`Sharing ${category}: ${shared}`);
+          }}
+        />
+      )}
+
+      {/* Profile Status Insights */}
+      {userProfile && (
+        <ProfileStatusInsights
+          profile={userProfile}
+          stats={stats}
+          oceanProfile={oceanProfile}
+          conversations={stats.completedConversations}
+          onStartConversation={handleStartNewConversation}
+        />
+      )}
+
+      {/* My Teams & Invitations */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {userProfile && (
+          <MyTeams 
+            userProfile={userProfile}
+            className="h-fit"
+          />
+        )}
+        
+        {/* Pending Invitations */}
+        {pendingInvitations && pendingInvitations.length > 0 && (
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-secondary" />
+                Pending Invitations ({pendingInvitations.length})
+              </CardTitle>
+              <CardDescription>
+                Team invitations waiting for your response
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {pendingInvitations.map((invitation) => (
+                  <div key={invitation.id} className="p-4 border rounded-lg space-y-3">
+                    <div>
+                      <p className="font-medium text-foreground">
+                        Join {invitation.manager?.full_name || invitation.manager?.display_name}'s Team
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Invitation expires: {new Date(invitation.expires_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleAcceptInvitation(invitation)}
+                        className="flex-1"
+                      >
+                        Accept
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDeclineInvitation(invitation)}
+                        className="flex-1"
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Join Team - Show only if no current manager and no pending invitations */}
+        {!currentManager && (!pendingInvitations || pendingInvitations.length === 0) && (
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-secondary" />
+                Join a Team
+              </CardTitle>
+              <CardDescription>
+                Request to join your manager's team
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="manager-email">Manager's Email</Label>
+                  <Input
+                    id="manager-email"
+                    type="email"
+                    placeholder="manager@company.com"
+                    value={managerEmail}
+                    onChange={(e) => setManagerEmail(e.target.value)}
+                  />
+                </div>
+                <Button 
+                  onClick={handleInviteManager} 
+                  disabled={isInvitingManager}
+                  className="w-full"
+                >
+                  {isInvitingManager ? "Sending Request..." : "Request to Join"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Sharing & Collaboration */}
+      {currentManager && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-secondary" />
+              Sharing & Collaboration
+            </CardTitle>
+            <CardDescription>
+              Control what data you share with your manager
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <SharingPreferences
+                userProfile={userProfile}
+                onPreferencesChange={handleSharingPreferencesChange}
+              />
+              
+              {/* Quick Share Actions */}
+              <div className="flex gap-4 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleShareWithManager('strengths')}
+                  className="flex items-center gap-2"
+                >
+                  <Shield className="h-4 w-4" />
+                  Share Strengths
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleShareWithManager('opportunities')}
+                  className="flex items-center gap-2"
+                >
+                  <Target className="h-4 w-4" />
+                  Share Growth Areas
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

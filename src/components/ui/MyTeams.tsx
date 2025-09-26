@@ -8,8 +8,9 @@ import TeamCard from './TeamCard';
 
 interface TeamMembership {
   id: string;
-  employee_id: string;
-  manager_id: string;
+  team_id: string;
+  member_id: string;
+  role: string;
   joined_at: string;
   manager: {
     id: string;
@@ -40,21 +41,37 @@ const MyTeams: React.FC<MyTeamsProps> = ({ userProfile, className = "" }) => {
       setLoading(true);
       
       const { data, error } = await supabase
-        .from('team_memberships')
+        .from('team_members')
         .select(`
           id,
-          employee_id,
-          manager_id,
-          joined_at,
-          manager:profiles!team_memberships_manager_id_fkey(
-            id, full_name, display_name, team_name
-          )
+          team_id,
+          member_id,
+          role,
+          joined_at
         `)
-        .eq('employee_id', userProfile.id)
+        .eq('member_id', userProfile.id)
+        .eq('role', 'employee')
         .order('joined_at', { ascending: false });
 
       if (error) throw error;
-      setTeams(data || []);
+
+      // Get manager details separately
+      const teamsWithManagers = await Promise.all(
+        (data || []).map(async (membership) => {
+          const { data: manager } = await supabase
+            .from('profiles')
+            .select('id, full_name, display_name, team_name')
+            .eq('id', membership.team_id)
+            .single();
+          
+          return {
+            ...membership,
+            manager
+          };
+        })
+      );
+
+      setTeams(teamsWithManagers);
     } catch (error) {
       console.error('Error fetching teams:', error);
       toast({
@@ -145,7 +162,7 @@ const MyTeams: React.FC<MyTeamsProps> = ({ userProfile, className = "" }) => {
                   managerName={membership.manager.display_name || membership.manager.full_name}
                   isEmployee={true}
                   joinedAt={membership.joined_at}
-                  onLeaveTeam={() => handleLeaveTeam(membership.manager_id, teamName)}
+                  onLeaveTeam={() => handleLeaveTeam(membership.team_id, teamName)}
                 />
               );
             })}
