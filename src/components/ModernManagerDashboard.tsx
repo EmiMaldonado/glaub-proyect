@@ -457,12 +457,19 @@ const ModernManagerDashboard: React.FC = () => {
         cacheStatus={isTeamResultsCacheValid ? 'cached' : 'fresh'}
       />
 
-      {/* Al final del return, antes del </div> final */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-8">
-          <InvitationDebugger />
-        </div>
-      )}
+      // Al final del return, antes del </div> final
+return (
+  <div className="container mx-auto px-4 py-8 space-y-8">
+    {/* Todo tu código existente... */}
+    
+    {/* Agregar esto al final, solo en desarrollo */}
+    {process.env.NODE_ENV === 'development' && (
+      <div className="mt-8">
+        <InvitationDebugger />
+      </div>
+    )}
+  </div>
+);
 
     </div>
   );

@@ -139,7 +139,7 @@ export const useConversationState = () => {
       setIsLoading(false);
       fetchingRef.current = false;
     }
-  }, []); // FIXED: Remove conversationState dependency to prevent infinite loop
+  }, [conversationState]);
 
   // Resume paused conversation
   const resumeConversation = useCallback(async (conversationId: string, userId: string) => {
