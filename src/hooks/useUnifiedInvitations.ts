@@ -39,7 +39,7 @@ export const useUnifiedInvitations = () => {
   const [loading, setLoading] = useState(false);
   const [invitations, setInvitations] = useState<UnifiedInvitation[]>([]);
 
-  // Check user permissions using type assertion for missing fields
+  // Check user permissions - REMOVED from dependencies
   const checkUserPermissions = useCallback(async () => {
     try {
       if (!user) return { canManageTeams: false, canBeManaged: false };
@@ -60,74 +60,15 @@ export const useUnifiedInvitations = () => {
       console.error('Error checking user permissions:', error);
       return { canManageTeams: false, canBeManaged: false };
     }
-  }, [user]);
+  }, []); // FIXED: Empty dependencies
 
-  // Send invitation with permission check
-  const sendInvitation = useCallback(async (request: InvitationRequest) => {
-    setLoading(true);
-    
-    try {
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // Check permissions
-      const permissions = await checkUserPermissions();
-      
-      if (request.invitationType === 'team_join' && !permissions.canManageTeams) {
-        throw new Error('You do not have permission to invite team members');
-      }
-
-      if (request.invitationType === 'manager_request' && !permissions.canBeManaged) {
-        throw new Error('You cannot request a manager at this time');
-      }
-
-      // Get current user profile
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('id, email, display_name, full_name')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!currentProfile) {
-        throw new Error('Profile not found');
-      }
-
-      // Call unified invitation edge function
-      const { data, error } = await supabase.functions.invoke('unified-invitation', {
-        body: {
-          email: request.email,
-          invitationType: request.invitationType,
-          teamId: request.teamId,
-          message: request.message
-        }
-      });
-
-      if (error) throw error;
-
-      console.log('✅ Invitation sent successfully:', data);
-      
-      // Reload invitations to show the new one
-      await loadInvitations();
-      
-      return data;
-
-    } catch (error: any) {
-      console.error('❌ Error sending invitation:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  // Load invitations for current user
+  // Load invitations - STANDALONE function
   const loadInvitations = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
     
     try {
-      // Get current user's profile to find invitations
       const { data: profile } = await supabase
         .from('profiles')
         .select('id, email')
@@ -136,7 +77,7 @@ export const useUnifiedInvitations = () => {
 
       if (!profile) return;
 
-      // Get sent invitations (where user is the inviter)
+      // Get sent invitations
       const { data: sentInvitations, error: sentError } = await supabase
         .from('invitations')
         .select(`
@@ -149,7 +90,7 @@ export const useUnifiedInvitations = () => {
 
       if (sentError) throw sentError;
 
-      // Get received invitations (where user is the target)
+      // Get received invitations
       const { data: receivedInvitations, error: receivedError } = await supabase
         .from('invitations')
         .select(`
@@ -175,14 +116,67 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
- }, [user?.id]);
+  }, [user?.id]); // FIXED: Only user.id dependency
 
-  // Accept invitation
+  // Send invitation - NO loadInvitations call
+  const sendInvitation = useCallback(async (request: InvitationRequest) => {
+    setLoading(true);
+    
+    try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Inline permission check - no dependency
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const extendedProfile = profile as any as ExtendedProfile;
+      const canManageTeams = extendedProfile?.can_manage_teams || false;
+      const canBeManaged = extendedProfile?.can_be_managed || true;
+      
+      if (request.invitationType === 'team_join' && !canManageTeams) {
+        throw new Error('You do not have permission to invite team members');
+      }
+
+      if (request.invitationType === 'manager_request' && !canBeManaged) {
+        throw new Error('You cannot request a manager at this time');
+      }
+
+      // Call unified invitation edge function
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+        body: {
+          email: request.email,
+          invitationType: request.invitationType,
+          teamId: request.teamId,
+          message: request.message
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('✅ Invitation sent successfully:', data);
+      
+      // DON'T auto-reload - let component handle it manually
+      
+      return data;
+
+    } catch (error: any) {
+      console.error('❌ Error sending invitation:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]); // FIXED: Only user.id dependency
+
+  // Accept invitation - NO loadInvitations call
   const acceptInvitation = useCallback(async (token: string) => {
     setLoading(true);
     
     try {
-      // Call unified accept invitation edge function
       const { data, error } = await supabase.functions.invoke('unified-accept-invitation', {
         body: { token }
       });
@@ -207,8 +201,7 @@ export const useUnifiedInvitations = () => {
         }
       }
       
-      // Reload invitations to reflect changes
-      await loadInvitations();
+      // DON'T auto-reload - let component handle it manually
       
       return data;
 
@@ -218,9 +211,9 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id]); // FIXED: Only user.id dependency
 
-  // Decline invitation
+  // Decline invitation - NO loadInvitations call
   const declineInvitation = useCallback(async (invitationId: string) => {
     setLoading(true);
     
@@ -234,8 +227,7 @@ export const useUnifiedInvitations = () => {
 
       console.log('✅ Invitation declined successfully');
       
-      // Reload invitations to reflect changes
-      await loadInvitations();
+      // DON'T auto-reload - let component handle it manually
 
     } catch (error: any) {
       console.error('❌ Error declining invitation:', error);
@@ -243,9 +235,9 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // FIXED: No dependencies
 
-  // Get team members
+  // Get team members - STANDALONE
   const getTeamMembers = useCallback(async (teamId: string) => {
     try {
       const { data, error } = await supabase
@@ -267,10 +259,9 @@ export const useUnifiedInvitations = () => {
     }
   }, []);
 
-  // Remove team member
+  // Remove team member - STANDALONE
   const removeTeamMember = useCallback(async (teamId: string, memberId: string) => {
     try {
-      // Prevent removing team leader
       const { data: member } = await supabase
         .from('team_members')
         .select('role')
