@@ -156,8 +156,10 @@ export const useUnifiedInvitations = () => {
 
       console.log('✅ Invitation sent successfully:', data);
       
-      // Reload invitations after sending
-      await loadInvitations();
+      // ✅ FIXED: Use setTimeout to break potential loops
+      setTimeout(() => {
+        loadInvitations();
+      }, 100);
       
       return data;
 
@@ -167,7 +169,7 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, checkUserPermissions, loadInvitations]); // ✅ Dependencias estables
+  }, [user?.id, checkUserPermissions]); // ✅ Removed loadInvitations dependency
 
   // ✅ OTRAS FUNCIONES SIN DEPENDENCIAS CIRCULARES
   const acceptInvitation = useCallback(async (token: string) => {
@@ -199,7 +201,11 @@ export const useUnifiedInvitations = () => {
         }
       }
       
-      await loadInvitations();
+      // ✅ FIXED: Use setTimeout to break potential loops
+      setTimeout(() => {
+        loadInvitations();
+      }, 100);
+      
       return data;
 
     } catch (error: any) {
@@ -208,7 +214,7 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, loadInvitations]);
+  }, [user?.id]); // ✅ Removed loadInvitations dependency
 
   const declineInvitation = useCallback(async (invitationId: string) => {
     if (!user || loading) return;
@@ -224,7 +230,11 @@ export const useUnifiedInvitations = () => {
       if (error) throw error;
 
       console.log('✅ Invitation declined successfully');
-      await loadInvitations();
+      
+      // ✅ FIXED: Use setTimeout to break potential loops
+      setTimeout(() => {
+        loadInvitations();
+      }, 100);
 
     } catch (error: any) {
       console.error('❌ Error declining invitation:', error);
@@ -232,7 +242,7 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, loadInvitations]);
+  }, [user?.id]); // ✅ Removed loadInvitations dependency
 
   // ✅ CARGAR INVITACIONES SOLO UNA VEZ
   useEffect(() => {

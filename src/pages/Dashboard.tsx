@@ -21,6 +21,8 @@ import ProfileStatusInsights from "@/components/ProfileStatusInsights";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
+import { requestLimiter } from "@/utils/requestLimiter";
+import { EmergencyStatus } from "@/components/EmergencyStatus";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -96,10 +98,21 @@ const Dashboard = () => {
   const [historicalData, setHistoricalData] = useState<any>(null);
   const [loadingHistorical, setLoadingHistorical] = useState(false);
 
-  // Función principal de carga con protección contra loops
+  // ✅ EMERGENCY FIXED: Enhanced protection against loops
   const loadDashboardData = useCallback(async () => {
     if (!user?.id || loadingInProgress.current) {
       console.log('⚠️ Skipping loadDashboardData - no user or already loading');
+      return;
+    }
+
+    // ✅ EMERGENCY: Use requestLimiter to prevent API flood
+    if (!requestLimiter.canMakeRequest(`dashboard-${user.id}`)) {
+      console.error('🚨 Emergency rate limit hit for dashboard');
+      toast({
+        title: "System Cooling Down",
+        description: "Please wait a moment before refreshing data",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -749,6 +762,9 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       )}
+      
+      {/* ✅ EMERGENCY: Status monitor for repair verification */}
+      <EmergencyStatus />
     </div>
   );
 };

@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { EmergencyErrorBoundary } from "@/components/EmergencyErrorBoundary";
+import { UserRoleRouter } from "@/components/UserRoleRouter";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
 import Navigation from "@/components/Navigation";
@@ -66,19 +68,21 @@ const OnboardingRoute = () => {
 
 const App = () => {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true,
-              }}
-            >
-              <OnboardingGuard>
+    <EmergencyErrorBoundary fallbackMessage="Critical system error detected. Application has been reset for safety.">
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <AuthProvider>
+              <UserRoleRouter>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter
+                  future={{
+                    v7_startTransition: true,
+                    v7_relativeSplatPath: true,
+                  }}
+                >
+                  <OnboardingGuard>
                 <div className="min-h-screen bg-gradient-subtle">
                   <Routes>
                     {/* Public routes */}
@@ -114,13 +118,17 @@ const App = () => {
                     <Route path="/dashboard" element={
                       <AuthGuard>
                         <Navigation />
-                        <Dashboard />
+                        <EmergencyErrorBoundary>
+                          <Dashboard />
+                        </EmergencyErrorBoundary>
                       </AuthGuard>
                     } />
                     <Route path="/dashboard/manager" element={
                       <AuthGuard>
                         <Navigation />
-                        <ManagerDashboard />
+                        <EmergencyErrorBoundary>
+                          <ManagerDashboard />
+                        </EmergencyErrorBoundary>
                       </AuthGuard>
                     } />
                     <Route path="/invitation/:token" element={
@@ -135,7 +143,9 @@ const App = () => {
                     } />
                     <Route path="/conversation/chat" element={
                       <AuthGuard>
-                        <ChatConversation />
+                        <EmergencyErrorBoundary>
+                          <ChatConversation />
+                        </EmergencyErrorBoundary>
                       </AuthGuard>
                     } />
                     <Route path="/conversation/voice" element={
@@ -177,12 +187,14 @@ const App = () => {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </div>
-              </OnboardingGuard>
-            </BrowserRouter>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+                  </OnboardingGuard>
+                </BrowserRouter>
+              </UserRoleRouter>
+            </AuthProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </EmergencyErrorBoundary>
   );
 };
 
