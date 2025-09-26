@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Users, User } from 'lucide-react';
 import { useManagerCapabilities } from '@/hooks/useManagerCapabilities';
 import { cn } from '@/lib/utils';
-// Al principio del archivo, agregar el import
-import InvitationDebugger from './InvitationDebugger';
 
 const DashboardViewSwitch: React.FC = () => {
   const navigate = useNavigate();
@@ -65,8 +63,5 @@ const DashboardViewSwitch: React.FC = () => {
     </div>
   );
 };
-// Al final del componente, dentro del último </div>
-{process.env.NODE_ENV === 'development' && (
-  <InvitationDebugger />
-)}
+
 export default DashboardViewSwitch;

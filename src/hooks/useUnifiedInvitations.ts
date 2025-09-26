@@ -19,14 +19,15 @@ export interface UnifiedInvitation {
   accepted_at?: string;
   expires_at: string;
   manager_id: string;
-  invited_by_id?: string; // ✅ CORREGIDO: invited_by_id en lugar de invited_by
+  invited_by_id?: string;
+  token: string; // ✅ Added missing token property
   manager?: {
     id: string;
     display_name?: string;
     full_name?: string;
     email?: string;
   };
-  inviter?: { // ✅ CORREGIDO: inviter en lugar de invited_by
+  inviter?: {
     id: string;
     display_name?: string;
     full_name?: string;

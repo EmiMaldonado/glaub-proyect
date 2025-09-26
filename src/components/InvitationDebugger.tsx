@@ -48,8 +48,8 @@ const InvitationDebugger: React.FC = () => {
       debug.profile = {
         found: !!profile,
         error: profileError?.message,
-        canManageTeams: profile?.can_manage_teams,
-        canBeManaged: profile?.can_be_managed,
+        canManageTeams: (profile as any)?.can_manage_teams,
+        canBeManaged: (profile as any)?.can_be_managed,
         role: profile?.role,
         id: profile?.id
       };
@@ -358,3 +358,5 @@ const InvitationDebugger: React.FC = () => {
     </Card>
   );
 };
+
+export default InvitationDebugger;
