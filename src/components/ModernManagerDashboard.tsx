@@ -18,6 +18,8 @@ import { useTeamRecommendations } from '@/hooks/useTeamRecommendations';
 import { useTeamDataCache } from '@/hooks/useTeamDataCache';
 import OceanPersonalitySection from './OceanPersonalitySection';
 import TeamResultsSection from './TeamResultsSection';
+// Al principio del archivo, agregar el import
+import InvitationDebugger from './InvitationDebugger';
 
 interface TeamMember {
   id: string;
@@ -454,6 +456,21 @@ const ModernManagerDashboard: React.FC = () => {
         teamDescription={teamDescription}
         cacheStatus={isTeamResultsCacheValid ? 'cached' : 'fresh'}
       />
+
+      // Al final del return, antes del </div> final
+return (
+  <div className="container mx-auto px-4 py-8 space-y-8">
+    {/* Todo tu código existente... */}
+    
+    {/* Agregar esto al final, solo en desarrollo */}
+    {process.env.NODE_ENV === 'development' && (
+      <div className="mt-8">
+        <InvitationDebugger />
+      </div>
+    )}
+  </div>
+);
+
     </div>
   );
 };

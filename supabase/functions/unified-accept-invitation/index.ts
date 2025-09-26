@@ -27,7 +27,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invalid Link</h1>
             <p>No invitation token provided.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
           </body>
         </html>
         `,
@@ -73,7 +73,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Database Error</h1>
             <p>Error looking up invitation: ${invitationError.message}</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
           </body>
         </html>
         `,
@@ -92,7 +92,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invalid or Used Invitation</h1>
             <p>This invitation link is invalid or has already been used.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
           </body>
         </html>
         `,
@@ -112,7 +112,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invitation Expired</h1>
             <p>This invitation has expired. Please request a new one.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
           </body>
         </html>
         `,
@@ -164,7 +164,7 @@ serve(async (req: Request) => {
             <h1 style="color: #dc2626;">Invitation Declined</h1>
             <p>You have declined the ${invitation.invitation_type === 'team_member' ? 'team' : 'manager'} invitation.</p>
             <p>The person who sent the invitation has been notified.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
           </body>
         </html>
         `,
@@ -188,7 +188,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Error</h1>
             <p>Error checking user accounts: ${userCheckError.message}</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
           </body>
         </html>
         `,
@@ -460,7 +460,7 @@ serve(async (req: Request) => {
         : 'Manager Request Accepted!';
         
       const successMessage = invitation.invitation_type === 'team_member'
-        ? `You've successfully joined ${invitation.manager?.team_name || `${invitation.manager?.display_name || invitation.manager?.full_name}'s team`} on EmpathAI.`
+        ? `You've successfully joined ${invitation.manager?.team_name || `${invitation.manager?.display_name || invitation.manager?.full_name}'s team`} on Gläub.`
         : `You've accepted the manager request from ${invitation.invited_by?.display_name || invitation.invited_by?.full_name}. You can now manage their insights and progress.`;
 
       return new Response(
@@ -503,12 +503,12 @@ serve(async (req: Request) => {
       const signupUrl = `https://xn--glub-thesis-m8a.com/auth?mode=signup&invitation_token=${token}&email=${encodeURIComponent(invitation.email)}&invitation_type=${invitation.invitation_type}`;
       
       const signupTitle = invitation.invitation_type === 'team_member'
-        ? 'Create Your EmpathAI Account'
-        : 'Accept Manager Role on EmpathAI';
+        ? 'Create Your Gläub Account'
+        : 'Accept Manager Role on Gläub';
         
       const signupMessage = invitation.invitation_type === 'team_member'
-        ? `You've been invited to join ${teamName} on EmpathAI.`
-        : `You've been requested to be a manager on EmpathAI by ${inviterName}.`;
+        ? `You've been invited to join ${teamName} on Gläub.`
+        : `You've been requested to be a manager on Gläub by ${inviterName}.`;
       
       return new Response(
         `
@@ -549,7 +549,7 @@ serve(async (req: Request) => {
           <h1 style="color: #dc3545;">Error</h1>
           <p>An error occurred while processing your invitation: ${error.message}</p>
           <p>Redirecting to error page in 5 seconds...</p>
-          <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
+          <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
         </body>
       </html>
       `,
