@@ -16,8 +16,8 @@ const SessionRestoration: React.FC<SessionRestorationProps> = ({
   onDismiss
 }) => {
   const { user } = useAuth();
-  const { loadSessionFromLocal, hasActiveSession } = useSessionManager();
   const navigate = useNavigate();
+  const { loadSessionFromLocal, hasActiveSession } = useSessionManager();
   const [showRestorePrompt, setShowRestorePrompt] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<{
     messageCount: number;
@@ -28,21 +28,24 @@ const SessionRestoration: React.FC<SessionRestorationProps> = ({
   useEffect(() => {
     if (!user) return;
 
-    // Check for restorable session
+    // Check for restorable session - simplified approach
     try {
-      const sessionData = loadSessionFromLocal();
-      if (sessionData && typeof sessionData === 'object') {
-        setSessionInfo({
-          messageCount: (sessionData as any).messages?.length || 0,
-          lastActivity: (sessionData as any).lastActivity || Date.now(),
-          conversationTitle: (sessionData as any).conversation?.title || 'Conversation'
-        });
-        setShowRestorePrompt(true);
+      const storedData = localStorage.getItem('chat_session');
+      if (storedData) {
+        const sessionData = JSON.parse(storedData);
+        if (sessionData?.sessionId) {
+          setSessionInfo({
+            messageCount: sessionData.messages?.length || 0,
+            lastActivity: sessionData.lastActivity || Date.now(),
+            conversationTitle: sessionData.conversation?.title || 'Conversation'
+          });
+          setShowRestorePrompt(true);
+        }
       }
     } catch (error) {
       console.error('Error loading session:', error);
     }
-  }, [user, loadSessionFromLocal]);
+  }, [user]);
 
   const handleRestore = () => {
     setShowRestorePrompt(false);
