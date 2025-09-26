@@ -116,6 +116,7 @@ export type Database = {
           invited_at: string
           invited_by_id: string | null
           manager_id: string
+          message: string | null
           status: string
           token: string
           updated_at: string
@@ -131,6 +132,7 @@ export type Database = {
           invited_at?: string
           invited_by_id?: string | null
           manager_id: string
+          message?: string | null
           status?: string
           token: string
           updated_at?: string
@@ -146,6 +148,7 @@ export type Database = {
           invited_at?: string
           invited_by_id?: string | null
           manager_id?: string
+          message?: string | null
           status?: string
           token?: string
           updated_at?: string
@@ -403,6 +406,8 @@ export type Database = {
         Row: {
           age: number | null
           avatar_url: string | null
+          can_be_managed: boolean | null
+          can_manage_teams: boolean | null
           created_at: string
           display_name: string | null
           email: string | null
@@ -411,7 +416,6 @@ export type Database = {
           id: string
           job_level: string | null
           job_position: string | null
-          manager_id: string | null
           onboarding_completed: boolean | null
           organization: string | null
           role: string | null
@@ -422,6 +426,8 @@ export type Database = {
         Insert: {
           age?: number | null
           avatar_url?: string | null
+          can_be_managed?: boolean | null
+          can_manage_teams?: boolean | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -430,7 +436,6 @@ export type Database = {
           id?: string
           job_level?: string | null
           job_position?: string | null
-          manager_id?: string | null
           onboarding_completed?: boolean | null
           organization?: string | null
           role?: string | null
@@ -441,6 +446,8 @@ export type Database = {
         Update: {
           age?: number | null
           avatar_url?: string | null
+          can_be_managed?: boolean | null
+          can_manage_teams?: boolean | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -449,7 +456,6 @@ export type Database = {
           id?: string
           job_level?: string | null
           job_position?: string | null
-          manager_id?: string | null
           onboarding_completed?: boolean | null
           organization?: string | null
           role?: string | null
@@ -457,15 +463,25 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      profiles_backup: {
+        Row: {
+          email: string | null
+          full_name: string | null
+          id: string | null
+        }
+        Insert: {
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+        }
+        Update: {
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+        }
+        Relationships: []
       }
       sharing_preferences: {
         Row: {
@@ -558,9 +574,9 @@ export type Database = {
           },
         ]
       }
-      team_memberships: {
+      team_memberships_backup: {
         Row: {
-          created_at: string
+          created_at: string | null
           employee_1_id: string | null
           employee_10_id: string | null
           employee_2_id: string | null
@@ -571,12 +587,12 @@ export type Database = {
           employee_7_id: string | null
           employee_8_id: string | null
           employee_9_id: string | null
-          id: string
-          manager_id: string
-          updated_at: string
+          id: string | null
+          manager_id: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           employee_1_id?: string | null
           employee_10_id?: string | null
           employee_2_id?: string | null
@@ -587,12 +603,12 @@ export type Database = {
           employee_7_id?: string | null
           employee_8_id?: string | null
           employee_9_id?: string | null
-          id?: string
-          manager_id: string
-          updated_at?: string
+          id?: string | null
+          manager_id?: string | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           employee_1_id?: string | null
           employee_10_id?: string | null
           employee_2_id?: string | null
@@ -603,89 +619,11 @@ export type Database = {
           employee_7_id?: string | null
           employee_8_id?: string | null
           employee_9_id?: string | null
-          id?: string
-          manager_id?: string
-          updated_at?: string
+          id?: string | null
+          manager_id?: string | null
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "team_memberships_employee_1_id_fkey"
-            columns: ["employee_1_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_10_id_fkey"
-            columns: ["employee_10_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_2_id_fkey"
-            columns: ["employee_2_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_3_id_fkey"
-            columns: ["employee_3_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_4_id_fkey"
-            columns: ["employee_4_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_5_id_fkey"
-            columns: ["employee_5_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_6_id_fkey"
-            columns: ["employee_6_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_7_id_fkey"
-            columns: ["employee_7_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_8_id_fkey"
-            columns: ["employee_8_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_employee_9_id_fkey"
-            columns: ["employee_9_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_memberships_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       "training data - conversation": {
         Row: {
@@ -741,9 +679,17 @@ export type Database = {
         Args: { invitation_manager_id: string }
         Returns: boolean
       }
+      can_manage_teams: {
+        Args: { user_profile_id: string }
+        Returns: boolean
+      }
       can_user_view_shared_profile: {
         Args: { profile_user_id: string }
         Returns: boolean
+      }
+      cleanup_expired_reset_tokens: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       clear_conversation_messages: {
         Args: { conversation_uuid: string }
@@ -773,6 +719,10 @@ export type Database = {
           manager_id: string
           status: string
         }[]
+      }
+      get_user_id_from_token: {
+        Args: { token_input: string }
+        Returns: string
       }
       get_user_manager_id: {
         Args: { user_profile_id: string }
@@ -837,7 +787,7 @@ export type Database = {
       }
       validate_reset_token: {
         Args: { token_input: string }
-        Returns: string
+        Returns: boolean
       }
     }
     Enums: {

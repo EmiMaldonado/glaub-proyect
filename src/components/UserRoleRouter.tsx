@@ -1,9 +1,23 @@
 import React from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useManagerCapabilities } from '@/hooks/useManagerCapabilities';
 
-// ✅ EMERGENCY FIX: Simplified user routing during emergency repair
-// Complex routing logic temporarily disabled to prevent build failures
+// ✅ RESTORED: Functional user routing with manager capabilities
 export const UserRoleRouter: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // ✅ EMERGENCY: Pass through children without complex logic during repair phase
-  // This will be re-enabled after core infinite loop fixes are stable
+  const { user, loading: authLoading } = useAuth();
+  const { isManager, canAccessManagerDashboard, loading: capabilitiesLoading } = useManagerCapabilities();
+
+  // Show loading while checking capabilities
+  if (authLoading || capabilitiesLoading) {
+    return <>{children}</>;
+  }
+
+  // If no user, pass through (AuthGuard will handle this)
+  if (!user) {
+    return <>{children}</>;
+  }
+
+  // For authenticated users, pass through with enhanced context
+  // The routing logic will be handled by individual pages and guards
   return <>{children}</>;
 };

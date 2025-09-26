@@ -82,7 +82,6 @@ const App = () => {
                     v7_relativeSplatPath: true,
                   }}
                 >
-                  <OnboardingGuard>
                 <div className="min-h-screen bg-gradient-subtle">
                   <Routes>
                     {/* Public routes */}
@@ -187,7 +186,6 @@ const App = () => {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </div>
-                  </OnboardingGuard>
                 </BrowserRouter>
               </UserRoleRouter>
             </AuthProvider>
