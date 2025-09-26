@@ -208,6 +208,45 @@ export type Database = {
           },
         ]
       }
+      manager_employee_relationships: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          manager_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          manager_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          manager_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_employee_relationships_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_employee_relationships_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manager_recommendations: {
         Row: {
           created_at: string
@@ -416,6 +455,7 @@ export type Database = {
           id: string
           job_level: string | null
           job_position: string | null
+          manager_id: string | null
           onboarding_completed: boolean | null
           organization: string | null
           role: string | null
@@ -436,6 +476,7 @@ export type Database = {
           id?: string
           job_level?: string | null
           job_position?: string | null
+          manager_id?: string | null
           onboarding_completed?: boolean | null
           organization?: string | null
           role?: string | null
@@ -456,6 +497,7 @@ export type Database = {
           id?: string
           job_level?: string | null
           job_position?: string | null
+          manager_id?: string | null
           onboarding_completed?: boolean | null
           organization?: string | null
           role?: string | null
@@ -463,7 +505,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles_backup: {
         Row: {
@@ -687,6 +737,15 @@ export type Database = {
         Args: { profile_user_id: string }
         Returns: boolean
       }
+      check_manager_capabilities: {
+        Args: { profile_id: string }
+        Returns: {
+          can_access_dashboard: boolean
+          employee_count: number
+          has_employees: boolean
+          is_manager: boolean
+        }[]
+      }
       cleanup_expired_reset_tokens: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -707,6 +766,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_direct_reports: {
+        Args: { manager_profile_id: string }
+        Returns: {
+          employee_email: string
+          employee_id: string
+          employee_name: string
+        }[]
+      }
       get_invitation_by_token: {
         Args: { invitation_token: string }
         Returns: {
@@ -718,6 +785,14 @@ export type Database = {
           invited_by_id: string
           manager_id: string
           status: string
+        }[]
+      }
+      get_manager_chain: {
+        Args: { employee_profile_id: string }
+        Returns: {
+          level: number
+          manager_id: string
+          manager_name: string
         }[]
       }
       get_user_id_from_token: {
@@ -784,6 +859,10 @@ export type Database = {
       setup_default_sharing_preferences: {
         Args: { target_manager_id: string; target_user_id: string }
         Returns: undefined
+      }
+      validate_manager_has_employees: {
+        Args: { manager_profile_id: string }
+        Returns: boolean
       }
       validate_reset_token: {
         Args: { token_input: string }
