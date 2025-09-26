@@ -258,61 +258,49 @@ const ChatConversation: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-background to-muted/20">
+    <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <div className="bg-background/80 backdrop-blur-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="border-b bg-background">
+        <div className="p-6">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate('/dashboard')}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground p-0"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5 mr-2" />
               Dashboard
             </Button>
-            <div>
-              <h1 className="font-semibold text-foreground">
-                {conversation?.title || 'Chat Conversation'}
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {hasActiveSession ? 'Active session' : 'Session inactive'}
-              </p>
-            </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePauseSession}
-              disabled={!hasActiveSession || isLoading}
-            >
-              <Pause className="w-4 h-4" />
-              Pause
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleEndSession}
-              disabled={!hasActiveSession || isLoading}
-            >
-              <Power className="w-4 h-4" />
-              End
-            </Button>
-          </div>
+          <h1 className="text-xl font-semibold text-foreground mt-2">
+            Chat conversation
+          </h1>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <div className="flex-1 overflow-hidden relative">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-gradient-to-br from-muted/30 to-muted/10">
+          <div className="absolute inset-0 opacity-5">
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <circle cx="20" cy="20" r="2" fill="currentColor" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#dots)" />
+            </svg>
+          </div>
+        </div>
+        
+        <div className="h-full overflow-y-auto relative z-10">
+          <div className="p-6 space-y-4 min-h-full flex flex-col justify-center">
             {messages.length === 0 && (
-              <div className="text-center text-muted-foreground py-8">
-                <h3 className="text-lg font-medium text-foreground">Ready to start your conversation</h3>
-                <p className="text-sm mt-2 opacity-75">Type a message below to begin</p>
+              <div className="text-center text-muted-foreground">
+                <h3 className="text-lg font-medium text-foreground mb-2">Ready to start your conversation</h3>
+                <p className="text-sm opacity-75">Type a message below to begin</p>
               </div>
             )}
 
@@ -322,10 +310,10 @@ const ChatConversation: React.FC = () => {
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] sm:max-w-[80%] px-3 py-2 sm:px-4 sm:py-3 rounded-lg ${
+                  className={`max-w-[85%] px-4 py-3 rounded-2xl ${
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                      : 'bg-card text-card-foreground shadow-sm'
                   }`}
                 >
                   <p className="text-sm leading-relaxed">{message.content}</p>
@@ -338,7 +326,7 @@ const ChatConversation: React.FC = () => {
 
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-muted px-3 py-2 sm:px-4 sm:py-3 rounded-lg max-w-[80%]">
+                <div className="bg-card px-4 py-3 rounded-2xl shadow-sm max-w-[80%]">
                   <div className="flex items-center space-x-2">
                     <LoadingSpinner />
                     <span className="text-sm">AI is thinking...</span>
@@ -351,36 +339,80 @@ const ChatConversation: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="bg-background border-t p-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3">
-          <input
-            type="text"
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (textInput.trim()) {
-                  handleSendMessage(textInput);
-                }
-              }
-            }}
-            placeholder="Type your message here..."
-            className="flex-1 px-3 py-2 sm:px-4 sm:py-3 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            disabled={isLoading || isPaused || !conversation?.id}
-          />
-          <Button
-            onClick={() => handleSendMessage(textInput)}
-            disabled={isLoading || !textInput.trim() || isPaused || !conversation?.id}
-            className="px-4 py-2 sm:px-6 sm:py-3"
-            size="default"
-          >
-            {isLoading ? (
-              <LoadingSpinner />
-            ) : (
-              'Send'
-            )}
-          </Button>
+      <div className="bg-background border-t">
+        <div className="p-6">
+          {/* Input Field */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (textInput.trim()) {
+                      handleSendMessage(textInput);
+                    }
+                  }
+                }}
+                placeholder="Type your message here ..."
+                className="w-full px-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                disabled={isLoading || isPaused || !conversation?.id}
+              />
+            </div>
+            <Button
+              onClick={() => handleSendMessage(textInput)}
+              disabled={isLoading || !textInput.trim() || isPaused || !conversation?.id}
+              className="h-12 w-12 rounded-xl bg-accent hover:bg-accent/90"
+              size="icon"
+            >
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              )}
+            </Button>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={handleEndSession}
+              disabled={!hasActiveSession || isLoading}
+              className="flex-1 h-auto p-4 rounded-xl border-2 hover:bg-muted/50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <Power className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-sm">End session</div>
+                  <div className="text-xs text-muted-foreground">Finish the chat and go to analysis</div>
+                </div>
+              </div>
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={handlePauseSession}
+              disabled={!hasActiveSession || isLoading}
+              className="flex-1 h-auto p-4 rounded-xl border-2 hover:bg-muted/50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                  <Pause className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-sm">Pause</div>
+                  <div className="text-xs text-muted-foreground">Save your conversation and return later</div>
+                </div>
+              </div>
+            </Button>
+          </div>
         </div>
       </div>
 
