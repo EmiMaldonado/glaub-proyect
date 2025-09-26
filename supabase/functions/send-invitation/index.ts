@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { Resend } from "npm:resend@4.0.0";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
 interface InvitationRequest {
@@ -88,27 +88,14 @@ serve(async (req: Request) => {
       throw new Error("Invitation already sent to this email");
     }
 
-    // Reemplazar la verificación con:
-    // Eliminar invitación anterior pendiente si existe
+    // Clean up any previous pending invitations
     await supabase
       .from("invitations")
       .delete()
       .eq("invited_by_id", profile.id)
       .eq("email", email)
       .eq("status", "pending")
-      .eq("invitation_type", invitationType);
-
-    console.log("Previous invitation cleaned if existed");
-
-    // Reemplazar la verificación con:
-    // Eliminar invitación anterior pendiente si existe
-    await supabase
-      .from("invitations")
-      .delete()
-      .eq("invited_by_id", profile.id)
-      .eq("email", email)
-      .eq("status", "pending")
-      .eq("invitation_type", invitationType);
+      .eq("invitation_type", "team_member");
 
     console.log("Previous invitation cleaned if existed");
 
