@@ -96,7 +96,7 @@ serve(async (req) => {
       if (conversations && conversations.length > 0) {
         // Extract conversation content and signals
         conversationData = conversations.map(conv => 
-          conv.messages?.map(msg => msg.content).join(' ') || ''
+          conv.messages?.map((msg: any) => msg.content).join(' ') || ''
         ).join(' ');
 
         // Aggregate OCEAN signals
@@ -316,7 +316,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error generating individual recommendations:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to generate individual recommendations' 
+      error: (error as Error).message || 'Failed to generate individual recommendations' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

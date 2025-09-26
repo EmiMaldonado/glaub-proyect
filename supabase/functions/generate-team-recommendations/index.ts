@@ -178,7 +178,7 @@ serve(async (req) => {
           name: member.display_name || member.full_name,
           role: member.role,
           personality,
-          hasConversationData: validConversations > 0
+          hasConversationData: (conversations?.length || 0) > 0
         });
       } catch (memberError) {
         console.error(`Error processing member ${member.id}:`, memberError);
@@ -379,7 +379,7 @@ Make all recommendations specific and actionable for a manager leading this part
   } catch (error) {
     console.error('Error generating team recommendations:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to generate team recommendations' 
+      error: (error as Error).message || 'Failed to generate team recommendations' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

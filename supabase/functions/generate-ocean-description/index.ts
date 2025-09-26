@@ -90,7 +90,7 @@ Make it personal, specific to their scores, and actionable. Avoid generic statem
   } catch (error) {
     console.error('Error in generate-ocean-description function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: (error as Error).message,
       success: false 
     }), {
       status: 500,

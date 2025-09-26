@@ -57,8 +57,8 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({
       test_status: 'ERROR',
-      error: error.message,
-      error_type: error.constructor.name,
+      error: (error as Error).message,
+      error_type: (error as Error).constructor.name,
       timestamp: new Date().toISOString()
     }), {
       status: 500,

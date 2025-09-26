@@ -584,11 +584,22 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     debugInfo.metadata.finish_reason = data.choices[0].finish_reason;
 
     // Analyze message for OCEAN signals and insights (only if we have a real user message)
-    let insights = { ocean_signals: {}, key_insights: [], themes: [], engagement: 0.5 };
+    let insights: { ocean_signals: any, key_insights: string[], themes: string[], engagement: number } = { 
+      ocean_signals: {}, 
+      key_insights: [], 
+      themes: [], 
+      engagement: 0.5 
+    };
     if (!isAIInitiated && message && message !== "__AI_START_CONVERSATION__") {
       debugInfo.processing_steps.push('Analyzing message for insights');
       const insightsStartTime = Date.now();
-      insights = analyzeMessageForInsights(message, assistantMessage);
+      const analysisResult = analyzeMessageForInsights(message, assistantMessage);
+      insights = {
+        ocean_signals: analysisResult.ocean_signals || {},
+        key_insights: analysisResult.conversation_themes || [],
+        themes: analysisResult.conversation_themes || [],
+        engagement: analysisResult.engagement_level || 0.5
+      };
       debugInfo.timing.insights_analysis_ms = Date.now() - insightsStartTime;
     } else {
       debugInfo.processing_steps.push('Skipping insights analysis for AI-initiated conversation');

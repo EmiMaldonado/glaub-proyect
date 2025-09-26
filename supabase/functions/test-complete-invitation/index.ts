@@ -33,7 +33,7 @@ serve(async (req: Request) => {
       tests.push({
         name: "Invitations table access",
         success: false,
-        error: error.message
+        error: (error as Error).message
       });
     }
     
@@ -54,7 +54,7 @@ serve(async (req: Request) => {
       tests.push({
         name: "Profiles table access",
         success: false,
-        error: error.message
+        error: (error as Error).message
       });
     }
     
@@ -75,7 +75,7 @@ serve(async (req: Request) => {
       tests.push({
         name: "Team memberships table access",
         success: false,
-        error: error.message
+        error: (error as Error).message
       });
     }
     
@@ -99,7 +99,7 @@ serve(async (req: Request) => {
       tests.push({
         name: "Invalid token handling",
         success: false,
-        error: error.message
+        error: (error as Error).message
       });
     }
     
@@ -122,7 +122,7 @@ serve(async (req: Request) => {
       tests.push({
         name: "Pending invitations query",
         success: false,
-        error: error.message
+        error: (error as Error).message
       });
     }
 

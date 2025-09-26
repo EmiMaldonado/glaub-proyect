@@ -72,6 +72,10 @@ serve(async (req: Request) => {
       throw new Error("Manager email is required");
     }
 
+    if (!profile) {
+      throw new Error("User profile not found");
+    }
+
     // Check if invitation already exists for this manager email
     const { data: existingInvitation } = await supabase
       .from("invitations")

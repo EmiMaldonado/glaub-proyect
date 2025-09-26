@@ -83,7 +83,7 @@ serve(async (req: Request) => {
       'employee_6_id', 'employee_7_id', 'employee_8_id', 'employee_9_id', 'employee_10_id'
     ];
     
-    const mockTeamMembership = {
+    const mockTeamMembership: Record<string, string | null> = {
       employee_1_id: 'user1',
       employee_2_id: null,
       employee_3_id: 'user3'

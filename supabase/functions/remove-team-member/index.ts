@@ -146,7 +146,7 @@ serve(async (req: Request) => {
     // Get full profile data for remaining team members
     const teamMemberIds = (updatedTeamMembers || []).map(tm => tm.member_id);
     
-    let teamMembers = [];
+    let teamMembers: any[] = [];
     if (teamMemberIds.length > 0) {
       const { data: memberProfiles, error: profilesError } = await supabase
         .from("profiles")
