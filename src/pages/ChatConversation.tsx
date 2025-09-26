@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'reactimport React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,25 +35,19 @@ const ChatConversation: React.FC = () => {
   const [searchParams] = useSearchParams();
   const continueConversation = searchParams.get('continue');
   
+  // ✅ REFERENCIAS FALTANTES AGREGADAS
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasInitialized = useRef<boolean>(false);
+  const channelRef = useRef<any>(null);
+  const subscriptionRef = useRef<string | null>(null);
+  
   // Estados principales
   const [textInput, setTextInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isWaitingForAI, setIsWaitingForAI] = useState(false);
   
-  // Debug logging
-  useEffect(() => {
-    console.log('🎯 ChatConversation STATE UPDATE:', {
-      hasActiveSession,
-      isPaused,
-      conversationId: conversation?.id,
-      messageCount: messages.length,
-      userMessageCount: messages.filter(msg => msg.role === 'user').length,
-      conversationStatus: conversation?.status
-    });
-  }, [hasActiveSession, isPaused, conversation, messages]);
-  
-  // Hooks personalizados
+  // ✅ HOOKS EN ORDEN CORRECTO
   const {
     conversation,
     messages,
@@ -71,6 +65,18 @@ const ChatConversation: React.FC = () => {
   } = useSessionManager();
 
   const { generateResumeMessage } = useConversationState();
+  
+  // Debug logging DESPUÉS de los hooks
+  useEffect(() => {
+    console.log('🎯 ChatConversation STATE UPDATE:', {
+      hasActiveSession,
+      isPaused,
+      conversationId: conversation?.id,
+      messageCount: messages.length,
+      userMessageCount: messages.filter(msg => msg.role === 'user').length,
+      conversationStatus: conversation?.status
+    });
+  }, [hasActiveSession, isPaused, conversation, messages]);
   
   const { pauseConversationWithContext } = useAutoPause({
     conversation,
@@ -412,8 +418,12 @@ const ChatConversation: React.FC = () => {
       resumeSession(conversation as Conversation, messages);
       await setupRealtimeSubscription(conversationId);
 
+      // ✅ MANEJO SEGURO DE session_data
+      const sessionData = conversation.session_data as any;
+      const pausedAt = sessionData?.pausedAt || conversation.session_data;
+      
       const resumeMessage = generateResumeMessage(
-        conversation.session_data || { lastTopic: conversation.title, pausedAt: conversation.session_data?.pausedAt },
+        { lastTopic: conversation.title, pausedAt },
         user.email?.split('@')[0] || 'there'
       );
       
@@ -833,41 +843,6 @@ const ChatConversation: React.FC = () => {
                   <div className="max-w-md mx-auto space-y-4">
                     <LoadingSpinner />
                     <h3 className="text-lg font-medium text-foreground">AI is starting the conversation...</h3>
-                    <p className="text-sm">
-                      Your AI therapeutic assistant is preparing your first message. 
-                      This should only take a moment.
-                    </p>
-                    <p className="text-xs opacity-75">
-                      All conversations are private and secure.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* No messages and not waiting */}
-              {messages.length === 0 && !isWaitingForAI && !isLoading && (
-                <div className="text-center text-muted-foreground py-8">
-                  <div className="max-w-md mx-auto space-y-4">
-                    <h3 className="text-lg font-medium text-foreground">Ready to start your conversation</h3>
-                    <p className="text-sm">
-                      Type a message below to begin your therapeutic chat session.
-                    </p>
-                  </div>
-                </div>
-              )}
-              
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] sm:max-w-[80%] px-3 py-2 sm:px-4 sm:py-3 rounded-lg ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
                     <p className="text-sm leading-relaxed">{message.content}</p>
                     <p className="text-xs opacity-70 mt-1">
                       {new Date(message.created_at).toLocaleTimeString()}
@@ -969,4 +944,39 @@ const ChatConversation: React.FC = () => {
   );
 };
 
-export default ChatConversation;
+export default ChatConversation;text-sm">
+                      Your AI therapeutic assistant is preparing your first message. 
+                      This should only take a moment.
+                    </p>
+                    <p className="text-xs opacity-75">
+                      All conversations are private and secure.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* No messages and not waiting */}
+              {messages.length === 0 && !isWaitingForAI && !isLoading && (
+                <div className="text-center text-muted-foreground py-8">
+                  <div className="max-w-md mx-auto space-y-4">
+                    <h3 className="text-lg font-medium text-foreground">Ready to start your conversation</h3>
+                    <p className="text-sm">
+                      Type a message below to begin your therapeutic chat session.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] sm:max-w-[80%] px-3 py-2 sm:px-4 sm:py-3 rounded-lg ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    <p className="

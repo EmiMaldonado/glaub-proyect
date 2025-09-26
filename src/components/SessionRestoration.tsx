@@ -11,6 +11,12 @@ interface SessionRestorationProps {
   onDismiss?: () => void;
 }
 
+interface SessionInfo {
+  messageCount: number;
+  lastActivity: number;
+  conversationTitle: string;
+}
+
 const SessionRestoration: React.FC<SessionRestorationProps> = ({
   onRestore,
   onDismiss
@@ -19,22 +25,26 @@ const SessionRestoration: React.FC<SessionRestorationProps> = ({
   const { loadSessionFromLocal, hasActiveSession } = useSessionManager();
   const navigate = useNavigate();
   const [showRestorePrompt, setShowRestorePrompt] = useState(false);
-  const [sessionInfo, setSessionInfo] = useState<{
-    messageCount: number;
-    lastActivity: number;
-    conversationTitle: string;
-  } | null>(null);
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
 
   useEffect(() => {
     if (!user) return;
-
+    
     // Check for restorable session
     try {
+      // ✅ LLAMADA CORRECTA A loadSessionFromLocal
       const sessionData = loadSessionFromLocal();
-      if (sessionData && typeof sessionData === 'object' && 'conversation' in sessionData && 'messages' in sessionData) {
+      
+      // ✅ VERIFICACIÓN SEGURA DE TIPO
+      if (sessionData && 
+          typeof sessionData === 'object' && 
+          'conversation' in sessionData && 
+          'messages' in sessionData &&
+          'lastActivity' in sessionData) {
+        
         setSessionInfo({
-          messageCount: sessionData.messages?.length || 0,
-          lastActivity: sessionData.lastActivity || Date.now(),
+          messageCount: Array.isArray(sessionData.messages) ? sessionData.messages.length : 0,
+          lastActivity: typeof sessionData.lastActivity === 'number' ? sessionData.lastActivity : Date.now(),
           conversationTitle: sessionData.conversation?.title || 'Conversation'
         });
         setShowRestorePrompt(true);
