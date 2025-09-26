@@ -114,20 +114,20 @@ serve(async (req: Request) => {
     
     // Send invitation email using Resend
     const { error: emailError } = await resend.emails.send({
-      from: "Gläub <onboarding@resend.dev>",
+      from: "EmpathAI <onboarding@resend.dev>",
       to: [managerEmail],
-      subject: `Invitation to join ${teamName} on Gläub`,
+      subject: `Invitation to join ${teamName} on EmpathAI`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #2563eb; text-align: center;">You're Invited to Join ${teamName}!</h1>
           
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p style="font-size: 16px; line-height: 1.6; margin-bottom: 16px;">
-              Hello! You've been invited by <strong>${managerName}</strong> to join their team "<strong>${teamName}</strong>" on Gläub.
+              Hello! You've been invited by <strong>${managerName}</strong> to join their team "<strong>${teamName}</strong>" on EmpathAI.
             </p>
             
             <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-              Gläub is an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being.
+              EmpathAI is an AI-powered therapeutic conversation platform that helps teams share insights and improve workplace well-being.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">

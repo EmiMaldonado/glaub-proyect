@@ -27,7 +27,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invalid Link</h1>
             <p>No invitation token provided.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -73,7 +73,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Database Error</h1>
             <p>Error looking up invitation: ${invitationError.message}</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -92,7 +92,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invalid or Used Invitation</h1>
             <p>This manager invitation link is invalid or has already been used.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -112,7 +112,7 @@ serve(async (req: Request) => {
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #dc3545;">Invitation Expired</h1>
             <p>This manager invitation has expired. Please ask the employee to send a new request.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -155,7 +155,7 @@ serve(async (req: Request) => {
             <h1 style="color: #dc2626;">Request Declined</h1>
             <p>You have declined the manager request from ${invitation.invited_by?.display_name || invitation.invited_by?.full_name}.</p>
             <p>They have been notified of your decision.</p>
-            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
+            <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
           </body>
         </html>
         `,
@@ -370,7 +370,7 @@ serve(async (req: Request) => {
           </head>
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h1 style="color: #007bff;">Create Your Manager Account</h1>
-            <p>You've been requested to be a manager for ${invitation.invited_by?.display_name || invitation.invited_by?.full_name} on Gläub.</p>
+            <p>You've been requested to be a manager for ${invitation.invited_by?.display_name || invitation.invited_by?.full_name} on EmpathAI.</p>
             <p>Click the button below to create your account and become their manager.</p>
             <p>Redirecting to signup in 3 seconds...</p>
             <a href="${signupUrl}" 
@@ -397,7 +397,7 @@ serve(async (req: Request) => {
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
           <h1 style="color: #dc3545;">Error</h1>
           <p>An error occurred while processing your manager invitation: ${error.message}</p>
-          <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to Gläub</a>
+          <a href="https://xn--glub-thesis-m8a.com/" style="color: #007bff;">Go to EmpathAI</a>
         </body>
       </html>
       `,
