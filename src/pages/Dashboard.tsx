@@ -129,35 +129,50 @@ const Dashboard = () => {
       
       console.log('📊 Loading dashboard data for user:', user.id);
 
-      // Load user profile
-      const { data: profile } = await supabase
+      // Load user profile with error handling
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
       
+      if (profileError) {
+        console.warn('Profile load error:', profileError);
+      }
+      
       if (profile) {
         setUserProfile(profile);
       }
 
-      // Load all conversations for comprehensive analysis
-      const { data: conversations } = await supabase
+      // Load all conversations with error handling
+      const { data: conversations, error: conversationsError } = await supabase
         .from('conversations')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      // Load all insights from all conversations
-      const { data: insights } = await supabase
-        .from('key_insights')
-        .select('*')
-        .order('created_at', { ascending: false });
+      if (conversationsError) {
+        console.warn('Conversations load error:', conversationsError);
+      }
 
-      // Filter insights that belong to user's conversations
+      // Get conversation IDs for filtering insights
       const userConversationIds = conversations?.map(c => c.id) || [];
-      const userInsights = insights?.filter(insight => 
-        userConversationIds.includes(insight.conversation_id)
-      ) || [];
+
+      // Load insights only if we have conversations
+      let userInsights: any[] = [];
+      if (userConversationIds.length > 0) {
+        const { data: insights, error: insightsError } = await supabase
+          .from('key_insights')
+          .select('*')
+          .in('conversation_id', userConversationIds)
+          .order('created_at', { ascending: false });
+
+        if (insightsError) {
+          console.warn('Insights load error:', insightsError);
+        } else {
+          userInsights = insights || [];
+        }
+      }
 
       // Set all insights for comprehensive dashboard
       if (userInsights && userInsights.length > 0) {
@@ -192,8 +207,8 @@ const Dashboard = () => {
         );
       }
 
-      // Load last conversation for quick reference
-      const { data: lastConv } = await supabase
+      // Load last conversation for quick reference with error handling
+      const { data: lastConv, error: lastConvError } = await supabase
         .from('conversations')
         .select('*')
         .eq('user_id', user.id)
@@ -202,13 +217,21 @@ const Dashboard = () => {
         .limit(1)
         .maybeSingle();
 
+      if (lastConvError) {
+        console.warn('Last conversation load error:', lastConvError);
+      }
+
       if (lastConv) {
-        // Separately load insights for this conversation
-        const { data: lastConvInsights } = await supabase
+        // Separately load insights for this conversation with error handling
+        const { data: lastConvInsights, error: lastInsightsError } = await supabase
           .from('key_insights')
           .select('insights, personality_notes, next_steps')
           .eq('conversation_id', lastConv.id)
           .maybeSingle();
+        
+        if (lastInsightsError) {
+          console.warn('Last conversation insights error:', lastInsightsError);
+        }
         
         setLastConversation({
           ...lastConv,
@@ -216,66 +239,113 @@ const Dashboard = () => {
         });
       }
 
-      // Load current manager if user is in a team
-      const { data: teamMembership } = await supabase
-        .from('team_members')
-        .select('team_id, role')
-        .eq('member_id', profile?.id)
-        .eq('role', 'employee')
-        .maybeSingle();
+      // Load current manager if user is in a team - with error handling
+      let teamMembership = null;
+      try {
+        const { data: membership, error: membershipError } = await supabase
+          .from('team_members')
+          .select('team_id, role')
+          .eq('member_id', profile?.id)
+          .eq('role', 'employee')
+          .maybeSingle();
+
+        if (membershipError) {
+          console.warn('Team membership load error:', membershipError);
+        } else {
+          teamMembership = membership;
+        }
+      } catch (e) {
+        console.warn('Team membership query failed:', e);
+      }
 
       if (teamMembership) {
-        const { data: manager } = await supabase
-          .from('profiles')
-          .select('*, user_id')
-          .eq('id', teamMembership.team_id)
-          .maybeSingle();
-        setCurrentManager(manager);
+        try {
+          const { data: manager, error: managerError } = await supabase
+            .from('profiles')
+            .select('*, user_id')
+            .eq('id', teamMembership.team_id)
+            .maybeSingle();
+          
+          if (managerError) {
+            console.warn('Manager load error:', managerError);
+          } else {
+            setCurrentManager(manager);
+          }
+        } catch (e) {
+          console.warn('Manager query failed:', e);
+        }
       }
 
-      // Load user team memberships
-      const { data: teamMemberships } = await supabase
-        .from('team_members')
-        .select(`
-          id,
-          team_id,
-          member_id,
-          role,
-          joined_at
-        `)
-        .eq('member_id', profile?.id)
-        .eq('role', 'employee');
-      
-      if (teamMemberships && teamMemberships.length > 0) {
-        const teamsWithManagers = await Promise.all(
-          teamMemberships.map(async (membership) => {
-            const { data: manager } = await supabase
-              .from('profiles')
-              .select('id, full_name, display_name, team_name')
-              .eq('id', membership.team_id)
-              .single();
-            
-            return {
-              ...membership,
-              manager
-            };
-          })
-        );
-        setUserTeams(teamsWithManagers);
+      // Load user team memberships with error handling
+      let teamsWithManagers: any[] = [];
+      try {
+        const { data: teamMemberships, error: membershipsError } = await supabase
+          .from('team_members')
+          .select(`
+            id,
+            team_id,
+            member_id,
+            role,
+            joined_at
+          `)
+          .eq('member_id', profile?.id)
+          .eq('role', 'employee');
+        
+        if (membershipsError) {
+          console.warn('Team memberships load error:', membershipsError);
+        } else if (teamMemberships && teamMemberships.length > 0) {
+          teamsWithManagers = await Promise.all(
+            teamMemberships.map(async (membership) => {
+              try {
+                const { data: manager, error: managerError } = await supabase
+                  .from('profiles')
+                  .select('id, full_name, display_name, team_name')
+                  .eq('id', membership.team_id)
+                  .single();
+                
+                if (managerError) {
+                  console.warn('Manager load error for team:', membership.team_id, managerError);
+                  return { ...membership, manager: null };
+                }
+                
+                return {
+                  ...membership,
+                  manager
+                };
+              } catch (e) {
+                console.warn('Manager query failed for team:', membership.team_id, e);
+                return { ...membership, manager: null };
+              }
+            })
+          );
+        }
+      } catch (e) {
+        console.warn('Team memberships query failed:', e);
       }
-
-      // Load pending invitations
-      const { data: invitations } = await supabase
-        .from('invitations')
-        .select(`
-          *,
-          manager:profiles!invitations_manager_id_fkey(full_name, display_name)
-        `)
-        .eq('email', user.email)
-        .eq('status', 'pending')
-        .gt('expires_at', new Date().toISOString());
       
-      setPendingInvitations(invitations || []);
+      setUserTeams(teamsWithManagers);
+
+      // Load pending invitations with error handling
+      try {
+        const { data: invitations, error: invitationsError } = await supabase
+          .from('invitations')
+          .select(`
+            *,
+            manager:profiles!invitations_manager_id_fkey(full_name, display_name)
+          `)
+          .eq('email', user.email)
+          .eq('status', 'pending')
+          .gt('expires_at', new Date().toISOString());
+        
+        if (invitationsError) {
+          console.warn('Invitations load error:', invitationsError);
+        } else {
+          setPendingInvitations(invitations || []);
+        }
+      } catch (e) {
+        console.warn('Invitations query failed:', e);
+        setPendingInvitations([]);
+      }
 
       setStats({
         totalConversations: conversations?.length || 0,
@@ -536,7 +606,7 @@ const Dashboard = () => {
     }
   }, [user?.id]);
 
-  // useEffect para carga inicial CONTROLADA
+  // useEffect para carga inicial CONTROLADA con debouncing mejorado
   useEffect(() => {
     if (!user?.id) return;
     
@@ -550,18 +620,25 @@ const Dashboard = () => {
     const initializeDashboard = async () => {
       console.log('🚀 Initializing dashboard for user:', user.id);
       
+      // Add longer delay to prevent cascade failures
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       await loadDashboardData();
       
-      if (getConversationState) {
+      // Add delay before conversation state
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (getConversationState && !loadingInProgress.current) {
         await getConversationState(user.id);
       }
       
+      // Longer delay before recovery
       setTimeout(() => {
         if (recoverAllMissingAnalyses && !loadingInProgress.current) {
           console.log('🔄 Running recovery process');
           recoverAllMissingAnalyses();
         }
-      }, 3000);
+      }, 5000); // Increased to 5 seconds
     };
     
     initializeDashboard();
@@ -787,8 +864,11 @@ const Dashboard = () => {
         </Card>
       )}
 
-      {/* Personal Recommendations */}
-      {allInsights && allInsights.length > 0 && (
+      // Personal Recommendations - Only show if we have actual insights
+      {allInsights && allInsights.length > 0 && allInsights.some(insight => 
+        (insight.insights && insight.insights.length > 0) || 
+        (insight.next_steps && insight.next_steps.length > 0)
+      ) && (
         <PersonalRecommendations
           context="last_session"
           period="last_week"
@@ -805,8 +885,8 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Profile Status Insights */}
-      {userProfile && (
+      {/* Profile Status Insights - Only show if we have conversations */}
+      {userProfile && stats.completedConversations > 0 && (
         <ProfileStatusInsights
           profile={userProfile}
           stats={stats}

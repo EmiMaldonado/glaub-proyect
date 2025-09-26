@@ -45,69 +45,10 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
     try {
       setIsLoading(true);
 
-      // Fetch conversation insights for analysis
-      let insights: any[] = [];
-      try {
-        const result = await (supabase as any)
-          .from('key_insights')
-          .select('insights, personality_notes, next_steps')
-          .eq('user_id', user.id);
-        insights = result.data || [];
-      } catch (e) {
-        console.log('Could not fetch insights:', e);
-      }
-
-      // Generate AI-powered strengths analysis
-      const response = await supabase.functions.invoke('ai-chat', {
-        body: {
-          message: `Analyze this user's emotional intelligence and soft skills based on their conversation data and generate a comprehensive strengths paragraph:
-
-          User Profile:
-          - Role: ${profile?.job_position || 'Not specified'}
-          - Organization: ${profile?.organization || 'Not specified'}
-          - Conversations Completed: ${stats.completedConversations}
-          - Total Conversations: ${conversations}
-
-          OCEAN Personality Profile: ${oceanProfile ? JSON.stringify({
-            openness: oceanProfile.openness,
-            conscientiousness: oceanProfile.conscientiousness,
-            extraversion: oceanProfile.extraversion,
-            agreeableness: oceanProfile.agreeableness,
-            neuroticism: oceanProfile.neuroticism
-          }) : 'Not available'}
-
-          Conversation Insights: ${JSON.stringify(insights)}
-
-          Generate a detailed analysis focusing on:
-          1. Emotional Intelligence strengths (1-2 flowing paragraphs)
-          2. Soft Skills strengths (1-2 flowing paragraphs)
-          3. Overall professional strengths summary (1 paragraph)
-
-          Write in an encouraging, professional tone. Focus on specific strengths demonstrated through their conversations and personality profile. Make it personal and actionable.
-          
-          Respond in JSON format: {
-            "emotionalIntelligence": "paragraph about EI strengths",
-            "softSkills": "paragraph about soft skills strengths", 
-            "overallStrengths": "paragraph summarizing overall strengths"
-          }`,
-          userId: user.id,
-          systemContext: 'strengths_analysis',
-          skipDatabase: true
-        }
-      });
-
-      if (response.data?.content) {
-        try {
-          const aiAnalysis = JSON.parse(response.data.content);
-          setStrengths({
-            emotionalIntelligence: aiAnalysis.emotionalIntelligence || '',
-            softSkills: aiAnalysis.softSkills || '',
-            overallStrengths: aiAnalysis.overallStrengths || ''
-          });
-        } catch (parseError) {
-          // Fallback if JSON parsing fails
-          setFallbackStrengths();
-        }
+      // Generate strengths based on available data instead of calling problematic AI function
+      if (oceanProfile && conversations > 0) {
+        const dynamicStrengths = generateDynamicStrengths();
+        setStrengths(dynamicStrengths);
       } else {
         setFallbackStrengths();
       }
@@ -117,6 +58,65 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const generateDynamicStrengths = () => {
+    const openness = oceanProfile?.openness || 50;
+    const conscientiousness = oceanProfile?.conscientiousness || 50;
+    const extraversion = oceanProfile?.extraversion || 50;
+    const agreeableness = oceanProfile?.agreeableness || 50;
+    const neuroticism = oceanProfile?.neuroticism || 50;
+    const stability = 100 - neuroticism;
+
+    let emotionalIntelligence = '';
+    let softSkills = '';
+    let overallStrengths = '';
+
+    // Generate EI analysis based on OCEAN scores
+    if (stability > 70) {
+      emotionalIntelligence = `Your high emotional stability (${stability}%) demonstrates excellent emotional regulation and resilience under pressure. This foundation allows you to maintain clear thinking during challenging situations and provides a steady presence for others.`;
+    } else if (stability > 50) {
+      emotionalIntelligence = `Your moderate emotional stability (${stability}%) shows balanced emotional awareness with room for growth in stress management. You're developing good emotional regulation skills through your conversation practice.`;
+    } else {
+      emotionalIntelligence = `Your emotional awareness journey (${stability}% stability) shows you're actively working on emotional intelligence. Your willingness to engage in self-reflection through ${conversations} conversations demonstrates commitment to emotional growth.`;
+    }
+
+    // Generate soft skills based on extraversion and agreeableness
+    if (extraversion > 60 && agreeableness > 60) {
+      softSkills = `Your combination of strong social energy (${extraversion}% extraversion) and collaborative nature (${agreeableness}% agreeableness) makes you naturally effective in team environments. You likely excel at building relationships and facilitating group dynamics.`;
+    } else if (agreeableness > 70) {
+      softSkills = `Your high agreeableness (${agreeableness}%) indicates strong collaborative skills and natural empathy. You're likely someone others turn to for support and consensus-building in group settings.`;
+    } else if (extraversion > 70) {
+      softSkills = `Your high extraversion (${extraversion}%) suggests strong communication and networking abilities. You're comfortable taking initiative in social and professional situations.`;
+    } else {
+      softSkills = `Your thoughtful approach to interpersonal relationships, demonstrated through ${conversations} reflective conversations, shows developing soft skills in self-awareness and communication.`;
+    }
+
+    // Generate overall strengths
+    const topTrait = Math.max(openness, conscientiousness, extraversion, agreeableness, stability);
+    let primaryStrength = '';
+    
+    if (topTrait === openness && openness > 70) {
+      primaryStrength = 'creativity and adaptability';
+    } else if (topTrait === conscientiousness && conscientiousness > 70) {
+      primaryStrength = 'organization and reliability';
+    } else if (topTrait === extraversion && extraversion > 70) {
+      primaryStrength = 'communication and leadership';
+    } else if (topTrait === agreeableness && agreeableness > 70) {
+      primaryStrength = 'collaboration and empathy';
+    } else if (topTrait === stability && stability > 70) {
+      primaryStrength = 'emotional resilience and stability';
+    } else {
+      primaryStrength = 'balanced personality development';
+    }
+
+    overallStrengths = `Your professional profile shows particular strength in ${primaryStrength}. Through ${conversations} conversations, you've demonstrated commitment to self-improvement and reflective thinking. This combination positions you well for roles that value both personal insight and professional growth.`;
+
+    return {
+      emotionalIntelligence,
+      softSkills,
+      overallStrengths
+    };
   };
 
   const setFallbackStrengths = () => {
