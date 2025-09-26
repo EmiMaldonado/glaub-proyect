@@ -118,7 +118,7 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, checkUserPermissions]);
+  }, [user?.id]);
 
   // Load invitations for current user
   const loadInvitations = useCallback(async () => {
@@ -175,7 +175,7 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+ }, [user?.id]);
 
   // Accept invitation
   const acceptInvitation = useCallback(async (token: string) => {
@@ -218,7 +218,7 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, loadInvitations]);
+  }, [user?.id]);
 
   // Decline invitation
   const declineInvitation = useCallback(async (invitationId: string) => {
@@ -243,7 +243,7 @@ export const useUnifiedInvitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadInvitations]);
+  }, []);
 
   // Get team members
   const getTeamMembers = useCallback(async (teamId: string) => {
