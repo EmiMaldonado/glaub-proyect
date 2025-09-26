@@ -128,24 +128,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Set up auth state listener - SYNCHRONOUS ONLY
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => { // ✅ CAMBIO: hacer async para manejar perfil
+      (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         
         setSession(session);
         setUser(session?.user ?? null);
-
-        // ✅ NUEVO: Manejar perfil según el estado de auth
-        if (session?.user) {
-          // Obtener o crear perfil cuando el usuario se autentica
-          await fetchOrCreateProfile(
-            session.user.id, 
-            session.user.email || '', 
-            session.user.user_metadata
-          );
-        } else {
-          // Limpiar perfil cuando se desautentica
+        
+        // Clear profile only when signing out
+        if (!session?.user) {
           setProfile(null);
         }
         
@@ -153,25 +145,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Check for existing session - SYNCHRONOUS ONLY
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
-      // ✅ NUEVO: También obtener perfil para sesión existente
-      if (session?.user) {
-        await fetchOrCreateProfile(
-          session.user.id, 
-          session.user.email || '', 
-          session.user.user_metadata
-        );
-      }
-      
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Separate effect for profile fetching - prevents loops
+  useEffect(() => {
+    if (user && !profile) {
+      fetchOrCreateProfile(user.id, user.email || '', user.user_metadata);
+    }
+  }, [user]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -481,15 +470,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.session) {
         setSession(data.session);
         setUser(data.session.user);
-        
-        // ✅ NUEVO: También actualizar perfil cuando se refresca la sesión
-        if (data.session.user) {
-          await fetchOrCreateProfile(
-            data.session.user.id, 
-            data.session.user.email || '', 
-            data.session.user.user_metadata
-          );
-        }
+        // Profile will be fetched by the useEffect when user changes
       }
       return { session: data.session, error };
     } catch (error) {
