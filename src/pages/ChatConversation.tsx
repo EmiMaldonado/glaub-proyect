@@ -191,7 +191,7 @@ const ChatConversation: React.FC = () => {
       const aiMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: response.data?.response || 'I received your message.',
+        content: response.data?.message || 'I received your message.',
         created_at: new Date().toISOString(),
       };
       
