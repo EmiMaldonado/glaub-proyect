@@ -537,10 +537,10 @@ const EmployeeDashboard: React.FC = () => {
             />
           </TabsContent>
         </Tabs>
-        {/* Al final del componente, dentro del último </div> */}
-        {process.env.NODE_ENV === 'development' && (
-          <InvitationDebugger />
-        )}
+      // Al final del componente, dentro del último </div>
+      {process.env.NODE_ENV === 'development' && (
+        <InvitationDebugger />
+      )}
       </div>
     </div>
   );
