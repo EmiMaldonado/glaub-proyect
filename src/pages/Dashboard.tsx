@@ -664,7 +664,7 @@ const Dashboard = () => {
   return <div className="container mx-auto px-4 pt-8 pb-8 space-y-8">
       {/* Welcome Header */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <h1 className="text-3xl font-bold leading-tight text-slate-900">
               Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
