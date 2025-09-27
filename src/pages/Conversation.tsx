@@ -9,6 +9,7 @@ import { ArrowLeft, Pause, Play, Power } from 'lucide-react';
 import { useSessionManager } from '@/hooks/useSessionManager';
 import { useAutoPause } from '@/hooks/useAutoPause';
 import { useConversationState } from '@/hooks/useConversationState';
+import { SessionAnalysisScreen } from '@/components/SessionAnalysisScreen';
 
 interface Message {
   id: string;
@@ -76,6 +77,7 @@ const ChatConversation: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isWaitingForAI, setIsWaitingForAI] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null); // Track subscription
 
@@ -1043,6 +1045,11 @@ const ChatConversation: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      <SessionAnalysisScreen 
+        isVisible={isAnalyzing}
+        onComplete={() => setIsAnalyzing(false)}
+      />
     </div>
   );
 };

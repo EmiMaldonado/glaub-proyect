@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Pause, Play, Power, Bot } from 'lucide-react';
 import { useSessionManager } from '@/hooks/useSessionManager';
 import { useConversationState } from '@/hooks/useConversationState';
+import { SessionAnalysisScreen } from '@/components/SessionAnalysisScreen';
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -38,6 +39,7 @@ const ChatConversation: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isWaitingForAI, setIsWaitingForAI] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const {
     conversation,
     messages,
@@ -210,15 +212,23 @@ const ChatConversation: React.FC = () => {
   };
   
   const handleEndSession = async () => {
+    setIsAnalyzing(true);
+    
     try {
+      // Simulate processing time for better UX
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       await completeSession();
       toast({
         title: "Session Completed",
-        description: "Your conversation has been saved."
+        description: "Your conversation has been saved and insights generated."
       });
+      
+      setIsAnalyzing(false);
       navigate('/dashboard');
     } catch (error) {
       console.error('Error ending session:', error);
+      setIsAnalyzing(false);
       toast({
         title: "Error",
         description: "Could not end session",
@@ -332,6 +342,11 @@ const ChatConversation: React.FC = () => {
       </div>
 
       <div ref={messagesEndRef} />
+      
+      <SessionAnalysisScreen 
+        isVisible={isAnalyzing}
+        onComplete={() => setIsAnalyzing(false)}
+      />
     </div>;
 };
 export default ChatConversation;

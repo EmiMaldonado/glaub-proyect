@@ -7,6 +7,7 @@ import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useSessionManager } from '@/hooks/useSessionManager';
 import NewVoiceInterface from '@/components/NewVoiceInterface';
 import VoiceErrorBoundary from '@/components/VoiceErrorBoundary';
+import { SessionAnalysisScreen } from '@/components/SessionAnalysisScreen';
 
 
 interface Message {
@@ -41,6 +42,7 @@ const VoiceConversation: React.FC = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [sessionTranscripts, setSessionTranscripts] = useState<Message[]>([]);
   const [currentAIResponse, setCurrentAIResponse] = useState<string>('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   // Session manager
   const { pauseSession } = useSessionManager();
@@ -50,6 +52,9 @@ const VoiceConversation: React.FC = () => {
   const handleEndSession = async () => {
     if (!conversation) return;
 
+    // Show analysis screen immediately  
+    setIsAnalyzing(true);
+
     try {
       console.log('🏁 handleEndSession: Starting completion with audio stop');
       
@@ -57,8 +62,6 @@ const VoiceConversation: React.FC = () => {
       const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
       stopAllVoiceAudio();
       console.log('🔇 handleEndSession: Voice audio stopped');
-      
-      
       
       // Calculate actual duration based on timer
       const actualDuration = Math.ceil((Date.now() - new Date(conversation.started_at).getTime()) / (1000 * 60));
@@ -78,11 +81,6 @@ const VoiceConversation: React.FC = () => {
       if (shouldGenerateInsights) {
         console.log('✅ Session meets criteria for insights generation');
         
-        toast({
-          title: "🎯 Session Complete!",
-          description: `Session completed (${actualDuration} min). Generating insights...`,
-        });
-
         try {
           // Generate insights via edge function with correct payload
           const response = await supabase.functions.invoke('session-analysis', {
@@ -99,35 +97,50 @@ const VoiceConversation: React.FC = () => {
 
           if (response.data) {
             console.log('✅ Session analysis completed successfully');
+            
+            toast({
+              title: "🎯 Voice Session Complete!",
+              description: "Your insights and recommendations are ready!",
+            });
+            
+            setIsAnalyzing(false);
             navigate(`/session-summary?conversation_id=${conversation.id}`);
           } else {
             console.log('⚠️ Session analysis returned no data');
+            setIsAnalyzing(false);
             navigate('/dashboard');
           }
         } catch (analysisError) {
           console.error('❌ Session analysis failed:', analysisError);
           toast({
             title: "Session Completed",
-            description: "Session saved but analysis failed. Check dashboard for personality insights.",
+            description: "Voice session saved but analysis failed. Check dashboard for insights.",
             variant: "default",
           });
+          setIsAnalyzing(false);
           navigate('/dashboard');
         }
       } else {
-        console.log(`⚠️ Session too short for insights: ${actualDuration} min, ${sessionTranscripts.length} messages`);
+        console.log(`⚠️ Session too short for insights: ${actualDuration} min, ${sessionTranscripts.length} transcripts`);
+        
         toast({
-          title: "Session Complete",
-          description: `Session was too brief (${actualDuration} min) for detailed insights`,
+          title: "Voice Session Complete",
+          description: `Session completed but was too brief (${actualDuration} min) for detailed insights`,
         });
+        
+        setIsAnalyzing(false);
         navigate('/dashboard');
       }
     } catch (error) {
-      console.error('❌ Error ending session:', error);
+      console.error('❌ handleEndSession: Error completing session:', error);
+      
       toast({
-        title: "Session Ended",
-        description: "Session completed but there was an issue processing it",
-        variant: "destructive",
+        title: "⚠️ Completion Issues", 
+        description: "Voice session may not be fully processed, but navigating to dashboard.",
+        variant: "default",
       });
+      
+      setIsAnalyzing(false);
       navigate('/dashboard');
     }
   };
@@ -581,6 +594,11 @@ const VoiceConversation: React.FC = () => {
         onBack={handleBack}
         currentAIResponse={currentAIResponse}
         canFinishSession={true}
+      />
+      
+      <SessionAnalysisScreen 
+        isVisible={isAnalyzing}
+        onComplete={() => setIsAnalyzing(false)}
       />
     </VoiceErrorBoundary>
   );

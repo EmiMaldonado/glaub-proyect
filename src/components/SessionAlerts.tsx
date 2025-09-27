@@ -25,13 +25,13 @@ export const SessionEndConfirmation: React.FC<SessionEndConfirmationProps> = ({
       <DialogContent className="sm:max-w-md animate-fade-in">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-warning" />
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-primary" />
             </div>
-            <DialogTitle className="text-lg font-semibold">End current session?</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">Ready to wrap up?</DialogTitle>
           </div>
           <DialogDescription className="text-muted-foreground">
-            All conversation data will be processed into insights. This action cannot be undone.
+            Just a friendly reminder - when you're ready to end this conversation, we'll create personalized insights and recommendations based on our chat today.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex gap-2 mt-6">
@@ -40,14 +40,13 @@ export const SessionEndConfirmation: React.FC<SessionEndConfirmationProps> = ({
             onClick={onClose}
             className="flex-1"
           >
-            Cancel
+            Continue Chatting
           </Button>
           <Button
-            variant="destructive"
             onClick={onConfirm}
             className="flex-1"
           >
-            End Session
+            Yes, I'm Ready
           </Button>
         </DialogFooter>
       </DialogContent>
