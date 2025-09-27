@@ -389,7 +389,7 @@ const ModernManagerDashboard: React.FC = () => {
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-6">
             <DashboardBreadcrumbs />
             <div>
