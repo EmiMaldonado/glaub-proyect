@@ -261,7 +261,7 @@ const ChatConversation: React.FC = () => {
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-background">
-        <div className="p-6">
+        <div className="py-2 px-6">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
