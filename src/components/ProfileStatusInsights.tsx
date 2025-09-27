@@ -158,6 +158,14 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
 
   return (
     <div className="space-y-6 bg-card rounded-lg shadow-soft p-6 border border-border/50">
+      {/* Header */}
+      <div className="space-y-1">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Target className="h-5 w-5 text-secondary" />
+          Your Variables Profile
+        </h3>
+        <p className="text-sm text-muted-foreground">Based on your conversation patterns</p>
+      </div>
       {/* Emotional Intelligence */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
