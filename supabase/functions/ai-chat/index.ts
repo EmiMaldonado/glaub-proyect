@@ -575,8 +575,19 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     }
 
     const data = await response.json();
-    const assistantMessage = data.choices[0].message.content;
+    let assistantMessage = data.choices[0].message.content;
     const tokensUsed = data.usage?.total_tokens || 0;
+
+    // Count user messages in the conversation to add ending prompt at specific intervals
+    const userMessageCount = filteredMessages.filter(m => m.role === 'user').length;
+    const isCurrentUserMessage = !isAIInitiated && message && message !== "__AI_START_CONVERSATION__";
+    const totalUserMessages = userMessageCount + (isCurrentUserMessage ? 1 : 0);
+
+    // Add conversation ending reminder after 5 and 10 user messages
+    if (totalUserMessages === 5 || totalUserMessages === 10) {
+      assistantMessage += " Whenever you feel ready to end this conversation, select end conversation.";
+      debugInfo.processing_steps.push(`Added ending prompt at message ${totalUserMessages}`);
+    }
 
     debugInfo.processing_steps.push('OpenAI response received successfully');
     debugInfo.metadata.tokens_used = tokensUsed;
