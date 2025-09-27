@@ -238,21 +238,7 @@ const ChatConversation: React.FC = () => {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-hidden relative">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-muted/30 to-muted/10">
-          <div className="absolute inset-0 opacity-5">
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <circle cx="20" cy="20" r="2" fill="currentColor" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#dots)" />
-            </svg>
-          </div>
-        </div>
-        
-        <div className="h-full overflow-y-auto relative z-10">
+        <div className="h-full overflow-y-auto">
           <div className="p-6 space-y-4 min-h-full flex flex-col justify-center">
             {messages.length === 0 && <div className="text-center text-muted-foreground">
                 <h3 className="text-2xl font-medium text-foreground mb-2">Hi {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there'},</h3>
