@@ -220,8 +220,14 @@ const ModernManagerDashboard: React.FC = () => {
       return personalityCache.teamDescription;
     }
     
-    if (!analyticsData || teamMembers.length === 0) {
+    // No team members case
+    if (teamMembers.length === 0) {
       return "Add team members to generate personality insights and team analysis.";
+    }
+    
+    // Team members exist but no analytics data (no conversations yet)
+    if (!analyticsData) {
+      return "None of your team members has any information yet. Please ask for start conversations.";
     }
     
     // Use AI-generated team description from analytics hook (primary source)

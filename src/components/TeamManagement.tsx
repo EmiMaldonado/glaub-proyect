@@ -74,7 +74,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ userProfile }) => {
         .from('team_members')
         .select(`
           member_id,
-          profiles!inner(*)
+          profiles!team_members_member_id_fkey(*)
         `)
         .eq('team_id', userProfile.id)
         .eq('role', 'employee')
