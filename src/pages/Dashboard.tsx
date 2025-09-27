@@ -773,6 +773,53 @@ const Dashboard = () => {
                           <span className="text-xs text-muted-foreground">Updating analysis...</span>
                         </div>}
                     </div>}
+                  
+                  {/* Strengths Analysis */}
+                  {stats.completedConversations > 0 && (
+                    <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                      <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Target className="h-4 w-4 text-secondary" />
+                        Your Professional Strengths
+                      </h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {oceanProfile ? (
+                          `Your professional profile shows particular strength in ${
+                            Math.max(
+                              oceanProfile.openness || 0,
+                              oceanProfile.conscientiousness || 0,
+                              oceanProfile.extraversion || 0,
+                              oceanProfile.agreeableness || 0,
+                              100 - (oceanProfile.neuroticism || 0)
+                            ) === oceanProfile.openness ? 'creativity and adaptability'
+                            : Math.max(
+                              oceanProfile.openness || 0,
+                              oceanProfile.conscientiousness || 0,
+                              oceanProfile.extraversion || 0,
+                              oceanProfile.agreeableness || 0,
+                              100 - (oceanProfile.neuroticism || 0)
+                            ) === oceanProfile.conscientiousness ? 'organization and reliability'
+                            : Math.max(
+                              oceanProfile.openness || 0,
+                              oceanProfile.conscientiousness || 0,
+                              oceanProfile.extraversion || 0,
+                              oceanProfile.agreeableness || 0,
+                              100 - (oceanProfile.neuroticism || 0)
+                            ) === oceanProfile.extraversion ? 'communication and leadership'
+                            : Math.max(
+                              oceanProfile.openness || 0,
+                              oceanProfile.conscientiousness || 0,
+                              oceanProfile.extraversion || 0,
+                              oceanProfile.agreeableness || 0,
+                              100 - (oceanProfile.neuroticism || 0)
+                            ) === oceanProfile.agreeableness ? 'collaboration and empathy'
+                            : 'emotional resilience and stability'
+                          }. Through ${stats.completedConversations} conversations, you've demonstrated commitment to self-improvement and reflective thinking.`
+                        ) : (
+                          `Based on your ${stats.completedConversations} conversations, you demonstrate growing self-awareness and emotional regulation. Your ability to engage in reflective dialogue shows promising professional development foundations.`
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
