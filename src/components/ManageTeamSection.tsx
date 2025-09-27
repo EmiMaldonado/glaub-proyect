@@ -293,20 +293,7 @@ const ManageTeamSection: React.FC<ManageTeamSectionProps> = ({
         
 
         {/* Team Health Indicator */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Team Health</label>
-          <div className="p-3 border rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Team Status</span>
-              <Badge variant={teamMembers.length > 0 ? "default" : "secondary"} className="text-xs">
-                {teamMembers.length > 0 ? "Active" : "Building"}
-              </Badge>
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              {teamMembers.length === 0 ? "Start building your team by inviting members" : `Your team has ${teamMembers.length} member${teamMembers.length > 1 ? 's' : ''} ready to collaborate`}
-            </div>
-          </div>
-        </div>
+        
       </CardContent>
     </Card>;
 };

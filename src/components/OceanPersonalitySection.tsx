@@ -82,9 +82,7 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
               {cacheStatus === 'cached'}
             </CardDescription>
           </div>
-          {onRefresh && <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading} className="shrink-0">
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>}
+          {onRefresh}
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
