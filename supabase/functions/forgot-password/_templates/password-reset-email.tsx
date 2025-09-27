@@ -20,15 +20,9 @@ export const PasswordResetEmail = ({
           
           <!-- Logo Section -->
           <div style="text-align: center; margin-bottom: 32px;">
-            <svg viewBox="0 0 120 40" style="width: 120px; height: 40px; margin: 0 auto;">
-              <defs>
-                <linearGradient id="colorGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" style="stop-color: #6889B4; stop-opacity: 1" />
-                  <stop offset="100%" style="stop-color: #A5C7B9; stop-opacity: 1" />
-                </linearGradient>
-              </defs>
-              <text x="10" y="28" font-family="Inter, sans-serif" font-size="24" font-weight="700" fill="url(#colorGradient)">Gläub</text>
-            </svg>
+            <div style="font-family: Inter, sans-serif; font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #6889B4, #A5C7B9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+              Gläub
+            </div>
           </div>
 
           <!-- Header -->
@@ -92,6 +86,6 @@ export const PasswordResetEmail = ({
       </body>
     </html>
   `;
-}
+};
 
-export default PasswordResetEmail
+export default PasswordResetEmail;
