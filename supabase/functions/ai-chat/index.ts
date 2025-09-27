@@ -514,6 +514,111 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     // Use the updated logic for determining first conversation (for AI-initiated, it's always first conversation logic)
     const isFirstConversation = isFirstConversationEver || isAIInitiated;
 
+    // Check if this is a resumed conversation and needs automatic greeting
+    let needsResumeGreeting = false;
+    let resumeSummary = '';
+    
+    if (messages && messages.length > 0 && !isAIInitiated && effectiveUserId !== 'system' && !message) {
+      // Get conversation details to check if it was paused/resumed
+      const { data: conversationDetails } = await supabase
+        .from('conversations')
+        .select('status, session_data, created_at, started_at')
+        .eq('id', conversationId)
+        .single();
+      
+      // Check if conversation was resumed (paused before) and this might be first message after resume
+      if (conversationDetails?.session_data?.pausedAt) {
+        // Check if the last message was from assistant and was a while ago
+        const lastMessage = messages[messages.length - 1];
+        const lastAssistantMessage = [...messages].reverse().find(m => m.role === 'assistant');
+        
+        // If no user message yet or last assistant message doesn't contain resume greeting
+        if (lastAssistantMessage && !lastAssistantMessage.content.includes('Welcome back!') && 
+            !lastAssistantMessage.content.includes('picking up where we left off')) {
+          needsResumeGreeting = true;
+          
+          // Create a summary of recent conversation
+          const recentMessages = messages.slice(-6); // Last 6 messages for context
+          const userMessages = recentMessages.filter(m => m.role === 'user');
+          
+          if (userMessages.length > 0) {
+            const topics = userMessages.map(m => m.content.substring(0, 100)).join('. ');
+            resumeSummary = `We were discussing: ${topics.substring(0, 200)}${topics.length > 200 ? '...' : ''}`;
+          }
+        }
+      }
+    }
+
+    // Handle automatic resume greeting
+    if (needsResumeGreeting) {
+      debugInfo.processing_steps.push('Generating automatic resume greeting');
+      
+      // Create AI-initiated greeting message
+      const resumePrompt = `This user is resuming a previous conversation. ${resumeSummary} Welcome them back warmly, briefly summarize what you discussed before, and ask how they're doing or if they want to continue from where you left off. Keep it natural and conversational (2-3 sentences max).`;
+      
+      const resumeMessages = [
+        { role: 'system', content: getSystemPrompt(false, previousInsights) },
+        ...messages.slice(-4).map(m => ({ role: m.role, content: m.content })), // Recent context
+        { role: 'user', content: resumePrompt }
+      ];
+      
+      // Call OpenAI for resume greeting
+      const resumeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: resumeMessages,
+          max_tokens: 150,
+          temperature: 0.7,
+        }),
+      });
+      
+      if (resumeResponse.ok) {
+        const resumeData = await resumeResponse.json();
+        const resumeGreeting = resumeData.choices[0].message.content;
+        
+        // Save the resume greeting as assistant message
+        await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            role: 'assistant',
+            content: resumeGreeting,
+            metadata: { 
+              timestamp: new Date().toISOString(),
+              type: 'resume_greeting',
+              debug_info: {
+                tokens_used: resumeData.usage?.total_tokens || 0
+              }
+            },
+            tokens_used: resumeData.usage?.total_tokens || 0
+          });
+        
+        // Return the greeting immediately
+        debugInfo.processing_steps.push('Resume greeting sent successfully');
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: resumeGreeting,
+          tokensUsed: resumeData.usage?.total_tokens || 0,
+          insights: { ocean_signals: {}, key_insights: [], themes: [], engagement: 0.5 },
+          debug: {
+            success: true,
+            processing_time_ms: Date.now() - startTime,
+            steps_completed: debugInfo.processing_steps,
+            timing_breakdown: debugInfo.timing,
+            metadata: { ...debugInfo.metadata, resume_greeting: true },
+            timestamp: new Date().toISOString()
+          }
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Prepare messages for OpenAI with personalized system prompt
     const systemPrompt = getSystemPrompt(isFirstConversation, previousInsights);
     
