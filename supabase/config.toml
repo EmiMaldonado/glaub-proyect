@@ -128,7 +128,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.unified-accept-invitation]
-verify_jwt = false
+verify_jwt = true
 
 [functions.test-unified-invitation]
 verify_jwt = false
@@ -184,3 +184,6 @@ verify_jwt = true
 
 [edge_functions.accept-manager-invitation]
 verify_jwt = false
+
+[edge_functions.unified-accept-invitation]
+verify_jwt = true

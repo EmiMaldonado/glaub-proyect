@@ -34,13 +34,17 @@ serve(async (req: Request) => {
     // Create Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user from JWT token in request headers
+    // Get user from JWT (Supabase handles JWT verification automatically when verify_jwt = true)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error("No Authorization header provided");
       throw new Error('Authorization header is required');
     }
 
     const jwt = authHeader.replace('Bearer ', '');
+    console.log("Processing request with JWT token present");
+
+    // Get user from the JWT token
     const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
     
     if (userError || !user) {
