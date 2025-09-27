@@ -157,7 +157,7 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-card rounded-lg shadow-soft p-6 border border-border/50">
       {/* Emotional Intelligence */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
