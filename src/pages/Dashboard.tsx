@@ -735,7 +735,7 @@ const Dashboard = () => {
                 </CardTitle>
                 <CardDescription>Based on your conversation patterns</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1">
                 <div className="space-y-6">
                   <div className="grid grid-cols-5 gap-4 text-center">
                     <div>
