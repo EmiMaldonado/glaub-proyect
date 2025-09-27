@@ -666,7 +666,7 @@ const Dashboard = () => {
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-foreground leading-tight">
+            <h1 className="text-3xl font-bold leading-tight text-slate-900">
               Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
             </h1>
             <p className="text-muted-foreground my-[0px] py-[8px] text-base">
