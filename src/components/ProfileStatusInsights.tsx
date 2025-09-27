@@ -111,11 +111,7 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
   };
   const setFallbackStrengths = () => {
     if (conversations === 0) {
-      setStrengths({
-        emotionalIntelligence: "Complete your first conversation to discover your emotional intelligence strengths through AI analysis of your communication patterns and responses.",
-        softSkills: "Your soft skills profile will be generated once you engage in conversations, revealing insights about your collaboration, leadership, and interpersonal abilities.",
-        overallStrengths: "Start a conversation with Glai to unlock personalized insights about your professional strengths based on psychological analysis of your unique communication style."
-      });
+      setStrengths(null); // Set to null to show empty state
     } else {
       setStrengths({
         emotionalIntelligence: `Based on your ${conversations} conversations, you demonstrate growing self-awareness and emotional regulation. Your ability to engage in reflective dialogue shows promising emotional intelligence foundations.`,
