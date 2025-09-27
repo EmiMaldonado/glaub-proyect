@@ -118,6 +118,14 @@ All colors MUST be HSL.
     --input: 240 6% 88%;
     --ring: 215 85% 50%;
     
+    /* AAA Contrast Compliant Colors */
+    --text-high-contrast: 240 15% 5%;        /* Very dark for AAA contrast */
+    --text-medium-contrast: 240 12% 15%;     /* Dark gray for strong contrast */
+    --text-low-contrast: 240 8% 45%;         /* Medium gray for secondary text */
+    --background-contrast: 240 8% 98%;       /* Very light background for contrast */
+    --interactive-primary: 214 85% 35%;      /* Darker primary for AAA contrast */
+    --interactive-secondary: 240 15% 25%;    /* Dark secondary for contrast */
+    
     /* Typography Scale */
     --font-size-xs: 0.75rem;      /* 12px */
     --font-size-sm: 0.875rem;     /* 14px */
@@ -346,6 +354,14 @@ All colors MUST be HSL.
     --border-strong: 240 8% 25%;
     --input: 240 6% 18%;
     --ring: 215 85% 60%;
+    
+    /* AAA Contrast Compliant Colors - Dark mode */
+    --text-high-contrast: 240 10% 98%;       /* Very light for AAA contrast on dark */
+    --text-medium-contrast: 240 8% 88%;      /* Light gray for strong contrast */
+    --text-low-contrast: 240 6% 65%;         /* Medium gray for secondary text */
+    --background-contrast: 240 12% 8%;       /* Very dark background for contrast */
+    --interactive-primary: 214 85% 75%;      /* Lighter primary for AAA contrast */
+    --interactive-secondary: 240 10% 85%;    /* Light secondary for contrast */
     
     /* Dark mode shadows - lighter for contrast */
     --shadow-xs: 0 1px 2px 0 hsl(240 15% 5% / 0.3);

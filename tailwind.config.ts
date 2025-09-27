@@ -89,6 +89,14 @@ export default {
           900: "hsl(var(--gray-900))",
         },
         
+        /* AAA Contrast System */
+        "text-high-contrast": "hsl(var(--text-high-contrast))",
+        "text-medium-contrast": "hsl(var(--text-medium-contrast))",
+        "text-low-contrast": "hsl(var(--text-low-contrast))",
+        "background-contrast": "hsl(var(--background-contrast))",
+        "interactive-primary": "hsl(var(--interactive-primary))",
+        "interactive-secondary": "hsl(var(--interactive-secondary))",
+        
         /* Legacy Compatibility */
         destructive: {
           DEFAULT: "hsl(var(--destructive))",

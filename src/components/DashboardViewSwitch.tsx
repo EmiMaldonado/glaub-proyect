@@ -27,16 +27,16 @@ const DashboardViewSwitch: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-2 p-1 bg-background-secondary rounded-lg mt-4 md:mt-0" data-testid="dashboard-view-switch">
+    <div className="flex items-center gap-1 p-1 bg-background-contrast border border-border-strong rounded-lg mt-4 md:mt-0 shadow-sm" data-testid="dashboard-view-switch">
       <Button
         variant={isOnPersonalDashboard ? "default" : "ghost"}
         size="sm"
         onClick={() => navigate('/dashboard')}
         className={cn(
-          "flex items-center gap-2 px-3 py-2 text-sm transition-all",
+          "flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border-0",
           isOnPersonalDashboard 
-            ? "bg-background shadow-sm" 
-            : "text-slate-100 hover:text-slate-600 hover:bg-primary/10"
+            ? "bg-interactive-primary text-white shadow-md hover:bg-interactive-primary/90" 
+            : "text-text-high-contrast bg-transparent hover:bg-interactive-primary/10 hover:text-interactive-primary"
         )}
         data-testid="personal-view-button"
       >
@@ -49,12 +49,11 @@ const DashboardViewSwitch: React.FC = () => {
         size="sm"
         onClick={() => navigate('/dashboard/manager')}
         className={cn(
-          "flex items-center gap-2 px-3 py-2 text-sm transition-all",
+          "flex items-center gap-2 px-3 py-2 text-sm font-medium transition-all border-0",
           isOnManagerDashboard 
-            ? "bg-background shadow-sm"
-            : "hover:bg-primary/10"
+            ? "bg-interactive-primary text-white shadow-md hover:bg-interactive-primary/90"
+            : "text-text-high-contrast bg-transparent hover:bg-interactive-primary/10 hover:text-interactive-primary"
         )}
-        style={!isOnManagerDashboard ? { color: '#0D2948' } : undefined}
         data-testid="manager-view-button"
       >
         <Users size={16} />
