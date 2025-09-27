@@ -89,10 +89,7 @@ const TeamResultsSection: React.FC<TeamResultsSectionProps> = ({
             <CardTitle className="text-xl">Team Results</CardTitle>
             {cacheStatus === 'cached'}
           </div>
-          {onRefresh && <Button onClick={onRefresh} variant="outline" size="sm" disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>}
+          {onRefresh}
         </div>
       </CardHeader>
       <CardContent>

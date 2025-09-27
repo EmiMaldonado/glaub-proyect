@@ -82,23 +82,16 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
               {cacheStatus === 'cached'}
             </CardDescription>
           </div>
-          {onRefresh && (
-            <Button variant="outline" size="sm" onClick={onRefresh}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          )}
+          {onRefresh}
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* OCEAN Percentages Grid */}
-        {oceanTraits.every(trait => trait.value === 0) ? (
-          <div className="text-center py-8">
+        {oceanTraits.every(trait => trait.value === 0) ? <div className="text-center py-8">
             <div className="text-sm text-muted-foreground">
               No information available yet on your team
             </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          </div> : <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {oceanTraits.map(trait => <div key={trait.key} className="text-center">
                 <div className="text-3xl font-bold text-primary mb-1">
                   {trait.value}%
@@ -107,8 +100,7 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
                   {trait.label}
                 </div>
               </div>)}
-          </div>
-        )}
+          </div>}
 
         {/* Team Analysis */}
         {teamDescription ? <div className="pt-4 border-t space-y-6">
