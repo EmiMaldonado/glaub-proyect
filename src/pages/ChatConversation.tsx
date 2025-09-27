@@ -229,7 +229,7 @@ const ChatConversation: React.FC = () => {
               <ArrowLeft className="w-5 h-5 mr-2" />
               Dashboard
             </Button>
-            <h1 className="text-lg font-medium text-foreground">
+            <h1 className="text-lg font-medium text-foreground text-center">
               Chat conversation
             </h1>
           </div>
