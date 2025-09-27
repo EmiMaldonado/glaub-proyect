@@ -737,7 +737,7 @@ const Dashboard = () => {
             <CardContent className="flex-1">
               {oceanProfile ? (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6 md:gap-8 text-center">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4 text-center">
                      <div className="p-4">
                        <div className="text-3xl md:text-4xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
                        <div className="text-sm text-muted-foreground mt-2">Openness</div>
