@@ -178,28 +178,17 @@ export const useUnifiedInvitations = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase.functions.invoke('unified-accept-invitation', {
-        body: { token }
+      const { data, error } = await supabase.functions.invoke('complete-invitation', {
+        body: { 
+          token,
+          user_id: user.id,
+          action: 'accept'
+        }
       });
 
       if (error) throw error;
 
       console.log('✅ Invitation accepted successfully:', data);
-      
-      if (data.invitation?.invitation_type === 'manager_request') {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profile) {
-          await supabase
-            .from('profiles')
-            .update({ can_manage_teams: true } as any)
-            .eq('id', profile.id);
-        }
-      }
       
       // ✅ FIXED: Use setTimeout to break potential loops
       setTimeout(() => {
