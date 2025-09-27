@@ -23,37 +23,38 @@ import DashboardBreadcrumbs from "@/components/DashboardBreadcrumbs";
 import DashboardViewSwitch from "@/components/DashboardViewSwitch";
 import { requestLimiter } from "@/utils/requestLimiter";
 import MyTeams from "@/components/ui/MyTeams";
-
 const Dashboard = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Referencias para controlar loops
   const hasLoadedInitialData = useRef(false);
   const lastLoadTime = useRef(0);
   const loadingInProgress = useRef(false);
   const renderCount = useRef(0);
-  
+
   // Debug: Detectar loops infinitos
   renderCount.current += 1;
   console.log(`🔄 Dashboard render #${renderCount.current}`);
-  
   if (renderCount.current > 20) {
     console.error('❌ INFINITE LOOP DETECTED!');
-    return (
-      <div className="container mx-auto px-4 pt-8 pb-8">
+    return <div className="container mx-auto px-4 pt-8 pb-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <h2 className="text-xl font-bold text-red-800 mb-2">Infinite Loop Detected</h2>
           <p className="text-red-600 mb-4">The dashboard is re-rendering too frequently. Please refresh the page.</p>
           <Button onClick={() => window.location.reload()}>Refresh Page</Button>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Hooks
-  const { getPausedConversation, clearPausedConversation } = usePausedConversations();
+  const {
+    getPausedConversation,
+    clearPausedConversation
+  } = usePausedConversations();
   const {
     conversationState,
     isLoading: isConversationLoading,
@@ -63,7 +64,9 @@ const Dashboard = () => {
     generateResumeMessage,
     refetchConversationState
   } = useConversationState();
-  const { recoverAllMissingAnalyses } = useDataRecovery();
+  const {
+    recoverAllMissingAnalyses
+  } = useDataRecovery();
 
   // Estados
   const [lastConversation, setLastConversation] = useState<any>(null);
@@ -122,35 +125,30 @@ const Dashboard = () => {
       console.log('⚠️ Rate limiting loadDashboardData');
       return;
     }
-
     try {
       loadingInProgress.current = true;
       lastLoadTime.current = now;
-      
       console.log('📊 Loading dashboard data for user:', user.id);
 
       // Load user profile with error handling
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
+      const {
+        data: profile,
+        error: profileError
+      } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();
       if (profileError) {
         console.warn('Profile load error:', profileError);
       }
-      
       if (profile) {
         setUserProfile(profile);
       }
 
       // Load all conversations with error handling
-      const { data: conversations, error: conversationsError } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
+      const {
+        data: conversations,
+        error: conversationsError
+      } = await supabase.from('conversations').select('*').eq('user_id', user.id).order('created_at', {
+        ascending: false
+      });
       if (conversationsError) {
         console.warn('Conversations load error:', conversationsError);
       }
@@ -161,12 +159,12 @@ const Dashboard = () => {
       // Load insights only if we have conversations
       let userInsights: any[] = [];
       if (userConversationIds.length > 0) {
-        const { data: insights, error: insightsError } = await supabase
-          .from('key_insights')
-          .select('*')
-          .in('conversation_id', userConversationIds)
-          .order('created_at', { ascending: false });
-
+        const {
+          data: insights,
+          error: insightsError
+        } = await supabase.from('key_insights').select('*').in('conversation_id', userConversationIds).order('created_at', {
+          ascending: false
+        });
         if (insightsError) {
           console.warn('Insights load error:', insightsError);
         } else {
@@ -179,10 +177,7 @@ const Dashboard = () => {
         setAllInsights(userInsights);
 
         // Calculate average OCEAN scores across all sessions
-        const allPersonalityData = userInsights
-          .map(i => i.personality_notes)
-          .filter(Boolean);
-
+        const allPersonalityData = userInsights.map(i => i.personality_notes).filter(Boolean);
         if (allPersonalityData.length > 0) {
           const avgOcean = {
             openness: Math.round(allPersonalityData.reduce((sum, p: any) => sum + (p?.openness || 0), 0) / allPersonalityData.length),
@@ -193,7 +188,7 @@ const Dashboard = () => {
             summary: `Based on ${allPersonalityData.length} therapeutic conversations, showing consistent patterns across sessions.`
           };
           setOceanProfile(avgOcean);
-          
+
           // Generate AI description immediately with the calculated avgOcean data
           generateOceanDescription(avgOcean, profile);
         }
@@ -201,38 +196,28 @@ const Dashboard = () => {
         // Create personalized summary
         const allInsightsData = userInsights.flatMap(i => i.insights || []);
         const allNextSteps = userInsights.flatMap(i => i.next_steps || []);
-        
-        setPersonalizedSummary(
-          `Based on your ${conversations?.length || 0} conversations, you've shown consistent growth in self-awareness and professional development. Your journey reflects ${allInsightsData.length} unique insights and ${allNextSteps.length} actionable recommendations.`
-        );
+        setPersonalizedSummary(`Based on your ${conversations?.length || 0} conversations, you've shown consistent growth in self-awareness and professional development. Your journey reflects ${allInsightsData.length} unique insights and ${allNextSteps.length} actionable recommendations.`);
       }
 
       // Load last conversation for quick reference with error handling
-      const { data: lastConv, error: lastConvError } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const {
+        data: lastConv,
+        error: lastConvError
+      } = await supabase.from('conversations').select('*').eq('user_id', user.id).eq('status', 'completed').order('created_at', {
+        ascending: false
+      }).limit(1).maybeSingle();
       if (lastConvError) {
         console.warn('Last conversation load error:', lastConvError);
       }
-
       if (lastConv) {
         // Separately load insights for this conversation with error handling
-        const { data: lastConvInsights, error: lastInsightsError } = await supabase
-          .from('key_insights')
-          .select('insights, personality_notes, next_steps')
-          .eq('conversation_id', lastConv.id)
-          .maybeSingle();
-        
+        const {
+          data: lastConvInsights,
+          error: lastInsightsError
+        } = await supabase.from('key_insights').select('insights, personality_notes, next_steps').eq('conversation_id', lastConv.id).maybeSingle();
         if (lastInsightsError) {
           console.warn('Last conversation insights error:', lastInsightsError);
         }
-        
         setLastConversation({
           ...lastConv,
           key_insights: lastConvInsights
@@ -242,13 +227,10 @@ const Dashboard = () => {
       // Load current manager if user is in a team - with error handling
       let teamMembership = null;
       try {
-        const { data: membership, error: membershipError } = await supabase
-          .from('team_members')
-          .select('team_id, role')
-          .eq('member_id', profile?.id)
-          .eq('role', 'employee')
-          .maybeSingle();
-
+        const {
+          data: membership,
+          error: membershipError
+        } = await supabase.from('team_members').select('team_id, role').eq('member_id', profile?.id).eq('role', 'employee').maybeSingle();
         if (membershipError) {
           console.warn('Team membership load error:', membershipError);
         } else {
@@ -257,15 +239,12 @@ const Dashboard = () => {
       } catch (e) {
         console.warn('Team membership query failed:', e);
       }
-
       if (teamMembership) {
         try {
-          const { data: manager, error: managerError } = await supabase
-            .from('profiles')
-            .select('*, user_id')
-            .eq('id', teamMembership.team_id)
-            .maybeSingle();
-          
+          const {
+            data: manager,
+            error: managerError
+          } = await supabase.from('profiles').select('*, user_id').eq('id', teamMembership.team_id).maybeSingle();
           if (managerError) {
             console.warn('Manager load error:', managerError);
           } else {
@@ -279,64 +258,59 @@ const Dashboard = () => {
       // Load user team memberships with error handling
       let teamsWithManagers: any[] = [];
       try {
-        const { data: teamMemberships, error: membershipsError } = await supabase
-          .from('team_members')
-          .select(`
+        const {
+          data: teamMemberships,
+          error: membershipsError
+        } = await supabase.from('team_members').select(`
             id,
             team_id,
             member_id,
             role,
             joined_at
-          `)
-          .eq('member_id', profile?.id)
-          .eq('role', 'employee');
-        
+          `).eq('member_id', profile?.id).eq('role', 'employee');
         if (membershipsError) {
           console.warn('Team memberships load error:', membershipsError);
         } else if (teamMemberships && teamMemberships.length > 0) {
-          teamsWithManagers = await Promise.all(
-            teamMemberships.map(async (membership) => {
-              try {
-                const { data: manager, error: managerError } = await supabase
-                  .from('profiles')
-                  .select('id, full_name, display_name, team_name')
-                  .eq('id', membership.team_id)
-                  .single();
-                
-                if (managerError) {
-                  console.warn('Manager load error for team:', membership.team_id, managerError);
-                  return { ...membership, manager: null };
-                }
-                
+          teamsWithManagers = await Promise.all(teamMemberships.map(async membership => {
+            try {
+              const {
+                data: manager,
+                error: managerError
+              } = await supabase.from('profiles').select('id, full_name, display_name, team_name').eq('id', membership.team_id).single();
+              if (managerError) {
+                console.warn('Manager load error for team:', membership.team_id, managerError);
                 return {
                   ...membership,
-                  manager
+                  manager: null
                 };
-              } catch (e) {
-                console.warn('Manager query failed for team:', membership.team_id, e);
-                return { ...membership, manager: null };
               }
-            })
-          );
+              return {
+                ...membership,
+                manager
+              };
+            } catch (e) {
+              console.warn('Manager query failed for team:', membership.team_id, e);
+              return {
+                ...membership,
+                manager: null
+              };
+            }
+          }));
         }
       } catch (e) {
         console.warn('Team memberships query failed:', e);
       }
-      
       setUserTeams(teamsWithManagers);
 
       // Load pending invitations with error handling
       try {
-        const { data: invitations, error: invitationsError } = await supabase
-          .from('invitations')
-          .select(`
+        const {
+          data: invitations,
+          error: invitationsError
+        } = await supabase.from('invitations').select(`
             *,
             manager:profiles!invitations_manager_id_fkey(full_name, display_name)
-          `)
-          .eq('email', user.email)
-          .eq('status', 'pending')
-          .gt('expires_at', new Date().toISOString());
-        
+          `).eq('email', user.email).eq('status', 'pending').gt('expires_at', new Date().toISOString());
         if (invitationsError) {
           console.warn('Invitations load error:', invitationsError);
         } else {
@@ -346,14 +320,12 @@ const Dashboard = () => {
         console.warn('Invitations query failed:', e);
         setPendingInvitations([]);
       }
-
       setStats({
         totalConversations: conversations?.length || 0,
         completedConversations: conversations?.filter(c => c.status === 'completed').length || 0,
         sharedInsights: 0,
         teamMembers: 0
       });
-
     } catch (error) {
       console.error('❌ Error loading dashboard data:', error);
       if (error?.message && !error.message.includes('refresh_token')) {
@@ -369,15 +341,10 @@ const Dashboard = () => {
   }, [user?.id]);
 
   // Función para generar descripción OCEAN con cache y protección
-  const generateOceanDescription = useCallback(async (
-    oceanProfile: any, 
-    userProfile: any, 
-    latestConversationId?: string
-  ) => {
+  const generateOceanDescription = useCallback(async (oceanProfile: any, userProfile: any, latestConversationId?: string) => {
     if (!oceanProfile || isLoadingDescription) return;
-
     const cacheKey = `ocean_description_${user?.id}`;
-    
+
     // Verificar cache primero
     try {
       const cachedData = localStorage.getItem(cacheKey);
@@ -391,19 +358,20 @@ const Dashboard = () => {
     } catch (e) {
       console.log('Cache error, generating new description');
     }
-
     setIsLoadingDescription(true);
-    
     try {
-      const { data, error } = await supabase.functions.invoke('generate-ocean-description', {
-        body: { oceanProfile, userProfile }
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('generate-ocean-description', {
+        body: {
+          oceanProfile,
+          userProfile
+        }
       });
-
       if (error) throw error;
-
       if (data?.success && data?.description) {
         setOceanDescription(data.description);
-        
         const cacheData = {
           description: data.description,
           conversationId: latestConversationId,
@@ -415,10 +383,8 @@ const Dashboard = () => {
       }
     } catch (error: any) {
       console.error('❌ Error generating OCEAN description:', error);
-      
       const fallbackDescription = "Your OCEAN profile reveals your unique personality patterns based on conversational analysis. Higher openness indicates creativity and willingness to try new experiences, while conscientiousness reflects your organization and goal-oriented nature. Extraversion measures your social energy and communication style, agreeableness shows your collaborative tendencies, and stability indicates your emotional resilience. These dimensions work together to create your distinctive approach to challenges, relationships, and personal growth opportunities.";
       setOceanDescription(fallbackDescription);
-
       const cacheData = {
         description: fallbackDescription,
         conversationId: latestConversationId,
@@ -434,16 +400,17 @@ const Dashboard = () => {
   // Cargar datos históricos con protección
   const loadHistoricalData = useCallback(async () => {
     if (!user?.id || loadingInProgress.current) return;
-    
     setLoadingHistorical(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-historical-data', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('generate-historical-data', {
         body: {
           period: selectedPeriod,
           userId: user.id
         }
       });
-      
       if (error) {
         console.error('Error loading historical data:', error);
         toast({
@@ -453,7 +420,6 @@ const Dashboard = () => {
         });
         return;
       }
-      
       setHistoricalData(data);
     } catch (error) {
       console.error('Unexpected error loading historical data:', error);
@@ -478,7 +444,6 @@ const Dashboard = () => {
       }
     }
   }, [user?.id, startNewConversation, navigate]);
-
   const handleResumeConversation = useCallback(async () => {
     if (user?.id && conversationState.pausedConversationId) {
       const conversation = await resumeConversation(conversationState.pausedConversationId, user.id);
@@ -498,7 +463,6 @@ const Dashboard = () => {
       });
       return;
     }
-
     if (!managerEmail.includes('@')) {
       toast({
         title: "Invalid Email",
@@ -507,18 +471,18 @@ const Dashboard = () => {
       });
       return;
     }
-
     setIsInvitingManager(true);
     try {
-      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('unified-invitation', {
         body: {
           email: managerEmail.trim(),
           invitationType: 'manager_request'
         }
       });
-
       if (error) throw error;
-
       toast({
         title: "Request Sent!",
         description: `Your request to join the team has been sent to ${managerEmail}. They will receive an email with your invitation.`
@@ -535,23 +499,22 @@ const Dashboard = () => {
       setIsInvitingManager(false);
     }
   }, [managerEmail]);
-
   const handleAcceptInvitation = useCallback(async (invitation: any) => {
     try {
       if (!user?.id) {
         throw new Error('User not authenticated');
       }
-
-      const { data, error } = await supabase.functions.invoke('complete-invitation', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('complete-invitation', {
         body: {
           token: invitation.token,
           user_id: user.id,
           action: 'accept'
         }
       });
-
       if (error) throw error;
-
       if (data?.success) {
         toast({
           title: "Invitation Accepted!",
@@ -570,23 +533,22 @@ const Dashboard = () => {
       });
     }
   }, [user?.id, loadDashboardData]);
-
   const handleDeclineInvitation = useCallback(async (invitation: any) => {
     try {
       if (!user?.id) {
         throw new Error('User not authenticated');
       }
-
-      const { data, error } = await supabase.functions.invoke('complete-invitation', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('complete-invitation', {
         body: {
           token: invitation.token,
           user_id: user.id,
           action: 'decline'
         }
       });
-
       if (error) throw error;
-
       if (data?.success) {
         toast({
           title: "Invitation Declined",
@@ -609,29 +571,24 @@ const Dashboard = () => {
   // useEffect para carga inicial CONTROLADA con debouncing mejorado
   useEffect(() => {
     if (!user?.id) return;
-    
     if (hasLoadedInitialData.current) {
       console.log('⚠️ Dashboard already loaded, skipping');
       return;
     }
-    
     hasLoadedInitialData.current = true;
-    
     const initializeDashboard = async () => {
       console.log('🚀 Initializing dashboard for user:', user.id);
-      
+
       // Add longer delay to prevent cascade failures
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
       await loadDashboardData();
-      
+
       // Add delay before conversation state
       await new Promise(resolve => setTimeout(resolve, 500));
-      
       if (getConversationState && !loadingInProgress.current) {
         await getConversationState(user.id);
       }
-      
+
       // Longer delay before recovery
       setTimeout(() => {
         if (recoverAllMissingAnalyses && !loadingInProgress.current) {
@@ -640,28 +597,23 @@ const Dashboard = () => {
         }
       }, 5000); // Increased to 5 seconds
     };
-    
     initializeDashboard();
   }, [user?.id]);
 
   // useEffect para navegación CONTROLADA
   useEffect(() => {
     if (!user?.id || location.pathname !== '/dashboard') return;
-    
     const timeSinceLastLoad = Date.now() - lastLoadTime.current;
     if (timeSinceLastLoad < 2000) {
       console.log('⚠️ Skipping navigation refresh - too soon');
       return;
     }
-    
     console.log('🔄 Dashboard navigation detected, refreshing conversation state');
-    
     const refreshTimeout = setTimeout(() => {
       if (refetchConversationState && !loadingInProgress.current) {
         refetchConversationState(user.id);
       }
     }, 1000);
-    
     return () => clearTimeout(refreshTimeout);
   }, [user?.id, location.pathname]);
 
@@ -671,7 +623,6 @@ const Dashboard = () => {
       const timeout = setTimeout(() => {
         loadHistoricalData();
       }, 500);
-      
       return () => clearTimeout(timeout);
     }
   }, [user?.id, activeTab, loadHistoricalData]);
@@ -683,11 +634,9 @@ const Dashboard = () => {
       loadingInProgress.current = false;
     };
   }, []);
-
   const handleSharingPreferencesChange = useCallback((preferences: any) => {
     setSharingPreferences(preferences);
   }, []);
-
   const handleShareWithManager = useCallback(async (type: 'strengths' | 'opportunities') => {
     try {
       if (!userProfile?.id || !currentManager) {
@@ -698,11 +647,7 @@ const Dashboard = () => {
         });
         return;
       }
-
-      const dataToShare = type === 'strengths' 
-        ? allInsights.flatMap(insight => insight.insights || []).slice(0, 5)
-        : allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5);
-
+      const dataToShare = type === 'strengths' ? allInsights.flatMap(insight => insight.insights || []).slice(0, 5) : allInsights.flatMap(insight => insight.next_steps || []).slice(0, 5);
       toast({
         title: "Shared Successfully!",
         description: `Your ${type} have been shared with your manager`
@@ -716,9 +661,7 @@ const Dashboard = () => {
       });
     }
   }, [userProfile?.id, currentManager, allInsights]);
-
-  return (
-    <div className="container mx-auto px-4 pt-8 pb-8 space-y-8">
+  return <div className="container mx-auto px-4 pt-8 pb-8 space-y-8">
       {/* Welcome Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-6">
@@ -726,12 +669,8 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold text-foreground leading-tight">
               Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
             </h1>
-            <p className="text-lg text-muted-foreground">
-              {stats.completedConversations === 0 ? (
-                "Welcome to Gläub. This is where your journey toward greater self-awareness and professional growth begins. I'm here to support you whenever you're ready to start."
-              ) : (
-                `Reflecting on our ${stats.completedConversations} conversation${stats.completedConversations === 1 ? '' : 's'}, your consistent engagement highlights a powerful commitment to your well-being and development.`
-              )}
+            <p className="text-muted-foreground my-[0px] py-[8px] text-base">
+              {stats.completedConversations === 0 ? "Welcome to Gläub. This is where your journey toward greater self-awareness and professional growth begins. I'm here to support you whenever you're ready to start." : `Reflecting on our ${stats.completedConversations} conversation${stats.completedConversations === 1 ? '' : 's'}, your consistent engagement highlights a powerful commitment to your well-being and development.`}
             </p>
           </div>
           <DashboardViewSwitch />
@@ -744,62 +683,34 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div className="space-y-3">
               <h2 className="text-2xl font-bold">Speak with Glai</h2>
-              {conversationState.hasPausedConversation ? (
-                <div className="space-y-2">
+              {conversationState.hasPausedConversation ? <div className="space-y-2">
                   <p className="text-primary-foreground/90">
                     You have a paused conversation
                   </p>
-                  {conversationState.lastTopic && (
-                    <p className="text-sm text-primary-foreground/70">
+                  {conversationState.lastTopic && <p className="text-sm text-primary-foreground/70">
                       Last topic: {conversationState.lastTopic}
-                    </p>
-                  )}
-                  {conversationState.pausedAt && (
-                    <p className="text-xs text-primary-foreground/60">
+                    </p>}
+                  {conversationState.pausedAt && <p className="text-xs text-primary-foreground/60">
                       Paused {new Date(conversationState.pausedAt).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-primary-foreground/90">
+                    </p>}
+                </div> : <p className="text-primary-foreground/90">
                   Start a new conversation with your AI therapeutic assistant
-                </p>
-              )}
+                </p>}
               
               <div className="flex gap-3 mt-4">
-                {conversationState.hasPausedConversation ? (
-                  <>
-                    <Button 
-                      variant="secondary" 
-                      size="lg" 
-                      onClick={handleResumeConversation}
-                      disabled={isConversationLoading}
-                    >
+                {conversationState.hasPausedConversation ? <>
+                    <Button variant="secondary" size="lg" onClick={handleResumeConversation} disabled={isConversationLoading}>
                       <Play className="mr-2 h-5 w-5" />
                       Resume Conversation
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="lg" 
-                      onClick={handleStartNewConversation}
-                      disabled={isConversationLoading}
-                      className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
-                    >
+                    <Button variant="outline" size="lg" onClick={handleStartNewConversation} disabled={isConversationLoading} className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
                       <Plus className="mr-2 h-5 w-5" />
                       Start New Conversation
                     </Button>
-                  </>
-                ) : (
-                  <Button 
-                    variant="secondary" 
-                    size="lg" 
-                    onClick={handleStartNewConversation}
-                    disabled={isConversationLoading}
-                  >
+                  </> : <Button variant="secondary" size="lg" onClick={handleStartNewConversation} disabled={isConversationLoading}>
                     <Plus className="mr-2 h-5 w-5" />
                     Start New Session
-                  </Button>
-                )}
+                  </Button>}
               </div>
             </div>
             <div className="hidden md:block">
@@ -812,8 +723,7 @@ const Dashboard = () => {
       </Card>
 
       {/* Variables Profile - Only show if oceanProfile exists */}
-      {oceanProfile && (
-        <Card className="shadow-soft">
+      {oceanProfile && <Card className="shadow-soft">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5 text-secondary" />
@@ -846,8 +756,7 @@ const Dashboard = () => {
                 </div>
               </div>
               {/* OCEAN Personality Description */}
-              {oceanDescription && (
-                <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+              {oceanDescription && <div className="mt-6 p-4 bg-muted/30 rounded-lg">
                   <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
                     <Lightbulb className="h-4 w-4 text-secondary" />
                     Your Personality Analysis
@@ -855,63 +764,34 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {oceanDescription}
                   </p>
-                  {isLoadingDescription && (
-                    <div className="flex items-center gap-2 mt-2">
+                  {isLoadingDescription && <div className="flex items-center gap-2 mt-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                       <span className="text-xs text-muted-foreground">Updating analysis...</span>
-                    </div>
-                  )}
-                </div>
-              )}
+                    </div>}
+                </div>}
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card>}
 
       // Personal Recommendations - Only show if we have actual insights
-      {allInsights && allInsights.length > 0 && allInsights.some(insight => 
-        (insight.insights && insight.insights.length > 0) || 
-        (insight.next_steps && insight.next_steps.length > 0)
-      ) && (
-        <PersonalRecommendations
-          context="last_session"
-          period="last_week"
-          recommendations={{
-            development: allInsights.flatMap(insight => insight.next_steps || []).slice(0, 4),
-            wellness: allInsights.flatMap(insight => insight.insights || []).slice(0, 3),
-            skills: allInsights.flatMap(insight => insight.insights || []).slice(3, 6),
-            goals: allInsights.flatMap(insight => insight.next_steps || []).slice(4, 7)
-          }}
-          oceanProfile={oceanProfile}
-          onShareToggle={(category, shared) => {
-            console.log(`Sharing ${category}: ${shared}`);
-          }}
-        />
-      )}
+      {allInsights && allInsights.length > 0 && allInsights.some(insight => insight.insights && insight.insights.length > 0 || insight.next_steps && insight.next_steps.length > 0) && <PersonalRecommendations context="last_session" period="last_week" recommendations={{
+      development: allInsights.flatMap(insight => insight.next_steps || []).slice(0, 4),
+      wellness: allInsights.flatMap(insight => insight.insights || []).slice(0, 3),
+      skills: allInsights.flatMap(insight => insight.insights || []).slice(3, 6),
+      goals: allInsights.flatMap(insight => insight.next_steps || []).slice(4, 7)
+    }} oceanProfile={oceanProfile} onShareToggle={(category, shared) => {
+      console.log(`Sharing ${category}: ${shared}`);
+    }} />}
 
       {/* Profile Status Insights - Only show if we have conversations */}
-      {userProfile && stats.completedConversations > 0 && (
-        <ProfileStatusInsights
-          profile={userProfile}
-          stats={stats}
-          oceanProfile={oceanProfile}
-          conversations={stats.completedConversations}
-          onStartConversation={handleStartNewConversation}
-        />
-      )}
+      {userProfile && stats.completedConversations > 0 && <ProfileStatusInsights profile={userProfile} stats={stats} oceanProfile={oceanProfile} conversations={stats.completedConversations} onStartConversation={handleStartNewConversation} />}
 
       {/* My Teams & Invitations */}
       <div className="grid gap-6 md:grid-cols-2">
-        {userProfile && (
-          <MyTeams 
-            userProfile={userProfile}
-            className="h-fit"
-          />
-        )}
+        {userProfile && <MyTeams userProfile={userProfile} className="h-fit" />}
         
         {/* Pending Invitations */}
-        {pendingInvitations && pendingInvitations.length > 0 && (
-          <Card className="h-fit">
+        {pendingInvitations && pendingInvitations.length > 0 && <Card className="h-fit">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-secondary" />
@@ -923,8 +803,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {pendingInvitations.map((invitation) => (
-                  <div key={invitation.id} className="p-4 border rounded-lg space-y-3">
+                {pendingInvitations.map(invitation => <div key={invitation.id} className="p-4 border rounded-lg space-y-3">
                     <div>
                       <p className="font-medium text-foreground">
                         Join {invitation.manager?.full_name || invitation.manager?.display_name}'s Team
@@ -934,32 +813,20 @@ const Dashboard = () => {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleAcceptInvitation(invitation)}
-                        className="flex-1"
-                      >
+                      <Button size="sm" onClick={() => handleAcceptInvitation(invitation)} className="flex-1">
                         Accept
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => handleDeclineInvitation(invitation)}
-                        className="flex-1"
-                      >
+                      <Button size="sm" variant="outline" onClick={() => handleDeclineInvitation(invitation)} className="flex-1">
                         Decline
                       </Button>
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
 
         {/* Join Team - Show only if no current manager and no pending invitations */}
-        {!currentManager && (!pendingInvitations || pendingInvitations.length === 0) && (
-          <Card className="h-fit">
+        {!currentManager && (!pendingInvitations || pendingInvitations.length === 0) && <Card className="h-fit">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-secondary" />
@@ -973,30 +840,18 @@ const Dashboard = () => {
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="manager-email">Manager's Email</Label>
-                  <Input
-                    id="manager-email"
-                    type="email"
-                    placeholder="manager@company.com"
-                    value={managerEmail}
-                    onChange={(e) => setManagerEmail(e.target.value)}
-                  />
+                  <Input id="manager-email" type="email" placeholder="manager@company.com" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} />
                 </div>
-                <Button 
-                  onClick={handleInviteManager} 
-                  disabled={isInvitingManager}
-                  className="w-full"
-                >
+                <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full">
                   {isInvitingManager ? "Sending Request..." : "Request to Join"}
                 </Button>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
       </div>
 
       {/* Sharing & Collaboration */}
-      {currentManager && (
-        <Card>
+      {currentManager && <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Share2 className="h-5 w-5 text-secondary" />
@@ -1008,38 +863,22 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <SharingPreferences
-                userProfile={userProfile}
-                onPreferencesChange={handleSharingPreferencesChange}
-              />
+              <SharingPreferences userProfile={userProfile} onPreferencesChange={handleSharingPreferencesChange} />
               
               {/* Quick Share Actions */}
               <div className="flex gap-4 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareWithManager('strengths')}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={() => handleShareWithManager('strengths')} className="flex items-center gap-2">
                   <Shield className="h-4 w-4" />
                   Share Strengths
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleShareWithManager('opportunities')}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={() => handleShareWithManager('opportunities')} className="flex items-center gap-2">
                   <Target className="h-4 w-4" />
                   Share Growth Areas
                 </Button>
               </div>
             </div>
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 };
-
 export default Dashboard;
