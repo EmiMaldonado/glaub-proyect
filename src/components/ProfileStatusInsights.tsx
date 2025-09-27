@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Brain, MessageSquare, Sparkles } from 'lucide-react';
+import { Target, Brain, MessageSquare, Sparkles, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -143,8 +143,8 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
       {/* Header */}
       <div className="space-y-1">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Target className="h-5 w-5 text-secondary" />
-          Your Variables Profile
+          <Users className="h-5 w-5 text-secondary" />
+          Your soft skills profile
         </h3>
         <p className="text-sm text-muted-foreground">Based on your conversation patterns</p>
       </div>
