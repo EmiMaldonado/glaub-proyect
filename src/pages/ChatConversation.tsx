@@ -225,7 +225,7 @@ const ChatConversation: React.FC = () => {
       <div className="border-b bg-background">
         <div className="py-2 relative px-[24px] mx-[24px]">
           <div className="flex items-center">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="text-muted-foreground hover:text-foreground p-0 absolute left-0">
+            <Button variant="ghost" size="sm" onClick={handlePauseSession} className="text-muted-foreground hover:text-foreground p-0 absolute left-0">
               <ArrowLeft className="w-5 h-5 mr-2" />
               <span className="hidden sm:inline">Dashboard</span>
             </Button>
