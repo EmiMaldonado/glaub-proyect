@@ -123,7 +123,7 @@ All colors MUST be HSL.
     --text-medium-contrast: 240 12% 15%;     /* Dark gray for strong contrast */
     --text-low-contrast: 240 8% 45%;         /* Medium gray for secondary text */
     --background-contrast: 240 8% 98%;       /* Very light background for contrast */
-    --interactive-primary: 214 85% 35%;      /* Darker primary for AAA contrast */
+    --interactive-primary: 214 30% 35%;      /* Custom blue #3E5574 for AAA contrast */
     --interactive-secondary: 240 15% 25%;    /* Dark secondary for contrast */
     
     /* Typography Scale */
@@ -360,7 +360,7 @@ All colors MUST be HSL.
     --text-medium-contrast: 240 8% 88%;      /* Light gray for strong contrast */
     --text-low-contrast: 240 6% 65%;         /* Medium gray for secondary text */
     --background-contrast: 240 12% 8%;       /* Very dark background for contrast */
-    --interactive-primary: 214 85% 75%;      /* Lighter primary for AAA contrast */
+    --interactive-primary: 214 45% 65%;      /* Lighter version of #3E5574 for AAA contrast on dark */
     --interactive-secondary: 240 10% 85%;    /* Light secondary for contrast */
     
     /* Dark mode shadows - lighter for contrast */
