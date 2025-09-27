@@ -268,7 +268,7 @@ How can I help you today?</p>
       </div>
 
       {/* Input Area */}
-      <div className="bg-background border-t">
+      <div className="bg-background">
         <div className="py-2 px-6">
           {/* Input Field */}
           <div className="flex items-center gap-3 mb-4">
