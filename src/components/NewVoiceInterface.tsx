@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mic, Square, Volume2, ArrowLeft, Check, Star, Loader2 } from 'lucide-react';
+import { Mic, Square, Volume2, ArrowLeft, Check, Star, Loader2, Pause, Power } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MicrophonePermission from '@/components/MicrophonePermission';
@@ -638,30 +638,35 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const buttonProps = getMainButton();
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={handleBackClick}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg font-medium text-[#24476e]">Voice Session</h1>
+    <div className="flex flex-col h-screen bg-background">
+      {/* Header - Mobile Optimized */}
+      <div className="border-b bg-background">
+        <div className="py-2 relative px-[24px] mx-[24px]">
+          <div className="flex items-center">
+            <Button variant="ghost" size="sm" onClick={handleBackClick} className="text-muted-foreground hover:text-foreground p-0 absolute left-0">
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Button>
+            <h1 className="text-lg font-medium text-foreground text-center w-full">
+              Voice conversation
+            </h1>
+          </div>
         </div>
-      </header>
+      </div>
 
       {/* Progress Section - only show when timer is active */}
       {onExtendSession && (
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <div className="bg-gray-100 rounded-lg p-4">
+        <div className="bg-background border-b px-4 py-3">
+          <div className="bg-muted/30 rounded-lg p-4">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-[#24476e] font-medium">Progress</span>
-              <span className="text-sm text-[#24476e]">
+              <span className="text-sm text-foreground font-medium">Progress</span>
+              <span className="text-sm text-muted-foreground">
                 {formattedTime} / {formattedTimeRemaining} remaining | Extensions: {extensionsUsed}
               </span>
             </div>
-            <div className="w-full bg-gray-300 rounded-full h-2">
+            <div className="w-full bg-muted rounded-full h-2">
               <div 
-                className="bg-[#24476e] h-2 rounded-full transition-all duration-300"
+                className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(progressPercentage, 100)}%` }}
               />
             </div>
@@ -687,7 +692,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
               
               {/* Status Text */}
               <div className="text-center">
-                <h2 className="text-2xl font-medium text-[#24476e] mb-2">
+                <h2 className="text-2xl font-medium text-foreground mb-2">
                   {getStatusText()}
                 </h2>
               </div>
@@ -695,20 +700,20 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
               {/* Animated Star Icon */}
               <div className="relative">
                  <Star 
-                  className={`w-16 h-16 text-[#a5c7b9] ${
+                  className={`w-16 h-16 text-primary ${
                     voiceState === 'ai_speaking' || voiceState === 'ai_thinking' || voiceState === 'recording' ? 'animate-pulse' : ''
                   }`} 
                   fill="currentColor"
                 />
                 {(voiceState === 'ai_speaking' || voiceState === 'ai_thinking' || voiceState === 'recording') && (
-                  <div className="absolute inset-0 w-16 h-16 border-2 border-[#a5c7b9] rounded-full animate-ping" />
+                  <div className="absolute inset-0 w-16 h-16 border-2 border-primary rounded-full animate-ping" />
                 )}
               </div>
 
               {/* AI Response Display */}
               {currentAIText && (
                 <div className="max-w-md text-center">
-                  <p className="text-sm text-gray-600 leading-relaxed bg-white p-4 rounded-lg shadow-sm border">
+                  <p className="text-sm text-muted-foreground leading-relaxed bg-card p-4 rounded-lg shadow-sm border">
                     {currentAIText}
                   </p>
                 </div>
@@ -717,49 +722,78 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
             </div>
 
             {/* Main Action Button */}
-            <div className="mt-8 flex flex-col items-center pb-10 space-y-4">
-              <Button
-                size="sm"
-                className={`${buttonProps.color} rounded-full px-6 py-3 text-sm font-medium shadow-lg transition-all duration-200 transform hover:scale-105`}
-                onClick={buttonProps.onClick}
-                disabled={buttonProps.disabled}
-              >
-                {buttonProps.icon}
-                <span className="ml-2">{buttonProps.label}</span>
-              </Button>
-
-              {/* Session Control Buttons */}
-              <div className="flex items-center space-x-2">
-                {onExtendSession && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={onExtendSession}
-                    className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white"
+            <div className="bg-background">
+              <div className="py-2 px-6">
+                <div className="flex justify-center mb-4">
+                  <Button
+                    size="sm"
+                    className={`${buttonProps.color} rounded-full px-6 py-3 text-sm font-medium shadow-lg transition-all duration-200 transform hover:scale-105`}
+                    onClick={buttonProps.onClick}
+                    disabled={buttonProps.disabled}
                   >
-                    +5 min
+                    {buttonProps.icon}
+                    <span className="ml-2">{buttonProps.label}</span>
                   </Button>
-                )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onStopSession}
-                  disabled={!onStopSession}
-                  className="border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white"
-                >
-                  Pause Session
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onEndSession}
-                  disabled={!canFinishSession}
-                  className={`border-[#24476e] ${canFinishSession ? 'text-[#24476e] hover:bg-[#24476e] hover:text-white' : 'text-gray-400 border-gray-300 cursor-not-allowed'}`}
-                  title={!canFinishSession ? "Minimum 1 minute required to finish session" : "Finish conversation"}
-                >
-                  <Check className="h-4 w-4 mr-2" />
-                  Finish
-                </Button>
+                </div>
+
+                {/* Mobile Optimized Action Buttons */}
+                <div className="flex flex-col gap-3">
+                  {/* Extend Session Button - only show when available */}
+                  {onExtendSession && (
+                    <Button 
+                      variant="outline" 
+                      onClick={onExtendSession}
+                      className="w-full h-8 p-2 sm:p-4 rounded-xl border hover:bg-muted/50"
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3 justify-center">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                          <span className="text-xs sm:text-sm font-bold text-green-600 dark:text-green-400">+5</span>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium text-xs sm:text-sm">Extend session</div>
+                          <div className="text-xs text-muted-foreground hidden sm:block">Add 5 more minutes to continue</div>
+                        </div>
+                      </div>
+                    </Button>
+                  )}
+                  
+                  {/* End Session and Pause Buttons */}
+                  <div className="flex flex-row gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={onEndSession}
+                      disabled={!canFinishSession}
+                      className="flex-1 h-8 p-2 sm:p-4 rounded-xl border hover:bg-muted/50"
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                          <Power className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium text-xs sm:text-sm">End session</div>
+                          <div className="text-xs text-muted-foreground hidden sm:block">Finish the voice chat and go to analysis</div>
+                        </div>
+                      </div>
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      onClick={onStopSession}
+                      disabled={!onStopSession}
+                      className="flex-1 h-8 p-2 sm:p-4 rounded-xl border hover:bg-muted/50"
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                          <Pause className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600 dark:text-yellow-400" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium text-xs sm:text-sm">Pause</div>
+                          <div className="text-xs text-muted-foreground hidden sm:block">Save your conversation and return later</div>
+                        </div>
+                      </div>
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </>
