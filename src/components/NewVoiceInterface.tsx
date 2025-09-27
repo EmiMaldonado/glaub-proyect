@@ -661,7 +661,7 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
         ) : (
           <>
             {/* Status and AI Response Display */}
-            <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8 bg-muted/50">
               
               {/* Status Text */}
               <div className="text-center">
