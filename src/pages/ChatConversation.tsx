@@ -400,7 +400,7 @@ const ChatConversation: React.FC = () => {
               variant="outline"
               onClick={handlePauseSession}
               disabled={!hasActiveSession || isLoading}
-              className="flex-1 h-auto p-4 rounded-xl border-2 hover:bg-muted/50"
+              className="flex-1 h-8 p-4 rounded-xl border-2 hover:bg-muted/50"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
