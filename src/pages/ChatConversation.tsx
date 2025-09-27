@@ -340,7 +340,7 @@ const ChatConversation: React.FC = () => {
 
       {/* Input Area */}
       <div className="bg-background border-t">
-        <div className="p-2">
+        <div className="p-6">
           {/* Input Field */}
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 relative">
