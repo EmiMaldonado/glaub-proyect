@@ -697,7 +697,7 @@ const Dashboard = () => {
                   Start a new conversation with your AI therapeutic assistant
                 </p>}
               
-              <div className="flex gap-3 mt-4">
+              <div className="flex flex-col md:flex-row gap-3 mt-4">
                 {conversationState.hasPausedConversation ? <>
                     <Button variant="secondary" size="lg" onClick={handleResumeConversation} disabled={isConversationLoading}>
                       <Play className="mr-2 h-5 w-5" />
