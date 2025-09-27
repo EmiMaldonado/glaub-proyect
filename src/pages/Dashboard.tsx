@@ -727,7 +727,11 @@ const Dashboard = () => {
               Hello, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
             </h1>
             <p className="text-lg text-muted-foreground">
-              {personalizedSummary || `You've completed ${stats.completedConversations} sessions with ${allInsights.length} insights generated.`}
+              {stats.completedConversations === 0 ? (
+                "Welcome to Gläub. This is where your journey toward greater self-awareness and professional growth begins. I'm here to support you whenever you're ready to start."
+              ) : (
+                `Reflecting on our ${stats.completedConversations} conversation${stats.completedConversations === 1 ? '' : 's'}, your consistent engagement highlights a powerful commitment to your well-being and development.`
+              )}
             </p>
           </div>
           <DashboardViewSwitch />
