@@ -183,13 +183,29 @@ serve(async (req: Request) => {
           console.error("Error checking existing team:", teamCheckError);
         }
 
-        // Update the invited user to manager role and set team name
+        // First, create the manager-employee relationship in the new structure
+        const { error: addEmployeeError } = await supabase
+          .from("manager_employee_relationships")
+          .insert({
+            manager_id: userProfile.id,
+            employee_id: invitation.manager_id
+          });
+
+        if (addEmployeeError && addEmployeeError.code !== '23505') { // Ignore duplicate key errors
+          console.error("Error adding employee relationship:", addEmployeeError);
+          throw new Error("Failed to add employee relationship: " + addEmployeeError.message);
+        }
+
+        console.log("Created manager-employee relationship");
+
+        // Now promote user to manager role and set team name (after establishing employee relationship)
         const finalTeamName = team_name || `${userProfile.display_name || userProfile.full_name || 'Manager'}'s Team`;
         
         const { error: promoteError } = await supabase
           .from("profiles")
           .update({ 
             can_manage_teams: true,
+            role: 'manager',
             team_name: finalTeamName
           })
           .eq("id", userProfile.id);
@@ -207,7 +223,7 @@ serve(async (req: Request) => {
           .insert({
             team_id: userProfile.id,
             member_id: userProfile.id,
-            can_manage_teams: true
+            role: 'manager'
           });
 
         if (addManagerError && addManagerError.code !== '23505') { // Ignore duplicate key errors
@@ -215,8 +231,8 @@ serve(async (req: Request) => {
           throw new Error("Failed to add manager to team: " + addManagerError.message);
         }
 
-        // Add inviter as first employee
-        const { error: addEmployeeError } = await supabase
+        // Add inviter as first employee to team_members
+        const { error: addMemberError } = await supabase
           .from("team_members")
           .insert({
             team_id: userProfile.id,
@@ -224,9 +240,9 @@ serve(async (req: Request) => {
             role: 'employee'
           });
 
-        if (addEmployeeError && addEmployeeError.code !== '23505') { // Ignore duplicate key errors
-          console.error("Error adding employee to team_members:", addEmployeeError);
-          throw new Error("Failed to add employee to team: " + addEmployeeError.message);
+        if (addMemberError && addMemberError.code !== '23505') { // Ignore duplicate key errors
+          console.error("Error adding employee to team_members:", addMemberError);
+          throw new Error("Failed to add employee to team: " + addMemberError.message);
         }
 
         // Update inviter's profile to have this manager

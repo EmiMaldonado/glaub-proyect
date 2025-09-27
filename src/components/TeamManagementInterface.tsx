@@ -139,29 +139,18 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
 
   const handleAcceptManagerRequest = async (invitation: Invitation) => {
     try {
-      // Insert into team_members table
-      const { error: memberError } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: managerProfile.id,
-          member_id: invitation.email, // This needs to be the profile ID, not email
-          role: 'member'
-        });
+      const { data, error } = await supabase.functions.invoke('unified-accept-invitation', {
+        body: { 
+          token: invitation.token,
+          action: 'accept'
+        }
+      });
 
-      // Mark invitation as accepted
-      await supabase
-        .from('invitations')
-        .update({ 
-          status: 'accepted',
-          accepted_at: new Date().toISOString()
-        })
-        .eq('id', invitation.id);
+      if (error) throw error;
 
-      // Update manager profile to have can_manage_teams = true
-      await supabase
-        .from('profiles')
-        .update({ can_manage_teams: true } as any)
-        .eq('id', managerProfile.id);
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to accept manager request');
+      }
 
       toast({
         title: "Manager request accepted!",
@@ -182,13 +171,14 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
 
   const handleDeclineManagerRequest = async (invitation: Invitation) => {
     try {
-      await supabase
-        .from('invitations')
-        .update({ 
-          status: 'declined',
-          accepted_at: new Date().toISOString()
-        })
-        .eq('id', invitation.id);
+      const { data, error } = await supabase.functions.invoke('unified-accept-invitation', {
+        body: { 
+          token: invitation.token,
+          action: 'decline'
+        }
+      });
+
+      if (error) throw error;
 
       toast({
         title: "Request declined",
@@ -233,13 +223,14 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
 
   const handleDeclineTeamInvitation = async (invitation: Invitation) => {
     try {
-      await supabase
-        .from('invitations')
-        .update({ 
-          status: 'declined',
-          accepted_at: new Date().toISOString()
-        })
-        .eq('id', invitation.id);
+      const { data, error } = await supabase.functions.invoke('unified-accept-invitation', {
+        body: { 
+          token: invitation.token,
+          action: 'decline'
+        }
+      });
+
+      if (error) throw error;
 
       toast({
         title: "Invitation declined",
