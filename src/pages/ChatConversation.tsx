@@ -242,8 +242,7 @@ const ChatConversation: React.FC = () => {
           <div className="p-6 space-y-4 min-h-full flex flex-col justify-center bg-muted/50">
             {messages.length === 0 && <div className="text-center text-muted-foreground">
                 <h3 className="text-2xl font-medium text-foreground mb-2">Hi {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there'},</h3>
-                <p className="text-sm opacity-75 mx-[30px]">I'm Glaubi, and I'm ready to chat. 
-How can I help you today?</p>
+                <p className="text-sm opacity-75 mx-[30px]">I'm Glai, and I'm ready to chat. How can I help you today?</p>
               </div>}
 
             {messages.map(message => <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
