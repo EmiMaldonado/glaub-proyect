@@ -722,133 +722,130 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Variables Profile - Only show if oceanProfile exists */}
-      {oceanProfile && <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-secondary" />
-              Your Variables Profile
-            </CardTitle>
-            <CardDescription>Based on your conversation patterns</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div className="grid grid-cols-5 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Openness</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Conscientiousness</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Extraversion</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Agreeableness</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
-                  <div className="text-xs text-muted-foreground">Stability</div>
-                </div>
-              </div>
-              {/* OCEAN Personality Description */}
-              {oceanDescription && <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                  <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4 text-secondary" />
-                    Your Personality Analysis
-                  </h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {oceanDescription}
-                  </p>
-                  {isLoadingDescription && <div className="flex items-center gap-2 mt-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                      <span className="text-xs text-muted-foreground">Updating analysis...</span>
+      {/* Main Content Layout - 70% Profile, 30% Teams */}
+      <div className="grid gap-6 lg:grid-cols-10">
+        {/* Variables Profile - 70% width on desktop */}
+        {oceanProfile && (
+          <div className="lg:col-span-7">
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-secondary" />
+                  Your Variables Profile
+                </CardTitle>
+                <CardDescription>Based on your conversation patterns</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-5 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
+                      <div className="text-xs text-muted-foreground">Openness</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
+                      <div className="text-xs text-muted-foreground">Conscientiousness</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
+                      <div className="text-xs text-muted-foreground">Extraversion</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
+                      <div className="text-xs text-muted-foreground">Agreeableness</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
+                      <div className="text-xs text-muted-foreground">Stability</div>
+                    </div>
+                  </div>
+                  {/* OCEAN Personality Description */}
+                  {oceanDescription && <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                      <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4 text-secondary" />
+                        Your Personality Analysis
+                      </h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {oceanDescription}
+                      </p>
+                      {isLoadingDescription && <div className="flex items-center gap-2 mt-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                          <span className="text-xs text-muted-foreground">Updating analysis...</span>
+                        </div>}
                     </div>}
-                </div>}
-            </div>
-          </CardContent>
-        </Card>}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-      // Personal Recommendations - Only show if we have actual insights
-      {allInsights && allInsights.length > 0 && allInsights.some(insight => insight.insights && insight.insights.length > 0 || insight.next_steps && insight.next_steps.length > 0) && <PersonalRecommendations context="last_session" period="last_week" recommendations={{
-      development: allInsights.flatMap(insight => insight.next_steps || []).slice(0, 4),
-      wellness: allInsights.flatMap(insight => insight.insights || []).slice(0, 3),
-      skills: allInsights.flatMap(insight => insight.insights || []).slice(3, 6),
-      goals: allInsights.flatMap(insight => insight.next_steps || []).slice(4, 7)
-    }} oceanProfile={oceanProfile} onShareToggle={(category, shared) => {
-      console.log(`Sharing ${category}: ${shared}`);
-    }} />}
+        {/* Teams Section - 30% width on desktop */}
+        <div className="lg:col-span-3 space-y-6">
+          {userProfile && <MyTeams userProfile={userProfile} className="h-fit" />}
+          
+          {/* Pending Invitations */}
+          {pendingInvitations && pendingInvitations.length > 0 && <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-secondary" />
+                  Pending Invitations ({pendingInvitations.length})
+                </CardTitle>
+                <CardDescription>
+                  Team invitations waiting for your response
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {pendingInvitations.map(invitation => <div key={invitation.id} className="p-4 border rounded-lg space-y-3">
+                      <div>
+                        <p className="font-medium text-foreground">
+                          Join {invitation.manager?.full_name || invitation.manager?.display_name}'s Team
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Invitation expires: {new Date(invitation.expires_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => handleAcceptInvitation(invitation)} className="flex-1">
+                          Accept
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDeclineInvitation(invitation)} className="flex-1">
+                          Decline
+                        </Button>
+                      </div>
+                    </div>)}
+                </div>
+              </CardContent>
+            </Card>}
+
+          {/* Join Team - Show only if no current manager and no pending invitations */}
+          {!currentManager && (!pendingInvitations || pendingInvitations.length === 0) && <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-secondary" />
+                  Join a Team
+                </CardTitle>
+                <CardDescription>
+                  Request to join your manager's team
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="manager-email">Manager's Email</Label>
+                    <Input id="manager-email" type="email" placeholder="manager@company.com" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} />
+                  </div>
+                  <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full">
+                    {isInvitingManager ? "Sending Request..." : "Request to Join"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>}
+        </div>
+      </div>
 
       {/* Profile Status Insights - Only show if we have conversations */}
       {userProfile && stats.completedConversations > 0 && <ProfileStatusInsights profile={userProfile} stats={stats} oceanProfile={oceanProfile} conversations={stats.completedConversations} onStartConversation={handleStartNewConversation} />}
-
-      {/* My Teams & Invitations */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {userProfile && <MyTeams userProfile={userProfile} className="h-fit" />}
-        
-        {/* Pending Invitations */}
-        {pendingInvitations && pendingInvitations.length > 0 && <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-secondary" />
-                Pending Invitations ({pendingInvitations.length})
-              </CardTitle>
-              <CardDescription>
-                Team invitations waiting for your response
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {pendingInvitations.map(invitation => <div key={invitation.id} className="p-4 border rounded-lg space-y-3">
-                    <div>
-                      <p className="font-medium text-foreground">
-                        Join {invitation.manager?.full_name || invitation.manager?.display_name}'s Team
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Invitation expires: {new Date(invitation.expires_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => handleAcceptInvitation(invitation)} className="flex-1">
-                        Accept
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDeclineInvitation(invitation)} className="flex-1">
-                        Decline
-                      </Button>
-                    </div>
-                  </div>)}
-              </div>
-            </CardContent>
-          </Card>}
-
-        {/* Join Team - Show only if no current manager and no pending invitations */}
-        {!currentManager && (!pendingInvitations || pendingInvitations.length === 0) && <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-secondary" />
-                Join a Team
-              </CardTitle>
-              <CardDescription>
-                Request to join your manager's team
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="manager-email">Manager's Email</Label>
-                  <Input id="manager-email" type="email" placeholder="manager@company.com" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} />
-                </div>
-                <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full">
-                  {isInvitingManager ? "Sending Request..." : "Request to Join"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>}
-      </div>
 
       {/* Sharing & Collaboration */}
       {currentManager && <Card>
