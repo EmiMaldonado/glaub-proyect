@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
 interface ProfileStatusInsightsProps {
   profile: any;
   stats: {
@@ -17,13 +16,11 @@ interface ProfileStatusInsightsProps {
   conversations: number;
   onStartConversation: () => void;
 }
-
 interface StrengthsAnalysis {
   emotionalIntelligence: string;
   softSkills: string;
   overallStrengths: string;
 }
-
 const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
   profile,
   stats,
@@ -31,17 +28,16 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
   conversations,
   onStartConversation
 }) => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [strengths, setStrengths] = useState<StrengthsAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     generateStrengthsAnalysis();
   }, [profile, stats, oceanProfile, conversations]);
-
   const generateStrengthsAnalysis = async () => {
     if (!user) return;
-
     try {
       setIsLoading(true);
 
@@ -59,7 +55,6 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
       setIsLoading(false);
     }
   };
-
   const generateDynamicStrengths = () => {
     const openness = oceanProfile?.openness || 50;
     const conscientiousness = oceanProfile?.conscientiousness || 50;
@@ -67,7 +62,6 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
     const agreeableness = oceanProfile?.agreeableness || 50;
     const neuroticism = oceanProfile?.neuroticism || 50;
     const stability = 100 - neuroticism;
-
     let emotionalIntelligence = '';
     let softSkills = '';
     let overallStrengths = '';
@@ -95,7 +89,6 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
     // Generate overall strengths
     const topTrait = Math.max(openness, conscientiousness, extraversion, agreeableness, stability);
     let primaryStrength = '';
-    
     if (topTrait === openness && openness > 70) {
       primaryStrength = 'creativity and adaptability';
     } else if (topTrait === conscientiousness && conscientiousness > 70) {
@@ -109,16 +102,13 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
     } else {
       primaryStrength = 'balanced personality development';
     }
-
     overallStrengths = `Your professional profile shows particular strength in ${primaryStrength}. Through ${conversations} conversations, you've demonstrated commitment to self-improvement and reflective thinking. This combination positions you well for roles that value both personal insight and professional growth.`;
-
     return {
       emotionalIntelligence,
       softSkills,
       overallStrengths
     };
   };
-
   const setFallbackStrengths = () => {
     if (conversations === 0) {
       setStrengths({
@@ -134,30 +124,22 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
       });
     }
   };
-
   if (isLoading) {
-    return (
-      <div className="text-center py-6">
+    return <div className="text-center py-6">
         <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3"></div>
         <p className="text-sm text-muted-foreground">AI analyzing your strengths...</p>
-      </div>
-    );
+      </div>;
   }
-
   if (!strengths) {
-    return (
-      <div className="text-center py-4">
+    return <div className="text-center py-4">
         <Target className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
         <p className="text-muted-foreground text-sm">No strengths data available</p>
         <p className="text-xs text-muted-foreground mt-1">
           Complete a conversation to identify your strengths
         </p>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-6 bg-card rounded-lg shadow-soft p-6 border border-border/50">
+  return <div className="space-y-6 bg-card rounded-lg shadow-soft p-6 border border-border/50">
       {/* Header */}
       <div className="space-y-1">
         <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -193,17 +175,7 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
       </div>
 
       {/* Overall Strengths */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-warning" />
-          <h4 className="text-sm font-medium">Overall Professional Strengths</h4>
-        </div>
-        <div className="p-4 bg-warning/5 rounded-lg border border-warning/20">
-          <p className="text-sm leading-relaxed text-foreground/90">
-            {strengths.overallStrengths}
-          </p>
-        </div>
-      </div>
+      
 
       {/* Action Button */}
       <div className="pt-2">
@@ -212,8 +184,6 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
           Continue Building Your Profile
         </Button>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default ProfileStatusInsights;
