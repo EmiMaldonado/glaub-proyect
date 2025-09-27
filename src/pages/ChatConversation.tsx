@@ -239,7 +239,7 @@ const ChatConversation: React.FC = () => {
       {/* Messages Area */}
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full overflow-y-auto">
-          <div className="p-6 space-y-4 min-h-full flex flex-col justify-center bg-muted/50">
+          <div className="p-6 space-y-4 min-h-full flex flex-col justify-end bg-muted/50">
             {messages.length === 0 && <div className="text-center text-muted-foreground">
                 <div className="mb-4 flex justify-center">
                   <Bot className="w-12 h-12 text-primary" />
