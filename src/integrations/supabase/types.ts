@@ -616,6 +616,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_team_members_member_id"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_team_members_team_id"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "team_members_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
