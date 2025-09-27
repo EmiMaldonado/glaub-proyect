@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Brain, MessageSquare, Sparkles, Users } from 'lucide-react';
+import { Target, Brain, MessageSquare, Sparkles, Users, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActionableSteps } from '@/hooks/useActionableSteps';
 interface ProfileStatusInsightsProps {
   profile: any;
   stats: {
@@ -33,6 +34,7 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
   } = useAuth();
   const [strengths, setStrengths] = useState<StrengthsAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { actionableSteps, isLoading: stepsLoading } = useActionableSteps();
   useEffect(() => {
     generateStrengthsAnalysis();
   }, [profile, stats, oceanProfile, conversations]);
@@ -172,6 +174,57 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
 
       {/* Overall Strengths */}
       
+      {/* Actionable Steps */}
+      {actionableSteps && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-info" />
+            <h4 className="text-sm font-medium">Actionable Steps</h4>
+          </div>
+          <div className="p-4 bg-info/5 rounded-lg border border-info/20">
+            <p className="text-sm leading-relaxed text-foreground/90 mb-3">
+              {actionableSteps.summary}
+            </p>
+            <ul className="space-y-2">
+              {actionableSteps.steps.map((step, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-foreground/90">
+                  <CheckCircle2 className="h-3 w-3 text-info mt-1 flex-shrink-0" />
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {stepsLoading && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-info" />
+            <h4 className="text-sm font-medium">Actionable Steps</h4>
+          </div>
+          <div className="p-4 bg-info/5 rounded-lg border border-info/20">
+            <div className="animate-pulse">
+              <div className="h-4 bg-info/20 rounded mb-2"></div>
+              <div className="h-4 bg-info/20 rounded w-3/4 mb-3"></div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 bg-info/20 rounded-full"></div>
+                  <div className="h-3 bg-info/20 rounded flex-1"></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 bg-info/20 rounded-full"></div>
+                  <div className="h-3 bg-info/20 rounded flex-1"></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 bg-info/20 rounded-full"></div>
+                  <div className="h-3 bg-info/20 rounded w-2/3"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Button */}
       <div className="pt-2">

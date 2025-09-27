@@ -137,3 +137,12 @@ verify_jwt = false
 
 [edge_functions.test-forgot-password]
 verify_jwt = false
+
+[edge_functions.generate-actionable-steps]
+verify_jwt = true
+
+[edge_functions.generate-team-recommendations]
+verify_jwt = true
+
+[edge_functions.generate-individual-recommendations]
+verify_jwt = true
