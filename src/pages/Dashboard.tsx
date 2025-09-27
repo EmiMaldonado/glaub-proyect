@@ -737,27 +737,27 @@ const Dashboard = () => {
             <CardContent className="flex-1">
               {oceanProfile ? (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-                    <div>
-                      <div className="text-2xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
-                      <div className="text-xs text-muted-foreground">Openness</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
-                      <div className="text-xs text-muted-foreground">Conscientiousness</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
-                      <div className="text-xs text-muted-foreground">Extraversion</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
-                      <div className="text-xs text-muted-foreground">Agreeableness</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
-                      <div className="text-xs text-muted-foreground">Stability</div>
-                    </div>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-6 md:gap-8 text-center">
+                     <div className="p-4">
+                       <div className="text-3xl md:text-4xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
+                       <div className="text-sm text-muted-foreground mt-2">Openness</div>
+                     </div>
+                     <div className="p-4">
+                       <div className="text-3xl md:text-4xl font-bold text-primary">{oceanProfile.conscientiousness || 0}%</div>
+                       <div className="text-sm text-muted-foreground mt-2">Conscientiousness</div>
+                     </div>
+                     <div className="p-4">
+                       <div className="text-3xl md:text-4xl font-bold text-primary">{oceanProfile.extraversion || 0}%</div>
+                       <div className="text-sm text-muted-foreground mt-2">Extraversion</div>
+                     </div>
+                     <div className="p-4">
+                       <div className="text-3xl md:text-4xl font-bold text-primary">{oceanProfile.agreeableness || 0}%</div>
+                       <div className="text-sm text-muted-foreground mt-2">Agreeableness</div>
+                     </div>
+                     <div className="p-4">
+                       <div className="text-3xl md:text-4xl font-bold text-primary">{100 - (oceanProfile.neuroticism || 0)}%</div>
+                       <div className="text-sm text-muted-foreground mt-2">Stability</div>
+                     </div>
                   </div>
                   {/* OCEAN Personality Description */}
                   {oceanDescription && <div className="mt-6 p-4 bg-muted/30 rounded-lg">
