@@ -4,7 +4,6 @@ import { Mic, Square, Volume2, ArrowLeft, Check, Star, Loader2, Pause, Power } f
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MicrophonePermission from '@/components/MicrophonePermission';
-import LeaveSessionModal from '@/components/LeaveSessionModal';
 
 interface VoiceInterfaceProps {
   onTranscriptionUpdate: (text: string, isUser: boolean) => void;
@@ -54,7 +53,6 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const [currentAIText, setCurrentAIText] = useState(currentAIResponse || '');
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [isProcessing, setIsProcessing] = useState(false); // Lock to prevent concurrent processing
-  const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [lastRecordingTime, setLastRecordingTime] = useState(0);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false); // Prevent duplicate TTS calls
 
@@ -63,57 +61,32 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
   const streamRef = useRef<MediaStream | null>(null);
   const audioPromiseRef = useRef<Promise<void> | null>(null);
 
-  // Handle back button with confirmation
-  const handleBackClick = () => {
-    setShowLeaveModal(true);
-  };
-
-  const handleConfirmLeave = async () => {
-    console.log('🔄 handleConfirmLeave: Starting leave with audio cleanup');
+  // Handle back button with direct pause like chat
+  const handleBackClick = async () => {
+    console.log('🔄 handleBackClick: Starting pause with audio cleanup');
     
-    // Stop all voice audio IMMEDIATELY
     try {
+      // Stop all voice audio IMMEDIATELY
       const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
       stopAllVoiceAudio();
-      console.log('🔇 handleConfirmLeave: Voice audio stopped');
+      console.log('🔇 handleBackClick: Voice audio stopped');
+      
+      // Stop any current audio playback in this component
+      stopAudio();
+      
+      // Clean up recording resources
+      cleanupRecording();
+      
+      // Use onStopSession to properly pause the conversation (same as chat)
+      if (onStopSession) {
+        onStopSession();
+      } else {
+        onBack();
+      }
     } catch (error) {
-      console.error('Error stopping voice audio:', error);
-    }
-    
-    // Stop any current audio playback in this component
-    stopAudio();
-    
-    // Clean up recording resources
-    cleanupRecording();
-    setShowLeaveModal(false);
-    
-    // Use onStopSession to properly pause the conversation
-    if (onStopSession) {
-      onStopSession();
-    } else {
+      console.error('Error in handleBackClick:', error);
       onBack();
     }
-  };
-
-  const handleDeleteSession = async () => {
-    console.log('🗑️ handleDeleteSession: Starting delete with audio cleanup');
-    
-    // Stop all voice audio IMMEDIATELY 
-    try {
-      const { stopAllVoiceAudio } = await import('@/hooks/useTextToSpeech');
-      stopAllVoiceAudio();
-      console.log('🔇 handleDeleteSession: Voice audio stopped');
-    } catch (error) {
-      console.error('Error stopping voice audio:', error);
-    }
-    
-    // Stop any current audio playback in this component
-    stopAudio();
-    
-    // Clean up recording resources
-    cleanupRecording();
-    setShowLeaveModal(false);
-    onBack();
   };
 
   // Comprehensive cleanup function that properly resets ALL states
@@ -799,14 +772,6 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
           </>
         )}
       </div>
-
-      {/* Leave Session Confirmation Modal */}
-      <LeaveSessionModal
-        isOpen={showLeaveModal}
-        onClose={() => setShowLeaveModal(false)}
-        onConfirm={handleConfirmLeave}
-        onDelete={handleDeleteSession}
-      />
     </div>
   );
 };
