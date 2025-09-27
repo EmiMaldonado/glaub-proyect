@@ -111,6 +111,16 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
       return;
     }
 
+    // Check if user is already a manager
+    if (userProfile?.role === 'manager' || userProfile?.can_manage_teams) {
+      toast({
+        title: "Cannot Request Manager",
+        description: "You are already a manager and cannot request another manager.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await sendInvitation({
         email: managerEmail.trim(),
@@ -435,7 +445,7 @@ const InvitationManager: React.FC<InvitationManagerProps> = ({ userProfile, onUp
       {/* Action Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Step 1: Request Manager (For Employees) */}
-        {!userProfile?.can_manage_teams && (
+        {!userProfile?.can_manage_teams && userProfile?.role !== 'manager' && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

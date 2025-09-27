@@ -733,6 +733,10 @@ export type Database = {
         Args: { user_profile_id: string }
         Returns: boolean
       }
+      can_send_manager_request: {
+        Args: { requester_profile_id: string }
+        Returns: boolean
+      }
       can_user_view_shared_profile: {
         Args: { profile_user_id: string }
         Returns: boolean
@@ -866,6 +870,10 @@ export type Database = {
       }
       validate_reset_token: {
         Args: { token_input: string }
+        Returns: boolean
+      }
+      would_create_circular_relationship: {
+        Args: { potential_manager_email: string; requester_profile_id: string }
         Returns: boolean
       }
     }

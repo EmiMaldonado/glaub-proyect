@@ -106,6 +106,34 @@ serve(async (req: Request) => {
       );
     }
 
+    // Additional validation for manager_request type
+    if (invitationType === 'manager_request') {
+      // Check if user can send manager_request
+      const { data: canSendRequest } = await supabase.rpc('can_send_manager_request', { 
+        requester_profile_id: profile.id 
+      });
+
+      if (!canSendRequest) {
+        return new Response(
+          JSON.stringify({ error: 'You cannot send a manager request. You may already be a manager or have a manager.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      // Check for circular relationships
+      const { data: wouldCreateCircular } = await supabase.rpc('would_create_circular_relationship', { 
+        potential_manager_email: email,
+        requester_profile_id: profile.id 
+      });
+
+      if (wouldCreateCircular) {
+        return new Response(
+          JSON.stringify({ error: 'Cannot invite this user as your manager - it would create a circular relationship.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    }
+
     // Check if invitation already exists for this email and type - only check pending and non-expired
     const { data: existingInvitation } = await supabase
       .from("invitations")

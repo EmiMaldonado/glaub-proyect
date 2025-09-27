@@ -132,6 +132,30 @@ export const useUnifiedInvitations = () => {
     try {
       setLoading(true);
 
+      // For manager_request type, validate that user is not already a manager
+      if (request.invitationType === 'manager_request') {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, can_manage_teams, id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profile && (profile.role === 'manager' || profile.can_manage_teams)) {
+          throw new Error('You are already a manager and cannot request another manager.');
+        }
+
+        // Check if user already has a manager
+        const { data: existingManager } = await supabase
+          .from('manager_employee_relationships')
+          .select('manager_id')
+          .eq('employee_id', profile?.id)
+          .maybeSingle();
+
+        if (existingManager) {
+          throw new Error('You already have a manager assigned.');
+        }
+      }
+
       // Check permissions
       const permissions = await checkUserPermissions();
       
