@@ -276,7 +276,7 @@ const Auth = () => {
                         <Mail className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
                         <div className="flex-1">
                           <h3 className="text-sm font-medium text-yellow-800 mb-2">
-                            Por favor confirma tu email
+                            Please confirm email
                           </h3>
                           <p className="text-sm text-yellow-700 mb-3">
                             Check your inbox and spam folder. Didn't receive the email?
