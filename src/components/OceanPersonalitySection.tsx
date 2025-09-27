@@ -172,11 +172,8 @@ const OceanPersonalitySection: React.FC<OceanPersonalitySectionProps> = ({
           </div> : (/* No description available */
       <div className="pt-4 border-t">
             <div className="text-center py-6">
-              <div className="text-sm text-muted-foreground mb-2">
-                ⏳ Generating team analysis...
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Team personality metrics are calculated. Detailed analysis is being generated.
+              <div className="text-sm text-muted-foreground">
+                Not information found on your team members. Please ask to start interacting with Glai.
               </div>
             </div>
           </div>)}
