@@ -725,17 +725,17 @@ const Dashboard = () => {
       {/* Main Content Layout - 70% Profile, 30% Teams */}
       <div className="grid gap-6 lg:grid-cols-10">
         {/* Variables Profile - 70% width on desktop */}
-        {oceanProfile && (
-          <div className="lg:col-span-7">
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-secondary" />
-                  Your profile
-                </CardTitle>
-                <CardDescription>Based on your conversation patterns</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1">
+        <div className="lg:col-span-7">
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-secondary" />
+                Your profile
+              </CardTitle>
+              <CardDescription>Based on your conversation patterns</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1">
+              {oceanProfile ? (
                 <div className="space-y-6">
                   <div className="grid grid-cols-5 gap-4 text-center">
                     <div>
@@ -821,10 +821,25 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              ) : (
+                // Empty state for no profile data
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Target className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium text-foreground mb-2">No Profile Data Yet</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Complete your first conversation to generate your personality profile and insights.
+                  </p>
+                  <Button onClick={handleStartNewConversation} disabled={isConversationLoading}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Start Your First Conversation
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Teams Section - 30% width on desktop */}
         <div className="lg:col-span-3 space-y-6">
@@ -891,8 +906,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Profile Status Insights - Only show if we have conversations */}
-      {userProfile && stats.completedConversations > 0 && <ProfileStatusInsights profile={userProfile} stats={stats} oceanProfile={oceanProfile} conversations={stats.completedConversations} onStartConversation={handleStartNewConversation} />}
+      {/* Profile Status Insights - Always show, component handles empty state */}
+      {userProfile && <ProfileStatusInsights profile={userProfile} stats={stats} oceanProfile={oceanProfile} conversations={stats.completedConversations} onStartConversation={handleStartNewConversation} />}
 
       {/* Sharing & Collaboration */}
       {currentManager && <Card>
