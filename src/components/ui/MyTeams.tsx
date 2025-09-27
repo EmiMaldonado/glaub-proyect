@@ -152,6 +152,12 @@ const MyTeams: React.FC<MyTeamsProps> = ({ userProfile, className = "" }) => {
         ) : (
           <div className="space-y-4">
             {teams.map((membership) => {
+              // Handle null manager (orphaned team membership)
+              if (!membership.manager) {
+                console.warn('Orphaned team membership found:', membership.id);
+                return null; // Skip rendering this membership
+              }
+
               const teamName = membership.manager.team_name || 
                 `${membership.manager.display_name || membership.manager.full_name}'s Team`;
               
@@ -165,7 +171,7 @@ const MyTeams: React.FC<MyTeamsProps> = ({ userProfile, className = "" }) => {
                   onLeaveTeam={() => handleLeaveTeam(membership.team_id, teamName)}
                 />
               );
-            })}
+            }).filter(Boolean)}
           </div>
         )}
       </CardContent>
