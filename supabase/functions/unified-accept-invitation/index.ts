@@ -38,7 +38,10 @@ serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error("No Authorization header provided");
-      throw new Error('Authorization header is required');
+      return new Response(
+        JSON.stringify({ error: 'Authorization required', success: false }), 
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const jwt = authHeader.replace('Bearer ', '');
@@ -49,7 +52,10 @@ serve(async (req: Request) => {
     
     if (userError || !user) {
       console.error("Error getting user from JWT:", userError);
-      throw new Error("Invalid or expired authentication token");
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired authentication token', success: false }), 
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log("Authenticated user:", { id: user.id, email: user.email });

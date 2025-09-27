@@ -58,80 +58,6 @@ enable_signup = true
 double_confirm_password_change = false
 enable_confirmations = false
 
-[functions.ai-chat]
-verify_jwt = true
-
-[functions.auth-emails]
-verify_jwt = false
-
-[functions.forgot-password]
-verify_jwt = false
-
-[functions.generate-historical-data]
-verify_jwt = true
-
-[functions.generate-ocean-description]
-verify_jwt = true
-
-[functions.generate-personal-recommendations]
-verify_jwt = true
-
-[functions.leave-team]
-verify_jwt = true
-
-[functions.realtime-chat]
-verify_jwt = true
-
-[functions.remove-team-member]
-verify_jwt = true
-
-[functions.reset-password]
-verify_jwt = false
-
-[functions.session-analysis]
-verify_jwt = true
-
-[functions.speech-to-text]
-verify_jwt = true
-
-[functions.test-chat]
-verify_jwt = true
-
-[functions.test-invitation-flow]
-verify_jwt = false
-
-[functions.text-to-speech]
-verify_jwt = true
-
-[functions.send-invitation]
-verify_jwt = true
-
-[functions.invite-manager]
-verify_jwt = true
-
-[functions.employee-invite-manager]
-verify_jwt = true
-
-[functions.accept-invitation]
-verify_jwt = false
-
-[functions.accept-manager-invitation]
-verify_jwt = false
-
-[functions.complete-invitation]
-verify_jwt = false
-
-[functions.test-complete-invitation]
-verify_jwt = false
-
-[functions.unified-invitation]
-verify_jwt = true
-
-[functions.unified-accept-invitation]
-verify_jwt = true
-
-[functions.test-unified-invitation]
-verify_jwt = false
 
 [edge-runtime]
 policy = "per_worker"
@@ -156,7 +82,31 @@ verify_jwt = true
 verify_jwt = false
 
 [edge_functions.complete-invitation]
+verify_jwt = false
+
+[edge_functions.forgot-password]
+verify_jwt = false
+
+[edge_functions.generate-historical-data]
 verify_jwt = true
+
+[edge_functions.generate-ocean-description]
+verify_jwt = true
+
+[edge_functions.generate-personal-recommendations]
+verify_jwt = true
+
+[edge_functions.reset-password]
+verify_jwt = false
+
+[edge_functions.test-complete-invitation]
+verify_jwt = false
+
+[edge_functions.unified-invitation]
+verify_jwt = true
+
+[edge_functions.test-unified-invitation]
+verify_jwt = false
 
 [edge_functions.session-analysis]
 verify_jwt = true
