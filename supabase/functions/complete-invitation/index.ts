@@ -183,24 +183,10 @@ serve(async (req: Request) => {
           console.error("Error checking existing team:", teamCheckError);
         }
 
-        // First, create the manager-employee relationship in the new structure
-        const { error: addEmployeeError } = await supabase
-          .from("manager_employee_relationships")
-          .insert({
-            manager_id: userProfile.id,
-            employee_id: invitation.manager_id
-          });
-
-        if (addEmployeeError && addEmployeeError.code !== '23505') { // Ignore duplicate key errors
-          console.error("Error adding employee relationship:", addEmployeeError);
-          throw new Error("Failed to add employee relationship: " + addEmployeeError.message);
-        }
-
-        console.log("Created manager-employee relationship");
-
-        // Now promote user to manager role and set team name (after establishing employee relationship)
+        // For manager_request: Promote user to manager first, then add employee relationship
         const finalTeamName = team_name || `${userProfile.display_name || userProfile.full_name || 'Manager'}'s Team`;
         
+        // Step 1: Promote user to manager role and set team name
         const { error: promoteError } = await supabase
           .from("profiles")
           .update({ 
@@ -216,6 +202,21 @@ serve(async (req: Request) => {
         }
 
         console.log("Promoted user to manager with team name:", finalTeamName);
+
+        // Step 2: Create the manager-employee relationship
+        const { error: addEmployeeError } = await supabase
+          .from("manager_employee_relationships")
+          .insert({
+            manager_id: userProfile.id,
+            employee_id: invitation.manager_id
+          });
+
+        if (addEmployeeError && addEmployeeError.code !== '23505') { // Ignore duplicate key errors
+          console.error("Error adding employee relationship:", addEmployeeError);
+          throw new Error("Failed to add employee relationship: " + addEmployeeError.message);
+        }
+
+        console.log("Created manager-employee relationship");
 
         // Add both users to team_members table: new manager and inviter as employee
         const { error: addManagerError } = await supabase
