@@ -731,7 +731,7 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-secondary" />
-                  Your Variables Profile
+                  Your profile
                 </CardTitle>
                 <CardDescription>Based on your conversation patterns</CardDescription>
               </CardHeader>
