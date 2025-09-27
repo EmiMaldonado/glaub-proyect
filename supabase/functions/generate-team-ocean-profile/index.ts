@@ -133,16 +133,8 @@ serve(async (req) => {
       teamPersonality.extraversion = Math.round(teamPersonality.extraversion / validPersonalityCount);
       teamPersonality.agreeableness = Math.round(teamPersonality.agreeableness / validPersonalityCount);
       teamPersonality.neuroticism = Math.round(teamPersonality.neuroticism / validPersonalityCount);
-    } else {
-      // Fallback to reasonable defaults if no data available
-      teamPersonality = {
-        openness: 65,
-        conscientiousness: 72,
-        extraversion: 58,
-        agreeableness: 78,
-        neuroticism: 42
-      };
     }
+    // If no valid personality data, keep values at 0 (initialized above)
 
     console.log('📊 Calculated team personality:', teamPersonality);
     console.log('🔢 Based on', validPersonalityCount, 'data points');
@@ -277,11 +269,11 @@ serve(async (req) => {
       success: false,
       error: errorMessage,
       personalityData: {
-        openness: 65,
-        conscientiousness: 72,
-        extraversion: 58,
-        agreeableness: 78,
-        neuroticism: 42
+        openness: 0,
+        conscientiousness: 0,
+        extraversion: 0,
+        agreeableness: 0,
+        neuroticism: 0
       },
       teamDescription: isOpenAIError 
         ? "The AI analysis service is temporarily unavailable. The personality data shown is based on your team's conversation patterns. Please try refreshing in a moment."
