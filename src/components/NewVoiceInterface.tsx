@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mic, Square, Volume2, ArrowLeft, Check, Star, Loader2, Pause, Power } from 'lucide-react';
+import { Mic, Square, Volume2, ArrowLeft, Check, Bot, Loader2, Pause, Power } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MicrophonePermission from '@/components/MicrophonePermission';
@@ -670,9 +670,9 @@ const NewVoiceInterface: React.FC<VoiceInterfaceProps> = ({
                 </h2>
               </div>
 
-              {/* Animated Star Icon */}
+              {/* Animated Bot Icon */}
               <div className="relative">
-                 <Star 
+                 <Bot 
                   className={`w-16 h-16 text-primary ${
                     voiceState === 'ai_speaking' || voiceState === 'ai_thinking' || voiceState === 'recording' ? 'animate-pulse' : ''
                   }`} 
