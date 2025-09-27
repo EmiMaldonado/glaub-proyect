@@ -76,6 +76,7 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [receivedInvitations, setReceivedInvitations] = useState<Invitation[]>([]);
+  const [teamJoinInvitations, setTeamJoinInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [updatingName, setUpdatingName] = useState(false);
@@ -83,6 +84,7 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
   useEffect(() => {
     loadInvitations();
     loadReceivedInvitations();
+    loadTeamJoinInvitations();
   }, [managerProfile.id]);
 
   const loadInvitations = async () => {
@@ -115,6 +117,23 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
       console.log('Received invitations for', managerProfile.email, ':', data);
     } catch (error: any) {
       console.error('Error loading received invitations:', error);
+    }
+  };
+
+  const loadTeamJoinInvitations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invitations')
+        .select('*')
+        .eq('email', managerProfile.email)
+        .eq('status', 'pending')
+        .eq('invitation_type', 'team_join');
+      
+      if (error) throw error;
+      setTeamJoinInvitations(data || []);
+      console.log('Team join invitations for', managerProfile.email, ':', data);
+    } catch (error: any) {
+      console.error('Error loading team join invitations:', error);
     }
   };
 
@@ -182,6 +201,57 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
       toast({
         title: "Error declining request",
         description: error.message || "Failed to decline manager request",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAcceptTeamInvitation = async (invitation: Invitation) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('unified-accept-invitation', {
+        body: { token: invitation.token }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Team invitation accepted!",
+        description: "You have joined the team successfully",
+      });
+
+      loadTeamJoinInvitations();
+      onTeamUpdate();
+    } catch (error: any) {
+      console.error('Error accepting team invitation:', error);
+      toast({
+        title: "Error accepting invitation",
+        description: error.message || "Failed to accept team invitation",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeclineTeamInvitation = async (invitation: Invitation) => {
+    try {
+      await supabase
+        .from('invitations')
+        .update({ 
+          status: 'declined',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', invitation.id);
+
+      toast({
+        title: "Invitation declined",
+        description: "The team invitation has been declined",
+      });
+
+      loadTeamJoinInvitations();
+    } catch (error: any) {
+      console.error('Error declining team invitation:', error);
+      toast({
+        title: "Error declining invitation",
+        description: error.message || "Failed to decline team invitation",
         variant: "destructive"
       });
     }
@@ -384,6 +454,54 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
         </Card>
       )}
 
+      {/* Join a Team */}
+      {teamJoinInvitations.length > 0 && (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-800">
+              <Users className="h-5 w-5" />
+              Join a Team ({teamJoinInvitations.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-green-700 mb-4">
+              You've been invited to join the following teams:
+            </p>
+            {teamJoinInvitations.map(invitation => (
+              <div key={invitation.id} className="p-4 bg-white border border-green-100 rounded-lg">
+                <p className="font-medium text-gray-900 mb-1">
+                  Team invitation to: <span className="text-green-700">{invitation.email}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-3">
+                  Invited on {new Date(invitation.invited_at).toLocaleDateString()}
+                  {invitation.expires_at && (
+                    <> • Expires {new Date(invitation.expires_at).toLocaleDateString()}</>
+                  )}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleAcceptTeamInvitation(invitation)}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Join Team
+                  </Button>
+                  <Button
+                    onClick={() => handleDeclineTeamInvitation(invitation)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Decline
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Team Settings */}
       <Card>
         <CardHeader>
@@ -516,21 +634,60 @@ const TeamManagementInterface: React.FC<TeamManagementInterfaceProps> = ({
         </CardContent>
       </Card>
 
-      {/* Pending Invitations */}
-      {invitations.length > 0 && (
+      {/* Team Invitations Sent */}
+      {invitations.filter(i => i.invitation_type === 'team_join').length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Invitations ({invitations.filter(i => i.status === 'pending').length} pending)
+              <Users className="h-5 w-5" />
+              Team Invitations Sent ({invitations.filter(i => i.invitation_type === 'team_join' && i.status === 'pending').length} pending)
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              People you've invited to join your team:
+            </p>
             <div className="space-y-3">
-              {invitations.map((invitation) => (
+              {invitations.filter(i => i.invitation_type === 'team_join').map((invitation) => (
                 <div key={invitation.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{invitation.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Sent {new Date(invitation.invited_at).toLocaleDateString()}
+                        {invitation.expires_at && (
+                          <> • Expires {new Date(invitation.expires_at).toLocaleDateString()}</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  {getStatusBadge(invitation.status)}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Manager Requests Sent */}
+      {invitations.filter(i => i.invitation_type === 'manager_request').length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Manager Requests Sent ({invitations.filter(i => i.invitation_type === 'manager_request' && i.status === 'pending').length} pending)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              People you've asked to be your manager:
+            </p>
+            <div className="space-y-3">
+              {invitations.filter(i => i.invitation_type === 'manager_request').map((invitation) => (
+                <div key={invitation.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Send className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="font-medium">{invitation.email}</p>
                       <p className="text-sm text-muted-foreground">
