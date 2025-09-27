@@ -10,6 +10,7 @@ import { EmergencyErrorBoundary } from "@/components/EmergencyErrorBoundary";
 import { UserRoleRouter } from "@/components/UserRoleRouter";
 import AuthGuard from "@/components/AuthGuard";
 import OnboardingGuard from "@/components/OnboardingGuard";
+import ManagerRouteGuard from "@/components/ManagerRouteGuard";
 import Navigation from "@/components/Navigation";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -124,10 +125,12 @@ const App = () => {
                     } />
                     <Route path="/dashboard/manager" element={
                       <AuthGuard>
-                        <Navigation />
-                        <EmergencyErrorBoundary>
-                          <ManagerDashboard />
-                        </EmergencyErrorBoundary>
+                        <ManagerRouteGuard>
+                          <Navigation />
+                          <EmergencyErrorBoundary>
+                            <ManagerDashboard />
+                          </EmergencyErrorBoundary>
+                        </ManagerRouteGuard>
                       </AuthGuard>
                     } />
                     <Route path="/invitation/:token" element={
