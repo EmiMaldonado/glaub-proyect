@@ -37,6 +37,10 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { email }: ForgotPasswordRequest = await req.json();
 
+    console.log(`📧 Processing password reset for: ${email.substring(0, 3)}***@${email.split('@')[1]}`);
+    console.log("🔑 RESEND_API_KEY status:", Deno.env.get("RESEND_API_KEY") ? "Present" : "Missing");
+    console.log("🌐 SITE_URL:", Deno.env.get("SITE_URL"));
+
     if (!email) {
       console.error("❌ Email validation failed: No email provided");
       return new Response(
@@ -77,12 +81,15 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('email', email)
         .single();
 
+      console.log("👤 Profile lookup result:", profile ? "Found" : "Not found", profileError?.message || "");
+
       if (!profileError && profile) {
         userExists = true;
         userId = profile.user_id;
         console.log(`✅ User found via profiles table in ${Date.now() - lookupStart}ms`);
       } else {
         // Fallback: List all users and find by email
+        console.log("🔍 Fallback: Checking auth users...");
         const { data: allUsers, error: listError } = await supabase.auth.admin.listUsers();
         if (!listError && allUsers?.users) {
           const authUser = allUsers.users.find((u: any) => u.email === email);
@@ -149,12 +156,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email with custom template and timeout
     const emailStart = Date.now();
-    const baseUrl = Deno.env.get("SITE_URL") || "https://xn--glub-thesis-m8a.com";
+    const baseUrl = Deno.env.get("SITE_URL") || "https://f95a31b2-0a27-4418-b650-07505c789eed.lovableproject.com";
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+    
+    console.log("📧 Attempting to send email...");
+    console.log("🔗 Reset URL:", resetUrl);
+    console.log("📤 Sending to:", email);
     
     try {
       // Render custom email template
       const templateStart = Date.now();
+      console.log("🎨 Rendering email template...");
       const html = await renderAsync(
         React.createElement(PasswordResetEmail, {
           resetUrl,
@@ -165,6 +177,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Send email with timeout
       const sendStart = Date.now();
+      console.log("📨 Calling Resend API...");
       const emailPromise = resend.emails.send({
         from: "Gläub <onboarding@resend.dev>",
         to: [email],
@@ -180,13 +193,16 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (emailResponse?.error) {
         console.error("❌ Email sending failed:", emailResponse.error);
+        throw new Error(`Resend API error: ${JSON.stringify(emailResponse.error)}`);
       } else {
         console.log(`📨 Email sent successfully in ${Date.now() - sendStart}ms`);
         console.log(`📊 Email ID: ${emailResponse?.data?.id || 'unknown'}`);
+        console.log("✅ Resend response:", JSON.stringify(emailResponse?.data || {}));
       }
     } catch (emailError) {
       console.error("❌ Email template or sending failed:", emailError);
-      // Continue for security (don't fail the whole operation)
+      console.error("❌ Email error details:", JSON.stringify(emailError));
+      throw emailError; // Re-throw to see the error in logs
     }
 
     const totalTime = Date.now() - startTime;
