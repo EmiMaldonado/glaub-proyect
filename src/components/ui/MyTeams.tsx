@@ -186,31 +186,19 @@ const MyTeams: React.FC<MyTeamsProps> = ({
                 const memberCount = membership.memberCount;
                 
                 return (
-                  <div key={membership.id} className="p-4 bg-card border rounded-lg hover:shadow-sm transition-shadow">
+                  <div key={membership.id} className="p-3 bg-card border rounded-lg hover:shadow-sm transition-shadow">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-primary" />
-                          <h4 className="font-medium text-foreground">{teamName}</h4>
-                        </div>
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <span>Manager:</span>
-                            <span className="font-medium">{managerName}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span>Members:</span>
-                            <span className="font-medium">{memberCount} team member{memberCount !== 1 ? 's' : ''}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span>Joined:</span>
-                            <span className="font-medium">{new Date(membership.joined_at).toLocaleDateString()}</span>
-                          </div>
+                          <span className="text-sm font-medium text-foreground">
+                            {teamName} - {managerName} - {memberCount} team member{memberCount !== 1 ? 's' : ''}
+                          </span>
                         </div>
                       </div>
                       <button
                         onClick={() => handleLeaveTeam(membership.team_id, teamName)}
-                        className="ml-4 px-3 py-1 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 rounded transition-colors"
+                        className="ml-4 px-2 py-1 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 rounded transition-colors"
                       >
                         Leave Team
                       </button>
