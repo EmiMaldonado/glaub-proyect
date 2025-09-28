@@ -156,7 +156,7 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
         <CardContent>
           <div className="text-center py-8">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Join a team to enable data sharing with your manager to configure data sharing preferences.</p>
+            <p className="text-muted-foreground text-sm">Join a team to enable data sharing with your manager to configure data sharing preferences.</p>
           </div>
         </CardContent>
       </Card>;
