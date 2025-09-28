@@ -861,7 +861,7 @@ const Dashboard = () => {
                   {pendingInvitations.map(invitation => <div key={invitation.id} className="p-4 border rounded-lg space-y-3">
                       <div>
                         <p className="font-medium text-foreground">
-                          Join {invitation.manager?.full_name || invitation.manager?.display_name}'s Team
+                          {invitation.manager?.full_name || invitation.manager?.display_name} wants to be on your team
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Invitation expires: {new Date(invitation.expires_at).toLocaleDateString()}
