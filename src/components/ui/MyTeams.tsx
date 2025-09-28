@@ -135,7 +135,7 @@ const MyTeams: React.FC<MyTeamsProps> = ({ userProfile, className = "" }) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Building className="h-5 w-5 text-primary" />
-          My Teams ({teams.length})
+          Teams you are member ({teams.length})
         </CardTitle>
         <CardDescription>
           Teams you are a member of
