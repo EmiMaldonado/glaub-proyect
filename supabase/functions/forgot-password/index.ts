@@ -154,7 +154,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email with custom template and timeout
     const emailStart = Date.now();
-    const baseUrl = Deno.env.get("SITE_URL") || "https://f95a31b2-0a27-4418-b650-07505c789eed.lovableproject.com";
+    
+    // Get the origin from the request headers to ensure correct domain
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/');
+    const baseUrl = Deno.env.get("SITE_URL") || origin || `${new URL(req.url).protocol}//${new URL(req.url).host}`;
     const resetUrl = `${baseUrl}/reset-password?token=${token}`;
     
     console.log("📧 Attempting to send email...");
