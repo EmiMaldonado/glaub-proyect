@@ -308,26 +308,20 @@ const Dashboard = () => {
           data: invitations,
           error: invitationsError
         } = await supabase.from('invitations').select('*').eq('email', user.email).eq('status', 'pending').gt('expires_at', new Date().toISOString());
-        
         if (invitationsError) {
           console.warn('Invitations load error:', invitationsError);
           setPendingInvitations([]);
         } else if (invitations && invitations.length > 0) {
           // Get manager details for each invitation
-          const invitationsWithManagers = await Promise.all(
-            invitations.map(async (invitation) => {
-              const { data: manager } = await supabase
-                .from('profiles')
-                .select('full_name, display_name')
-                .eq('id', invitation.manager_id)
-                .single();
-              
-              return {
-                ...invitation,
-                manager: manager
-              };
-            })
-          );
+          const invitationsWithManagers = await Promise.all(invitations.map(async invitation => {
+            const {
+              data: manager
+            } = await supabase.from('profiles').select('full_name, display_name').eq('id', invitation.manager_id).single();
+            return {
+              ...invitation,
+              manager: manager
+            };
+          }));
           setPendingInvitations(invitationsWithManagers);
         } else {
           setPendingInvitations([]);
@@ -751,8 +745,7 @@ const Dashboard = () => {
               <CardDescription>Based on your conversation patterns</CardDescription>
             </CardHeader>
             <CardContent className="flex-1">
-              {oceanProfile ? (
-                <div className="space-y-6">
+              {oceanProfile ? <div className="space-y-6">
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4 text-center">
                      <div className="p-4">
                        <div className="text-3xl md:text-4xl font-bold text-primary">{oceanProfile.openness || 0}%</div>
@@ -791,55 +784,18 @@ const Dashboard = () => {
                     </div>}
                   
                   {/* Strengths Analysis */}
-                  {stats.completedConversations > 0 && (
-                    <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                  {stats.completedConversations > 0 && <div className="mt-6 p-4 bg-muted/30 rounded-lg">
                       <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
                         <Target className="h-4 w-4 text-secondary" />
                         Your Professional Strengths
                       </h4>
                       <p className="text-sm text-muted-foreground leading-relaxed">
-                        {oceanProfile ? (
-                          `Your professional profile shows particular strength in ${
-                            Math.max(
-                              oceanProfile.openness || 0,
-                              oceanProfile.conscientiousness || 0,
-                              oceanProfile.extraversion || 0,
-                              oceanProfile.agreeableness || 0,
-                              100 - (oceanProfile.neuroticism || 0)
-                            ) === oceanProfile.openness ? 'creativity and adaptability'
-                            : Math.max(
-                              oceanProfile.openness || 0,
-                              oceanProfile.conscientiousness || 0,
-                              oceanProfile.extraversion || 0,
-                              oceanProfile.agreeableness || 0,
-                              100 - (oceanProfile.neuroticism || 0)
-                            ) === oceanProfile.conscientiousness ? 'organization and reliability'
-                            : Math.max(
-                              oceanProfile.openness || 0,
-                              oceanProfile.conscientiousness || 0,
-                              oceanProfile.extraversion || 0,
-                              oceanProfile.agreeableness || 0,
-                              100 - (oceanProfile.neuroticism || 0)
-                            ) === oceanProfile.extraversion ? 'communication and leadership'
-                            : Math.max(
-                              oceanProfile.openness || 0,
-                              oceanProfile.conscientiousness || 0,
-                              oceanProfile.extraversion || 0,
-                              oceanProfile.agreeableness || 0,
-                              100 - (oceanProfile.neuroticism || 0)
-                            ) === oceanProfile.agreeableness ? 'collaboration and empathy'
-                            : 'emotional resilience and stability'
-                          }. Through ${stats.completedConversations} conversations, you've demonstrated commitment to self-improvement and reflective thinking.`
-                        ) : (
-                          `Based on your ${stats.completedConversations} conversations, you demonstrate growing self-awareness and emotional regulation. Your ability to engage in reflective dialogue shows promising professional development foundations.`
-                        )}
+                        {oceanProfile ? `Your professional profile shows particular strength in ${Math.max(oceanProfile.openness || 0, oceanProfile.conscientiousness || 0, oceanProfile.extraversion || 0, oceanProfile.agreeableness || 0, 100 - (oceanProfile.neuroticism || 0)) === oceanProfile.openness ? 'creativity and adaptability' : Math.max(oceanProfile.openness || 0, oceanProfile.conscientiousness || 0, oceanProfile.extraversion || 0, oceanProfile.agreeableness || 0, 100 - (oceanProfile.neuroticism || 0)) === oceanProfile.conscientiousness ? 'organization and reliability' : Math.max(oceanProfile.openness || 0, oceanProfile.conscientiousness || 0, oceanProfile.extraversion || 0, oceanProfile.agreeableness || 0, 100 - (oceanProfile.neuroticism || 0)) === oceanProfile.extraversion ? 'communication and leadership' : Math.max(oceanProfile.openness || 0, oceanProfile.conscientiousness || 0, oceanProfile.extraversion || 0, oceanProfile.agreeableness || 0, 100 - (oceanProfile.neuroticism || 0)) === oceanProfile.agreeableness ? 'collaboration and empathy' : 'emotional resilience and stability'}. Through ${stats.completedConversations} conversations, you've demonstrated commitment to self-improvement and reflective thinking.` : `Based on your ${stats.completedConversations} conversations, you demonstrate growing self-awareness and emotional regulation. Your ability to engage in reflective dialogue shows promising professional development foundations.`}
                       </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Empty state for no profile data
-                <div className="text-center py-12">
+                    </div>}
+                </div> :
+            // Empty state for no profile data
+            <div className="text-center py-12">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                     <Target className="h-8 w-8 text-muted-foreground" />
                   </div>
@@ -851,8 +807,7 @@ const Dashboard = () => {
                     <Plus className="mr-2 h-4 w-4" />
                     Start Your First Conversation
                   </Button>
-                </div>
-              )}
+                </div>}
             </CardContent>
           </Card>
         </div>
@@ -877,10 +832,7 @@ const Dashboard = () => {
                   {pendingInvitations.map(invitation => <div key={invitation.id} className="p-4 border rounded-lg space-y-3">
                       <div>
                         <p className="font-medium text-foreground">
-                          {invitation.invitation_type === 'manager_request' 
-                            ? `${invitation.manager?.full_name || invitation.manager?.display_name || 'Someone'} wants you to be their manager`
-                            : `${invitation.manager?.full_name || invitation.manager?.display_name || 'Someone'} invites you to join their team`
-                          }
+                          {invitation.invitation_type === 'manager_request' ? `${invitation.manager?.full_name || invitation.manager?.display_name || 'Someone'} wants you to be their manager` : `${invitation.manager?.full_name || invitation.manager?.display_name || 'Someone'} invites you to join their team`}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Invitation expires: {new Date(invitation.expires_at).toLocaleDateString()}
@@ -930,32 +882,8 @@ const Dashboard = () => {
 
       {/* Sharing & Collaboration */}
       {currentManager && <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5 text-secondary" />
-              Sharing & Collaboration
-            </CardTitle>
-            <CardDescription>
-              Control what data you share with your manager
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <SharingPreferences userProfile={userProfile} onPreferencesChange={handleSharingPreferencesChange} />
-              
-              {/* Quick Share Actions */}
-              <div className="flex gap-4 pt-4 border-t">
-                <Button variant="outline" size="sm" onClick={() => handleShareWithManager('strengths')} className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Share Strengths
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleShareWithManager('opportunities')} className="flex items-center gap-2">
-                  <Target className="h-4 w-4" />
-                  Share Growth Areas
-                </Button>
-              </div>
-            </div>
-          </CardContent>
+          
+          
         </Card>}
     </div>;
 };
