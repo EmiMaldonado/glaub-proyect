@@ -745,6 +745,9 @@ const ChatConversation: React.FC = () => {
       if (success && shouldGenerateInsights) {
         console.log('✅ Session meets criteria for insights generation');
         
+        // Show analysis screen while processing
+        setIsAnalyzing(true);
+        
         toast({
           title: "🎯 Session Complete!",
           description: `Session completed (${actualDuration} min). Generating insights...`,
@@ -766,13 +769,16 @@ const ChatConversation: React.FC = () => {
 
           if (response.data) {
             console.log('✅ Session analysis completed successfully');
+            setIsAnalyzing(false);
             navigate(`/session-summary?conversation_id=${conversation.id}`);
           } else {
             console.log('⚠️ Session analysis returned no data');
+            setIsAnalyzing(false);
             navigate('/dashboard');
           }
         } catch (analysisError) {
           console.error('❌ Session analysis failed:', analysisError);
+          setIsAnalyzing(false);
           toast({
             title: "Session Completed",
             description: "Session saved but analysis failed. Check dashboard for insights.",
