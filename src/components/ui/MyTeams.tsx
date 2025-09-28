@@ -127,18 +127,26 @@ const MyTeams: React.FC<MyTeamsProps> = ({
         </CardTitle>
         
       </CardHeader>
-      <CardContent>
-        {teams.length === 0 ? <SharingPreferences userProfile={userProfile} /> : <div className="space-y-4">
+      <CardContent className="space-y-6">
+        {teams.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Your Teams</h3>
             {teams.map(membership => {
-          // Handle null manager (orphaned team membership)
-          if (!membership.manager) {
-            console.warn('Orphaned team membership found:', membership.id);
-            return null; // Skip rendering this membership
-          }
-          const teamName = membership.manager.team_name || `${membership.manager.display_name || membership.manager.full_name}'s Team`;
-          return <TeamCard key={membership.id} teamName={teamName} managerName={membership.manager.display_name || membership.manager.full_name} isEmployee={true} joinedAt={membership.joined_at} onLeaveTeam={() => handleLeaveTeam(membership.team_id, teamName)} />;
-        }).filter(Boolean)}
-          </div>}
+              // Handle null manager (orphaned team membership)
+              if (!membership.manager) {
+                console.warn('Orphaned team membership found:', membership.id);
+                return null; // Skip rendering this membership
+              }
+              const teamName = membership.manager.team_name || `${membership.manager.display_name || membership.manager.full_name}'s Team`;
+              return <TeamCard key={membership.id} teamName={teamName} managerName={membership.manager.display_name || membership.manager.full_name} isEmployee={true} joinedAt={membership.joined_at} onLeaveTeam={() => handleLeaveTeam(membership.team_id, teamName)} />;
+            }).filter(Boolean)}
+          </div>
+        )}
+        
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-4">Privacy & Sharing Settings</h3>
+          <SharingPreferences userProfile={userProfile} />
+        </div>
       </CardContent>
     </Card>;
 };
