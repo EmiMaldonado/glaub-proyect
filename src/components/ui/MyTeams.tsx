@@ -12,6 +12,7 @@ interface TeamMembership {
   member_id: string;
   role: string;
   joined_at: string;
+  memberCount: number;
   manager: {
     id: string;
     full_name: string;
@@ -54,14 +55,17 @@ const MyTeams: React.FC<MyTeamsProps> = ({
       });
       if (error) throw error;
 
-      // Get manager details separately
+      // Get manager details and team member count separately
       const teamsWithManagers = await Promise.all((data || []).map(async membership => {
-        const {
-          data: manager
-        } = await supabase.from('profiles').select('id, full_name, display_name, team_name').eq('id', membership.team_id).single();
+        const [managerResult, memberCountResult] = await Promise.all([
+          supabase.from('profiles').select('id, full_name, display_name, team_name').eq('id', membership.team_id).single(),
+          supabase.from('team_members').select('id', { count: 'exact' }).eq('team_id', membership.team_id)
+        ]);
+        
         return {
           ...membership,
-          manager
+          manager: managerResult.data,
+          memberCount: memberCountResult.count || 0
         };
       }));
       setTeams(teamsWithManagers);
@@ -138,7 +142,25 @@ const MyTeams: React.FC<MyTeamsProps> = ({
                 return null; // Skip rendering this membership
               }
               const teamName = membership.manager.team_name || `${membership.manager.display_name || membership.manager.full_name}'s Team`;
-              return <TeamCard key={membership.id} teamName={teamName} managerName={membership.manager.display_name || membership.manager.full_name} isEmployee={true} joinedAt={membership.joined_at} onLeaveTeam={() => handleLeaveTeam(membership.team_id, teamName)} />;
+              const managerName = membership.manager.display_name || membership.manager.full_name;
+              const memberCount = membership.memberCount;
+              
+              return (
+                <div key={membership.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {teamName} - {managerName} - {memberCount} team member{memberCount !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleLeaveTeam(membership.team_id, teamName)}
+                    className="text-xs text-destructive hover:text-destructive/80 transition-colors"
+                  >
+                    Leave Team
+                  </button>
+                </div>
+              );
             }).filter(Boolean)}
           </div>
         )}
