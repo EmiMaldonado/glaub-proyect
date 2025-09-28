@@ -810,6 +810,17 @@ const Dashboard = () => {
                 </div>}
             </CardContent>
           </Card>
+          
+          {/* Profile Status Insights - Right under OCEAN profile */}
+          {userProfile && <div className="mt-6">
+            <ProfileStatusInsights 
+              profile={userProfile} 
+              stats={stats} 
+              oceanProfile={oceanProfile} 
+              conversations={stats.completedConversations} 
+              onStartConversation={handleStartNewConversation} 
+            />
+          </div>}
         </div>
 
         {/* Teams Section - 30% width on desktop */}
@@ -876,9 +887,6 @@ const Dashboard = () => {
             </Card>}
         </div>
       </div>
-
-      {/* Profile Status Insights - Always show, component handles empty state */}
-      {userProfile && <ProfileStatusInsights profile={userProfile} stats={stats} oceanProfile={oceanProfile} conversations={stats.completedConversations} onStartConversation={handleStartNewConversation} />}
 
       {/* Sharing & Collaboration */}
       {currentManager && <Card>
