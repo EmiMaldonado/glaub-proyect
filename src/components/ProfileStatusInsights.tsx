@@ -129,12 +129,21 @@ const ProfileStatusInsights: React.FC<ProfileStatusInsightsProps> = ({
       </div>;
   }
   if (!strengths) {
-    return <div className="text-center py-4">
-        <Target className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-        <p className="text-muted-foreground text-sm">No strengths data available</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Complete a conversation to identify your strengths
-        </p>
+    return <div className="bg-card rounded-lg shadow-soft p-6 border border-border/50">
+        <div className="space-y-1 mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Users className="h-5 w-5 text-secondary" />
+            Your soft skills profile
+          </h3>
+          <p className="text-sm text-muted-foreground">Based on your conversation patterns</p>
+        </div>
+        <div className="text-center py-4">
+          <Target className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-muted-foreground text-sm">No strengths data available</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Complete a conversation to identify your strengths
+          </p>
+        </div>
       </div>;
   }
   return <div className="space-y-6 bg-card rounded-lg shadow-soft p-6 border border-border/50">
