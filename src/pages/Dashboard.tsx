@@ -813,7 +813,13 @@ const Dashboard = () => {
           
           {/* Profile Status Insights - Right under OCEAN profile */}
           {userProfile && <div className="mt-6">
-            <ProfileStatusInsights profile={userProfile} stats={stats} oceanProfile={oceanProfile} conversations={stats.completedConversations} onStartConversation={handleStartNewConversation} />
+            <ProfileStatusInsights 
+              profile={userProfile} 
+              stats={stats} 
+              oceanProfile={oceanProfile} 
+              conversations={stats.completedConversations} 
+              onStartConversation={handleStartNewConversation} 
+            />
           </div>}
         </div>
 
@@ -883,7 +889,10 @@ const Dashboard = () => {
       </div>
 
       {/* Sharing & Collaboration */}
-      {currentManager}
+      {currentManager && <Card>
+          
+          
+        </Card>}
     </div>;
 };
 export default Dashboard;
