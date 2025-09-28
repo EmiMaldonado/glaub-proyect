@@ -755,6 +755,10 @@ export type Database = {
         Args: { profile_user_id: string }
         Returns: boolean
       }
+      can_view_manager_profile: {
+        Args: { manager_profile_id: string }
+        Returns: boolean
+      }
       check_manager_capabilities: {
         Args: { profile_id: string }
         Returns: {
