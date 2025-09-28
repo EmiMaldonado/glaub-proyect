@@ -41,6 +41,8 @@ const MyTeams: React.FC<MyTeamsProps> = ({
   const fetchMyTeams = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching teams for user profile:', userProfile.id);
+      
       const {
         data,
         error
@@ -53,14 +55,32 @@ const MyTeams: React.FC<MyTeamsProps> = ({
         `).eq('member_id', userProfile.id).eq('role', 'employee').order('joined_at', {
         ascending: false
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('❌ Error fetching team memberships:', error);
+        throw error;
+      }
+
+      console.log('✅ Found team memberships:', data?.length || 0, data);
 
       // Get manager details and team member count separately
       const teamsWithManagers = await Promise.all((data || []).map(async membership => {
+        console.log('🔍 Processing membership:', membership.id, 'for team:', membership.team_id);
+        
         const [managerResult, memberCountResult] = await Promise.all([
-          supabase.from('profiles').select('id, full_name, display_name, team_name').eq('id', membership.team_id).single(),
+          supabase.from('profiles').select('id, full_name, display_name, team_name').eq('id', membership.team_id).maybeSingle(),
           supabase.from('team_members').select('id', { count: 'exact' }).eq('team_id', membership.team_id)
         ]);
+        
+        if (managerResult.error) {
+          console.error('❌ Error fetching manager:', managerResult.error);
+        }
+        if (memberCountResult.error) {
+          console.error('❌ Error fetching member count:', memberCountResult.error);
+        }
+
+        console.log('👤 Manager data:', managerResult.data);
+        console.log('📊 Member count:', memberCountResult.count);
         
         return {
           ...membership,
@@ -68,9 +88,11 @@ const MyTeams: React.FC<MyTeamsProps> = ({
           memberCount: memberCountResult.count || 0
         };
       }));
+      
+      console.log('✅ Final teams with managers:', teamsWithManagers);
       setTeams(teamsWithManagers);
     } catch (error) {
-      console.error('Error fetching teams:', error);
+      console.error('💥 Error fetching teams:', error);
       toast({
         title: "Error loading teams",
         description: "Failed to load your team memberships",
@@ -135,33 +157,68 @@ const MyTeams: React.FC<MyTeamsProps> = ({
         {teams.length > 0 && (
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-muted-foreground">Your Teams</h3>
-            {teams.map(membership => {
-              // Handle null manager (orphaned team membership)
-              if (!membership.manager) {
-                console.warn('Orphaned team membership found:', membership.id);
-                return null; // Skip rendering this membership
-              }
-              const teamName = membership.manager.team_name || `${membership.manager.display_name || membership.manager.full_name}'s Team`;
-              const managerName = membership.manager.display_name || membership.manager.full_name;
-              const memberCount = membership.memberCount;
-              
-              return (
-                <div key={membership.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {teamName} - {managerName} - {memberCount} team member{memberCount !== 1 ? 's' : ''}
-                    </span>
+            <div className="space-y-3">
+              {teams.map(membership => {
+                // Handle null manager (orphaned team membership)
+                if (!membership.manager) {
+                  console.warn('⚠️ Orphaned team membership found:', membership.id, 'for team:', membership.team_id);
+                  return (
+                    <div key={membership.id} className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="h-4 w-4 text-yellow-600" />
+                        <span className="text-sm font-medium text-yellow-800">Orphaned Team Membership</span>
+                      </div>
+                      <p className="text-xs text-yellow-700 mb-3">
+                        This team membership exists but the manager profile is missing.
+                      </p>
+                      <button
+                        onClick={() => handleLeaveTeam(membership.team_id, "Unknown Team")}
+                        className="text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded transition-colors"
+                      >
+                        Remove Membership
+                      </button>
+                    </div>
+                  );
+                }
+                
+                const teamName = membership.manager.team_name || `${membership.manager.display_name || membership.manager.full_name}'s Team`;
+                const managerName = membership.manager.display_name || membership.manager.full_name;
+                const memberCount = membership.memberCount;
+                
+                return (
+                  <div key={membership.id} className="p-4 bg-card border rounded-lg hover:shadow-sm transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-4 w-4 text-primary" />
+                          <h4 className="font-medium text-foreground">{teamName}</h4>
+                        </div>
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <span>Manager:</span>
+                            <span className="font-medium">{managerName}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span>Members:</span>
+                            <span className="font-medium">{memberCount} team member{memberCount !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span>Joined:</span>
+                            <span className="font-medium">{new Date(membership.joined_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleLeaveTeam(membership.team_id, teamName)}
+                        className="ml-4 px-3 py-1 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 rounded transition-colors"
+                      >
+                        Leave Team
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleLeaveTeam(membership.team_id, teamName)}
-                    className="text-xs text-destructive hover:text-destructive/80 transition-colors"
-                  >
-                    Leave Team
-                  </button>
-                </div>
-              );
-            }).filter(Boolean)}
+                );
+              })}
+            </div>
           </div>
         )}
         
