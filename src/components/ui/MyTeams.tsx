@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from '@/hooks/use-toast';
 import { Users, Building } from 'lucide-react';
 import TeamCard from './TeamCard';
+import SharingPreferences from '@/components/SharingPreferences';
 
 interface TeamMembership {
   id: string;
@@ -142,13 +143,7 @@ const MyTeams: React.FC<MyTeamsProps> = ({ userProfile, className = "" }) => {
       </CardHeader>
       <CardContent>
         {teams.length === 0 ? (
-          <div className="text-center py-8">
-            <Building className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-muted-foreground font-medium">No team memberships</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              You're not part of any teams yet. Ask your manager to send you an invitation.
-            </p>
-          </div>
+          <SharingPreferences userProfile={userProfile} />
         ) : (
           <div className="space-y-4">
             {teams.map((membership) => {
