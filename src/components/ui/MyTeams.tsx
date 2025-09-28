@@ -166,7 +166,7 @@ const MyTeams: React.FC<MyTeamsProps> = ({
                     <div key={membership.id} className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Users className="h-4 w-4 text-yellow-600" />
-                        <span className="text-sm font-medium text-yellow-800">Orphaned Team Membership</span>
+                        <span className="text-sm font-medium text-yellow-800">Unknown Team</span>
                       </div>
                       <p className="text-xs text-yellow-700 mb-3">
                         This team membership exists but the manager profile is missing.
