@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Users, Building } from 'lucide-react';
+import { Users, Building, Plus } from 'lucide-react';
 import TeamCard from './TeamCard';
 import SharingPreferences from '@/components/SharingPreferences';
 interface TeamMembership {
@@ -33,6 +36,8 @@ const MyTeams: React.FC<MyTeamsProps> = ({
   } = useAuth();
   const [teams, setTeams] = useState<TeamMembership[]>([]);
   const [loading, setLoading] = useState(true);
+  const [managerEmail, setManagerEmail] = useState('');
+  const [isInvitingManager, setIsInvitingManager] = useState(false);
   useEffect(() => {
     if (user && userProfile) {
       fetchMyTeams();
@@ -136,6 +141,70 @@ const MyTeams: React.FC<MyTeamsProps> = ({
       });
     }
   };
+
+  const handleSendTeamRequest = async () => {
+    if (!managerEmail.trim()) {
+      toast({
+        title: "Email required",
+        description: "Please enter a manager's email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (managerEmail === user?.email) {
+      toast({
+        title: "Invalid email",
+        description: "You cannot send a team request to yourself",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsInvitingManager(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('unified-invitation', {
+        body: {
+          email: managerEmail,
+          invitationType: 'team_join'
+        }
+      });
+
+      if (error) {
+        console.error('Error sending team request:', error);
+        toast({
+          title: "Error sending request",
+          description: error.message || "Failed to send team request",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.success) {
+        toast({
+          title: "Request sent successfully",
+          description: `Team join request sent to ${managerEmail}`
+        });
+        setManagerEmail('');
+      } else {
+        toast({
+          title: "Error sending request",
+          description: data?.error || "Failed to send team request",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error('Error sending team request:', error);
+      toast({
+        title: "Error sending request",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsInvitingManager(false);
+    }
+  };
+
   if (loading) {
     return <Card className={className}>
         <CardContent className="p-8">
@@ -148,15 +217,47 @@ const MyTeams: React.FC<MyTeamsProps> = ({
   return <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Building className="h-5 w-5 text-primary" />
-          Teams you are member ({teams.length})
+          <Users className="h-5 w-5 text-primary" />
+          Your Teams
         </CardTitle>
-        
+        <CardDescription>
+          Manage your team memberships and invitations
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Send a join request to a manager */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-foreground">
+            <Plus className="h-4 w-4" />
+            <span className="font-medium">Send a join request to a manager</span>
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="manager-email" className="text-sm text-muted-foreground">
+                Manager's email
+              </Label>
+              <Input 
+                id="manager-email"
+                type="email" 
+                placeholder="manager@company.com" 
+                value={managerEmail} 
+                onChange={(e) => setManagerEmail(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <Button 
+              onClick={handleSendTeamRequest} 
+              disabled={isInvitingManager} 
+              className="w-full"
+            >
+              {isInvitingManager ? "Sending Request..." : "Send Team Request"}
+            </Button>
+          </div>
+        </div>
         {teams.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Your Teams</h3>
+            <h3 className="text-sm font-medium text-muted-foreground">Current Team Memberships ({teams.length})</h3>
             <div className="space-y-3">
               {teams.map(membership => {
                 // Handle null manager (orphaned team membership)
