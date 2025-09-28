@@ -45,8 +45,13 @@ image_transformation = { enabled = true }
 [auth]
 enabled = true
 port = 54329
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://gläub-thesis.com"]
+site_url = "https://gläub-thesis.com"
+additional_redirect_urls = [
+  "https://gläub-thesis.com",
+  "https://xn--glub-thesis-m8a.com", 
+  "http://localhost:3000",
+  "https://f95a31b2-0a27-4418-b650-07505c789eed.lovableproject.com"
+]
 jwt_expiry = 3600
 refresh_token_rotation_enabled = true
 security_update_password_require_reauthentication = false
