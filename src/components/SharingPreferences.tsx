@@ -7,13 +7,11 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, Settings } from 'lucide-react';
-
 interface SharingPreferencesProps {
   userProfile: any;
   managerId?: string;
   onPreferencesChange?: (preferences: SharingPreferences) => void;
 }
-
 interface SharingPreferences {
   share_profile: boolean;
   share_insights: boolean;
@@ -21,13 +19,14 @@ interface SharingPreferences {
   share_ocean_profile: boolean;
   share_progress: boolean;
 }
-
 const SharingPreferences: React.FC<SharingPreferencesProps> = ({
   userProfile,
   managerId,
   onPreferencesChange
 }) => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [preferences, setPreferences] = useState<SharingPreferences>({
     share_profile: true,
     share_insights: true,
@@ -39,36 +38,26 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
   const [saving, setSaving] = useState(false);
   const [hasManager, setHasManager] = useState(false);
   const [managerName, setManagerName] = useState<string>('');
-
   useEffect(() => {
     if (user && userProfile) {
       loadSharingPreferences();
       checkManagerStatus();
     }
   }, [user, userProfile, managerId]);
-
   const checkManagerStatus = async () => {
     if (!userProfile?.id) return;
-
     try {
       // Check if user is part of any team (has a manager)
-      const { data: teamMembership } = await supabase
-        .from('team_members')
-        .select(`
+      const {
+        data: teamMembership
+      } = await supabase.from('team_members').select(`
           team_id
-        `)
-        .eq('member_id', userProfile.id)
-        .eq('role', 'employee')
-        .maybeSingle();
-
+        `).eq('member_id', userProfile.id).eq('role', 'employee').maybeSingle();
       if (teamMembership) {
         // Get manager details
-        const { data: managerProfile } = await supabase
-          .from('profiles')
-          .select('full_name, display_name')
-          .eq('id', teamMembership.team_id)
-          .single();
-
+        const {
+          data: managerProfile
+        } = await supabase.from('profiles').select('full_name, display_name').eq('id', teamMembership.team_id).single();
         setHasManager(true);
         setManagerName(managerProfile?.display_name || managerProfile?.full_name || 'Your Manager');
       } else {
@@ -78,28 +67,18 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
       console.error('Error checking manager status:', error);
     }
   };
-
   const loadSharingPreferences = async () => {
     if (!user?.id || !userProfile?.id) return;
-
     setLoading(true);
     try {
       // Get the user's manager from team memberships
-      const { data: teamMembership } = await supabase
-        .from('team_members')
-        .select('team_id')
-        .eq('member_id', userProfile.id)
-        .eq('role', 'employee')
-        .maybeSingle();
-
-        if (teamMembership) {
-        const { data: existingPrefs } = await supabase
-          .from('sharing_preferences')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('manager_id', teamMembership.team_id)
-          .maybeSingle();
-
+      const {
+        data: teamMembership
+      } = await supabase.from('team_members').select('team_id').eq('member_id', userProfile.id).eq('role', 'employee').maybeSingle();
+      if (teamMembership) {
+        const {
+          data: existingPrefs
+        } = await supabase.from('sharing_preferences').select('*').eq('user_id', user.id).eq('manager_id', teamMembership.team_id).maybeSingle();
         if (existingPrefs) {
           const newPrefs = {
             share_profile: existingPrefs.share_profile,
@@ -118,57 +97,46 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
       setLoading(false);
     }
   };
-
   const updateAllPreferences = async () => {
     if (!user?.id || !userProfile?.id || !hasManager) return;
-
     setSaving(true);
     try {
       // Get the user's manager ID
-      const { data: teamMembership } = await supabase
-        .from('team_members')
-        .select('team_id')
-        .eq('member_id', userProfile.id)
-        .eq('role', 'employee')
-        .single();
-
+      const {
+        data: teamMembership
+      } = await supabase.from('team_members').select('team_id').eq('member_id', userProfile.id).eq('role', 'employee').single();
       if (!teamMembership) {
         throw new Error('Manager not found');
       }
 
       // Upsert sharing preferences
-      const { error } = await supabase
-        .from('sharing_preferences')
-        .upsert({
-          user_id: user.id,
-          manager_id: teamMembership.team_id,
-          ...preferences,
-          share_ocean_profile: true // Always shared
-        }, {
-          onConflict: 'user_id,manager_id'
-        });
-
+      const {
+        error
+      } = await supabase.from('sharing_preferences').upsert({
+        user_id: user.id,
+        manager_id: teamMembership.team_id,
+        ...preferences,
+        share_ocean_profile: true // Always shared
+      }, {
+        onConflict: 'user_id,manager_id'
+      });
       if (error) throw error;
-
       onPreferencesChange?.(preferences);
-
       toast({
         title: "Preferences Updated",
-        description: "Your data sharing preferences have been saved successfully",
+        description: "Your data sharing preferences have been saved successfully"
       });
-
     } catch (error: any) {
       console.error('Error updating sharing preferences:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to update sharing preferences",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setSaving(false);
     }
   };
-
   const getSharingLabel = (key: keyof SharingPreferences): string => {
     const labels = {
       share_profile: 'Profile',
@@ -179,37 +147,22 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
     };
     return labels[key];
   };
-
   if (!hasManager) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your preferences</CardTitle>
-          <CardDescription>
-            Join a team to enable data sharing with your manager
-          </CardDescription>
+    return <Card>
+        <CardHeader className="py-[16px]">
+          <CardTitle className="text-sm">Your preferences</CardTitle>
+          
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              You need to be part of a team to configure data sharing preferences
-            </p>
+            <p className="text-muted-foreground">Join a team to enable data sharing with your manager to configure data sharing preferences.</p>
           </div>
         </CardContent>
-      </Card>
-    );
+      </Card>;
   }
-
-  const sharingOptions: Array<keyof SharingPreferences> = [
-    'share_profile',
-    'share_insights', 
-    'share_conversations',
-    'share_progress'
-  ];
-
-  return (
-    <Card>
+  const sharingOptions: Array<keyof SharingPreferences> = ['share_profile', 'share_insights', 'share_conversations', 'share_progress'];
+  return <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Settings className="h-4 w-4 text-primary" />
@@ -222,20 +175,15 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
       <CardContent className="space-y-4">
         {/* Checkbox list */}
         <div className="space-y-3">
-          {sharingOptions.map((option) => (
-            <div key={option} className="flex items-center space-x-2">
-              <Checkbox
-                id={option}
-                checked={preferences[option]}
-                onCheckedChange={(checked) => 
-                  setPreferences(prev => ({ ...prev, [option]: checked as boolean }))
-                }
-              />
+          {sharingOptions.map(option => <div key={option} className="flex items-center space-x-2">
+              <Checkbox id={option} checked={preferences[option]} onCheckedChange={checked => setPreferences(prev => ({
+            ...prev,
+            [option]: checked as boolean
+          }))} />
               <Label htmlFor={option} className="text-sm font-medium">
                 {getSharingLabel(option)}
               </Label>
-            </div>
-          ))}
+            </div>)}
         </div>
 
         {/* Always shared OCEAN profile */}
@@ -249,16 +197,10 @@ const SharingPreferences: React.FC<SharingPreferencesProps> = ({
         </div>
 
         {/* Update button */}
-        <Button 
-          onClick={updateAllPreferences} 
-          disabled={saving}
-          className="w-full mt-4"
-        >
+        <Button onClick={updateAllPreferences} disabled={saving} className="w-full mt-4">
           {saving ? 'Saving...' : 'Update preferences'}
         </Button>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default SharingPreferences;
