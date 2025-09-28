@@ -307,14 +307,30 @@ const Dashboard = () => {
         const {
           data: invitations,
           error: invitationsError
-        } = await supabase.from('invitations').select(`
-            *,
-            manager:profiles!invitations_manager_id_fkey(full_name, display_name)
-          `).eq('email', user.email).eq('status', 'pending').gt('expires_at', new Date().toISOString());
+        } = await supabase.from('invitations').select('*').eq('email', user.email).eq('status', 'pending').gt('expires_at', new Date().toISOString());
+        
         if (invitationsError) {
           console.warn('Invitations load error:', invitationsError);
+          setPendingInvitations([]);
+        } else if (invitations && invitations.length > 0) {
+          // Get manager details for each invitation
+          const invitationsWithManagers = await Promise.all(
+            invitations.map(async (invitation) => {
+              const { data: manager } = await supabase
+                .from('profiles')
+                .select('full_name, display_name')
+                .eq('id', invitation.manager_id)
+                .single();
+              
+              return {
+                ...invitation,
+                manager: manager
+              };
+            })
+          );
+          setPendingInvitations(invitationsWithManagers);
         } else {
-          setPendingInvitations(invitations || []);
+          setPendingInvitations([]);
         }
       } catch (e) {
         console.warn('Invitations query failed:', e);
