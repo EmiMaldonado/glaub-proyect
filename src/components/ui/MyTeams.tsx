@@ -186,7 +186,7 @@ const MyTeams: React.FC<MyTeamsProps> = ({
                 const memberCount = membership.memberCount;
                 
                 return (
-                  <div key={membership.id} className="p-3 bg-card border rounded-lg hover:shadow-sm transition-shadow">
+                  <div key={membership.id} className="p-3 bg-blue-50/30 border rounded-lg hover:shadow-sm transition-shadow">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
