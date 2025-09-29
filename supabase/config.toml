@@ -45,8 +45,9 @@ image_transformation = { enabled = true }
 [auth]
 enabled = true
 port = 54329
-site_url = "https://gläub-thesis.com"
+site_url = "https://www.glaubinsights.org"
 additional_redirect_urls = [
+  "https://www.glaubinsights.org",
   "https://gläub-thesis.com",
   "https://xn--glub-thesis-m8a.com", 
   "http://localhost:3000",

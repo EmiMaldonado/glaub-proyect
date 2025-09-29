@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@4.0.0";
+import { Resend } from "npm:resend@4.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -48,12 +48,12 @@ serve(async (req: Request) => {
     if (email_action_type === "signup") {
       subject = "Welcome to Gläub - Confirm your email";
       // Use token_hash for the verification URL as it's more secure
-      const confirmUrl = `${site_url}/auth/v1/verify?token=${token_hash}&type=signup&redirect_to=${redirect_to}`;
+      const confirmUrl = `${site_url}/auth/callback?token_hash=${token_hash}&type=signup&redirect_to=${encodeURIComponent(redirect_to)}`;
       
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
           <div style="background-color: white; padding: 30px; border-radius: 10px; text-align: center;">
-            <img src="https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
+            <img src="https://www.glaubinsights.org/glaub-logo.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
             
             <h1 style="color: #333; margin-bottom: 20px;">Welcome to Gläub!</h1>
             
@@ -82,12 +82,12 @@ serve(async (req: Request) => {
       `;
     } else if (email_action_type === "recovery") {
       subject = "Reset your Gläub password";
-      const resetUrl = `${redirect_to}?access_token=${token}&type=recovery`;
+      const resetUrl = `${site_url}/auth/callback?token_hash=${token_hash}&type=recovery&redirect_to=${encodeURIComponent(redirect_to)}`;
       
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
           <div style="background-color: white; padding: 30px; border-radius: 10px; text-align: center;">
-            <img src="https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
+            <img src="https://www.glaubinsights.org/glaub-logo.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
             
             <h1 style="color: #333; margin-bottom: 20px;">Reset Your Password</h1>
             
