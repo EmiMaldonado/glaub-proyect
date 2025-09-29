@@ -330,9 +330,9 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-5-mini-2025-08-07', // Faster model
+          model: 'gpt-4o-mini', // Working model
           messages: analysisMessages,
-          max_completion_tokens: 1000, // Use max_completion_tokens for newer models
+          max_tokens: 1000,
         }),
       });
 

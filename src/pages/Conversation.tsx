@@ -835,8 +835,8 @@ const ChatConversation: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* MOBILE LAYOUT FIX: Header limpio */}
-      <header className="bg-background border-b px-4 py-3 sticky top-0 z-10">
+      {/* MOBILE LAYOUT FIX: Header compacto */}
+      <header className="bg-background border-b px-4 py-2 sticky top-0 z-10">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-3">
             <Button 
@@ -982,12 +982,13 @@ const ChatConversation: React.FC = () => {
                   }}
                   placeholder={isPaused ? "Resume the conversation to continue..." : "Type your message..."}
                   disabled={isLoading || isPaused || isWaitingForAI}
-                  className="flex-1 px-3 py-2 border border-input rounded-md bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-3 border border-input rounded-md bg-background text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px]"
                 />
                 <Button
                   onClick={() => handleSendMessage(textInput)}
                   disabled={!textInput.trim() || isLoading || isPaused || isWaitingForAI}
-                  size="sm"
+                  size="default"
+                  className="px-4 py-2 min-h-[40px]"
                 >
                   {isLoading ? (
                     <LoadingSpinner />
@@ -997,40 +998,40 @@ const ChatConversation: React.FC = () => {
                 </Button>
               </div>
 
-              {/* MOBILE: Botones de acción en línea separada */}
-              <div className="sm:hidden flex flex-wrap justify-center gap-2 pt-2 border-t border-border">
+              {/* MOBILE: Botones de acción mejorados */}
+              <div className="sm:hidden flex flex-wrap justify-center gap-3 pt-3 border-t border-border">
                 {hasActiveSession && !isPaused && (
                   <>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={handlePauseSession}
-                      className="text-xs px-3 py-1"
+                      className="text-sm px-4 py-2 min-h-[40px]"
                     >
-                      <Pause className="h-3 w-3 mr-1" />
+                      <Pause className="h-4 w-4 mr-2" />
                       Pause
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={handleEndSession}
                       disabled={messages.filter(msg => msg.role === 'user').length < 5}
-                      className="text-xs px-3 py-1 text-red-600 hover:text-red-700 disabled:text-gray-400"
+                      className="text-sm px-4 py-2 min-h-[40px] text-red-600 hover:text-red-700 disabled:text-gray-400"
                     >
-                      <Power className="h-3 w-3 mr-1" />
+                      <Power className="h-4 w-4 mr-2" />
                       End ({messages.filter(msg => msg.role === 'user').length}/5)
                     </Button>
                   </>
                 )}
                 {isPaused && (
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="default"
+                    size="default"
                     onClick={handleResumeSession}
-                    className="text-xs px-3 py-1"
+                    className="text-sm px-6 py-2 min-h-[40px] bg-primary text-primary-foreground"
                   >
-                    <Play className="h-3 w-3 mr-1" />
-                    Resume
+                    <Play className="h-4 w-4 mr-2" />
+                    Continue Session
                   </Button>
                 )}
               </div>

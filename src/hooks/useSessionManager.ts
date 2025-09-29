@@ -278,6 +278,29 @@ export const useSessionManager = (): SessionManagerHook => {
         (Date.now() - new Date(sessionState.conversation.started_at).getTime()) / (1000 * 60)
       );
 
+      // Trigger session analysis before completing if enough messages
+      if (sessionState.messages.length >= 4) {
+        try {
+          console.log('🔍 Triggering session analysis...');
+          const { data: analysisData, error: analysisError } = await supabase.functions.invoke('ai-chat', {
+            body: {
+              analysis_type: 'session_summary',
+              messages: sessionState.messages,
+              conversation_id: sessionState.conversation.id
+            }
+          });
+
+          if (analysisError) {
+            console.error('⚠️ Session analysis failed:', analysisError);
+          } else {
+            console.log('✅ Session analysis completed');
+          }
+        } catch (analysisError) {
+          console.error('⚠️ Session analysis error:', analysisError);
+          // Continue with session completion even if analysis fails
+        }
+      }
+
       // Actualizar en la base de datos
       const { error } = await supabase
         .from('conversations')
@@ -295,11 +318,6 @@ export const useSessionManager = (): SessionManagerHook => {
 
       if (error) throw error;
 
-      // Limpiar localStorage
-      localStorage.removeItem(STORAGE_KEYS.SESSION);
-      localStorage.removeItem(STORAGE_KEYS.MESSAGES);
-      localStorage.removeItem(STORAGE_KEYS.LAST_ACTIVITY);
-
       // Limpiar paused_conversations si existe
       await supabase
         .from('paused_conversations')
@@ -307,6 +325,12 @@ export const useSessionManager = (): SessionManagerHook => {
         .eq('user_id', user.id);
 
       console.log('✅ Session completed successfully');
+
+      // Limpiar localStorage DESPUÉS de todo está guardado
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
+      localStorage.removeItem(STORAGE_KEYS.MESSAGES);
+      localStorage.removeItem(STORAGE_KEYS.LAST_ACTIVITY);
+
       return true;
 
     } catch (error) {

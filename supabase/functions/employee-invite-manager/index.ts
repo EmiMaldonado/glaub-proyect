@@ -1,88 +1,37 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-// Direct Supabase API implementation
-const createClient = (url: string, key: string) => {
-  return {
-    from: (table: string) => ({
-      select: (columns?: string) => ({
-        eq: (column: string, value: any) => ({
-          maybeSingle: async () => {
-            const response = await fetch(`${url}/rest/v1/${table}?select=${columns || '*'}&${column}=eq.${value}`, {
-              headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-            });
-            return { data: await response.json(), error: null };
-          },
-          single: async () => {
-            const response = await fetch(`${url}/rest/v1/${table}?select=${columns || '*'}&${column}=eq.${value}`, {
-              headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-            });
-            return { data: (await response.json())[0], error: null };
-          }
-        })
-      }),
-      insert: (data: any) => ({
-        select: () => ({
-          single: async () => {
-            const response = await fetch(`${url}/rest/v1/${table}`, {
-              method: 'POST',
-              headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify(data)
-            });
-            return { data: (await response.json())[0], error: null };
-          }
-        })
-      })
-    }),
-    auth: {
-      getUser: async (jwt: string) => {
-        const response = await fetch(`${url}/auth/v1/user`, {
-          headers: { 'Authorization': `Bearer ${jwt}` }
-        });
-        return { data: { user: await response.json() }, error: null };
-      }
-    }
-  };
+import { createClient } from 'npm:@supabase/supabase-js@2.57.2';
+import { Resend } from "npm:resend@4.0.0";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-import { corsHeaders } from "../_shared/cors.ts";
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const resend = new Resend(resendApiKey);
 
 interface EmployeeManagerInvitationRequest {
   managerEmail: string;
 }
 
-// Direct API implementation for email sending
-async function sendEmail(to: string, subject: string, html: string) {
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "Gläub <noreply@resend.dev>",
-      to: [to],
-      subject: subject,
-      html: html,
-    }),
-  });
-
-  return await response.json();
-}
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
 serve(async (req: Request) => {
+  const startTime = Date.now();
+  console.log(`🚀 Manager invitation request started at ${new Date().toISOString()}`);
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     // Get the user from the Authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("❌ No authorization header");
       throw new Error("No authorization header");
     }
 
@@ -90,10 +39,13 @@ serve(async (req: Request) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
 
     if (userError || !user) {
+      console.error("❌ User authentication failed:", userError?.message);
       throw new Error("Unauthorized");
     }
 
-    // Get employee profile
+    console.log(`👤 Request from user: ${user.email}`);
+
+    // Get employee profile using SDK
     const { data: employeeProfile, error: profileError } = await supabase
       .from("profiles")
       .select("id, full_name, display_name, team_name, role")
@@ -101,61 +53,83 @@ serve(async (req: Request) => {
       .single();
 
     if (profileError || !employeeProfile) {
+      console.error("❌ Employee profile not found:", profileError?.message);
       throw new Error("Employee profile not found");
     }
+
+    console.log(`📋 Employee profile: ${employeeProfile.display_name || employeeProfile.full_name}`);
 
     const { managerEmail }: EmployeeManagerInvitationRequest = await req.json();
 
     if (!managerEmail) {
+      console.error("❌ Manager email is required");
       throw new Error("Manager email is required");
     }
 
-    // Check if invitation already exists for this manager email from this employee
-    const existingResponse = await fetch(`${supabaseUrl}/rest/v1/invitations?select=*&email=eq.${managerEmail}&invited_by_id=eq.${employeeProfile.id}&invitation_type=eq.manager_request&status=eq.pending`, {
-      headers: { 'apikey': supabaseServiceKey, 'Authorization': `Bearer ${supabaseServiceKey}` }
-    });
-    const existingInvitations = await existingResponse.json();
-    const existingInvitation = existingInvitations.length > 0 ? existingInvitations[0] : null;
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(managerEmail)) {
+      console.error("❌ Invalid email format");
+      throw new Error("Invalid email format");
+    }
 
-    if (existingInvitation) {
+    console.log(`📧 Manager email: ${managerEmail}`);
+
+    // Check if invitation already exists using SDK
+    const { data: existingInvitations, error: checkError } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('email', managerEmail)
+      .eq('invited_by_id', employeeProfile.id)
+      .eq('invitation_type', 'manager_request')
+      .eq('status', 'pending');
+
+    if (checkError) {
+      console.error("❌ Error checking existing invitations:", checkError.message);
+      throw new Error("Failed to check existing invitations");
+    }
+
+    if (existingInvitations && existingInvitations.length > 0) {
+      console.error("❌ Manager invitation already exists");
       throw new Error("Manager invitation already sent to this email");
     }
 
     // Generate unique token
     const token = crypto.randomUUID();
+    console.log("🔑 Generated invitation token");
 
-    // Create invitation record - Employee → Manager flow
-    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/invitations`, {
-      method: 'POST',
-      headers: { 
-        'apikey': supabaseServiceKey, 
-        'Authorization': `Bearer ${supabaseServiceKey}`, 
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({
+    // Create invitation record using SDK
+    const { data: invitation, error: invitationError } = await supabase
+      .from('invitations')
+      .insert({
         manager_id: employeeProfile.id, // The employee who will become manager if accepted
         email: managerEmail,
         token,
         invitation_type: "manager_request",
         invited_by_id: employeeProfile.id
       })
-    });
-    const invitationData = await insertResponse.json();
-    const invitation = Array.isArray(invitationData) ? invitationData[0] : invitationData;
-    const invitationError = !insertResponse.ok;
+      .select()
+      .single();
 
     if (invitationError) {
-      console.error("Error creating manager invitation:", invitationError);
+      console.error("❌ Error creating manager invitation:", invitationError.message);
       throw new Error("Failed to create manager invitation");
     }
+
+    console.log("✅ Invitation created successfully:", invitation.id);
 
     const employeeName = employeeProfile.display_name || employeeProfile.full_name || 'Your colleague';
     const baseUrl = "https://www.glaubinsights.org";
     const acceptUrl = `${baseUrl}/invitation/${token}`;
     
-    // Send invitation email
-    const emailResponse = await sendEmail(managerEmail, `${employeeName} invited you to be their manager`, `
+    console.log("📧 Sending invitation email...");
+    
+    // Send invitation email using Resend SDK
+    const emailResponse = await resend.emails.send({
+      from: "Gläub <noreply@resend.dev>",
+      to: [managerEmail],
+      subject: `${employeeName} invited you to be their manager`,
+      html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
             <div style="background-color: white; padding: 30px; border-radius: 10px; text-align: center;">
                 <img src="https://www.glaubinsights.org/glaub-logo.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
@@ -197,18 +171,18 @@ serve(async (req: Request) => {
                 </p>
             </div>
         </div>
-      `);
+      `
+    });
 
-    if (!emailResponse || emailResponse.error) {
-      console.error("Error sending manager invitation email:", emailResponse?.error);
+    if (emailResponse.error) {
+      console.error("❌ Error sending manager invitation email:", emailResponse.error);
       throw new Error("Failed to send invitation email");
     }
 
-    console.log("Manager request sent successfully:", { 
-      invitationId: invitation.id, 
-      email: managerEmail,
-      requestedBy: employeeName
-    });
+    console.log(`✅ Email sent successfully. ID: ${emailResponse.data?.id}`);
+
+    const totalTime = Date.now() - startTime;
+    console.log(`🏁 Manager invitation completed in ${totalTime}ms`);
 
     return new Response(
       JSON.stringify({ 
@@ -219,7 +193,8 @@ serve(async (req: Request) => {
           status: invitation.status,
           invited_at: invitation.invited_at,
           invitation_type: invitation.invitation_type
-        }
+        },
+        processingTime: totalTime
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -227,9 +202,14 @@ serve(async (req: Request) => {
     );
 
   } catch (error: any) {
-    console.error("Error in employee-invite-manager function:", error);
+    const totalTime = Date.now() - startTime;
+    console.error(`💥 Error in employee-invite-manager function (${totalTime}ms):`, error.message);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        processingTime: totalTime
+      }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
