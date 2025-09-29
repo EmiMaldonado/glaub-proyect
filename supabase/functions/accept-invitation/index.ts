@@ -432,7 +432,7 @@ function getSuccessHTML(message: string) {
         <div class="success-icon"></div>
         <h1>Success!</h1>
         <p>${message}</p>
-        <a href="https://gläub-thesis.com" class="btn">Continue to Gläub</a>
+        <a href="https://www.glaubinsights.org" class="btn">Continue to Gläub</a>
     </div>
 </body>
 </html>
