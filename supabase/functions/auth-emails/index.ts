@@ -1,7 +1,25 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@4.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+// Direct API implementation instead of using external dependencies
+async function sendEmail(to: string, subject: string, html: string) {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "Gläub <noreply@resend.dev>",
+      to: [to],
+      subject: subject,
+      html: html,
+    }),
+  });
+
+  return await response.json();
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,15 +140,10 @@ serve(async (req: Request) => {
       });
     }
 
-    const emailResponse = await resend.emails.send({
-      from: "Gläub <noreply@resend.dev>",
-      to: [user.email],
-      subject: subject,
-      html: html,
-    });
+    const emailResponse = await sendEmail(user.email, subject, html);
 
     console.log("Auth email sent successfully:", { 
-      id: emailResponse.data?.id,
+      id: emailResponse.id,
       to: user.email,
       subject,
       action_type: email_action_type 
@@ -138,7 +151,7 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      email_id: emailResponse.data?.id,
+      email_id: emailResponse.id,
       message: 'Email sent successfully' 
     }), {
       status: 200,

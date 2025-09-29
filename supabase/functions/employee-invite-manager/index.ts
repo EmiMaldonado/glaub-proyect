@@ -1,13 +1,73 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { Resend } from "npm:resend@4.0.0";
+// Direct Supabase API implementation
+const createClient = (url: string, key: string) => {
+  return {
+    from: (table: string) => ({
+      select: (columns?: string) => ({
+        eq: (column: string, value: any) => ({
+          maybeSingle: async () => {
+            const response = await fetch(`${url}/rest/v1/${table}?select=${columns || '*'}&${column}=eq.${value}`, {
+              headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+            });
+            return { data: await response.json(), error: null };
+          },
+          single: async () => {
+            const response = await fetch(`${url}/rest/v1/${table}?select=${columns || '*'}&${column}=eq.${value}`, {
+              headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+            });
+            return { data: (await response.json())[0], error: null };
+          }
+        })
+      }),
+      insert: (data: any) => ({
+        select: () => ({
+          single: async () => {
+            const response = await fetch(`${url}/rest/v1/${table}`, {
+              method: 'POST',
+              headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(data)
+            });
+            return { data: (await response.json())[0], error: null };
+          }
+        })
+      })
+    }),
+    auth: {
+      getUser: async (jwt: string) => {
+        const response = await fetch(`${url}/auth/v1/user`, {
+          headers: { 'Authorization': `Bearer ${jwt}` }
+        });
+        return { data: { user: await response.json() }, error: null };
+      }
+    }
+  };
+};
 import { corsHeaders } from "../_shared/cors.ts";
 
 interface EmployeeManagerInvitationRequest {
   managerEmail: string;
 }
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+// Direct API implementation for email sending
+async function sendEmail(to: string, subject: string, html: string) {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "Gläub <noreply@resend.dev>",
+      to: [to],
+      subject: subject,
+      html: html,
+    }),
+  });
+
+  return await response.json();
+}
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -89,12 +149,8 @@ serve(async (req: Request) => {
     const baseUrl = "https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev";
     const acceptUrl = `${baseUrl}/invitation/${token}`;
     
-    // Send invitation email using Resend
-    const { error: emailError } = await resend.emails.send({
-      from: "Glaub <onboarding@resend.dev>",
-      to: [managerEmail],
-      subject: `${employeeName} invited you to be their manager`,
-      html: `
+    // Send invitation email
+    const emailResponse = await sendEmail(managerEmail, `${employeeName} invited you to be their manager`, `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
             <div style="background-color: white; padding: 30px; border-radius: 10px; text-align: center;">
                 <img src="https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
