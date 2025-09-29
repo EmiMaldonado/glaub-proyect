@@ -225,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error.message.includes('User already registered')) {
           toast({
             title: "Account already exists",
-            description: "An account with this email already exists. Please sign in instead.",
+            description: "You are already an active user. Please sign in.",
             variant: "destructive",
           });
         } else if (error.message.includes('Password should be at least')) {
