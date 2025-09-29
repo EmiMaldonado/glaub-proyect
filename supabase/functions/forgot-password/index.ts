@@ -155,10 +155,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email with custom template and timeout
     const emailStart = Date.now();
     
-    // Get the origin from the request headers to ensure correct domain
-    const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/');
-    const baseUrl = Deno.env.get("SITE_URL") || origin || `${new URL(req.url).protocol}//${new URL(req.url).host}`;
-    const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+    // Use correct domain for reset URL
+    const siteUrl = Deno.env.get("SITE_URL") || "https://www.glaubinsights.org";
+    const resetUrl = `${siteUrl}/auth/callback?type=recovery&token=${token}`;
     
     console.log("📧 Attempting to send email...");
     console.log("🔗 Reset URL:", resetUrl);
@@ -180,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
       const emailPromise = resend.emails.send({
         from: "Gläub <onboarding@resend.dev>",
         to: [email],
-        subject: "Restablecer Contraseña - Gläub",
+        subject: "Reset Password - Gläub",
         html,
       });
       

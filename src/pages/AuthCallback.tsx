@@ -102,30 +102,43 @@ const AuthCallback = () => {
           }
         }
 
-        // Process query parameter tokens (password recovery)
-        if (accessToken && type === 'recovery') {
+        // Handle custom recovery flow with token
+        if (type === 'recovery') {
           console.log('Processing password recovery...');
           
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || '',
-          });
+          const token = searchParams.get('token');
+          
+          if (accessToken) {
+            // Standard Supabase recovery flow
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken || '',
+            });
 
-          if (sessionError) {
-            console.error('Recovery session error:', sessionError);
-            setStatus('error');
-            setMessage('Password recovery link error. The link may have expired.');
+            if (sessionError) {
+              console.error('Recovery session error:', sessionError);
+              setStatus('error');
+              setMessage('Password recovery link error. The link may have expired.');
+              return;
+            }
+
+            setStatus('success');
+            setMessage('Recovery link valid. Redirecting to password reset...');
+            
+            // Redirect to reset password
+            setTimeout(() => {
+              navigate('/reset-password', { replace: true });
+            }, 1000);
+            return;
+          } else if (token) {
+            // Custom recovery flow - redirect with token
+            setStatus('success');
+            setMessage('Password recovery link verified. Redirecting...');
+            setTimeout(() => {
+              navigate(`/reset-password?token=${token}`, { replace: true });
+            }, 1000);
             return;
           }
-
-          setStatus('success');
-          setMessage('Recovery link valid. Redirecting to password reset...');
-          
-          // Redirect to reset password
-          setTimeout(() => {
-            navigate('/reset-password', { replace: true });
-          }, 1000);
-          return;
         }
 
         // If we get here without processing anything, show error
