@@ -111,14 +111,11 @@ serve(async (req: Request) => {
     }
 
     // Check if invitation already exists for this manager email from this employee
-    const { data: existingInvitation } = await supabase
-      .from("invitations")
-      .select("*")
-      .eq("email", managerEmail)
-      .eq("invited_by_id", employeeProfile.id)
-      .eq("invitation_type", "manager_request")
-      .eq("status", "pending")
-      .maybeSingle();
+    const existingResponse = await fetch(`${supabaseUrl}/rest/v1/invitations?select=*&email=eq.${managerEmail}&invited_by_id=eq.${employeeProfile.id}&invitation_type=eq.manager_request&status=eq.pending`, {
+      headers: { 'apikey': supabaseServiceKey, 'Authorization': `Bearer ${supabaseServiceKey}` }
+    });
+    const existingInvitations = await existingResponse.json();
+    const existingInvitation = existingInvitations.length > 0 ? existingInvitations[0] : null;
 
     if (existingInvitation) {
       throw new Error("Manager invitation already sent to this email");
@@ -128,17 +125,25 @@ serve(async (req: Request) => {
     const token = crypto.randomUUID();
 
     // Create invitation record - Employee → Manager flow
-    const { data: invitation, error: invitationError } = await supabase
-      .from("invitations")
-      .insert({
+    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/invitations`, {
+      method: 'POST',
+      headers: { 
+        'apikey': supabaseServiceKey, 
+        'Authorization': `Bearer ${supabaseServiceKey}`, 
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
         manager_id: employeeProfile.id, // The employee who will become manager if accepted
         email: managerEmail,
         token,
         invitation_type: "manager_request",
         invited_by_id: employeeProfile.id
       })
-      .select()
-      .single();
+    });
+    const invitationData = await insertResponse.json();
+    const invitation = Array.isArray(invitationData) ? invitationData[0] : invitationData;
+    const invitationError = !insertResponse.ok;
 
     if (invitationError) {
       console.error("Error creating manager invitation:", invitationError);
@@ -146,14 +151,14 @@ serve(async (req: Request) => {
     }
 
     const employeeName = employeeProfile.display_name || employeeProfile.full_name || 'Your colleague';
-    const baseUrl = "https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev";
+    const baseUrl = "https://www.glaubinsights.org";
     const acceptUrl = `${baseUrl}/invitation/${token}`;
     
     // Send invitation email
     const emailResponse = await sendEmail(managerEmail, `${employeeName} invited you to be their manager`, `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
             <div style="background-color: white; padding: 30px; border-radius: 10px; text-align: center;">
-                <img src="https://f95a31b2-0a27-4418-b650-07505c789eed.sandbox.lovable.dev/lovable-uploads/eb8e87b8-1951-4632-82f0-7b714e5efcd5.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
+                <img src="https://www.glaubinsights.org/glaub-logo.png" alt="Gläub" style="height: 40px; margin-bottom: 30px;">
 
                 <h1 style="color: #333; margin-bottom: 20px;">You've been invited to become a manager on Gläub</h1>
 
@@ -192,12 +197,11 @@ serve(async (req: Request) => {
                 </p>
             </div>
         </div>
-      `,
-    });
+      `);
 
-    if (emailError) {
-      console.error("Error sending manager invitation email:", emailError);
-      throw new Error(`Failed to send invitation email: ${emailError.message}`);
+    if (!emailResponse || emailResponse.error) {
+      console.error("Error sending manager invitation email:", emailResponse?.error);
+      throw new Error("Failed to send invitation email");
     }
 
     console.log("Manager request sent successfully:", { 
