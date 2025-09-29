@@ -156,7 +156,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailStart = Date.now();
     
     // Use correct domain for reset URL
-    const siteUrl = Deno.env.get("SITE_URL") || "https://www.glaubinsights.org";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://glaubinsights.org";
     const resetUrl = `${siteUrl}/reset-password?token=${token}`;
     
     console.log("📧 Attempting to send email...");
