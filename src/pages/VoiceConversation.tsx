@@ -104,21 +104,21 @@ const VoiceConversation: React.FC = () => {
             });
             
             setIsAnalyzing(false);
-            navigate(`/session-summary?conversation_id=${conversation.id}`);
+            navigate(`/session-recap/${conversation.id}`);
           } else {
             console.log('⚠️ Session analysis returned no data');
             setIsAnalyzing(false);
-            navigate('/dashboard');
+            navigate(`/session-recap/${conversation.id}`);
           }
         } catch (analysisError) {
           console.error('❌ Session analysis failed:', analysisError);
           toast({
             title: "Session Completed",
-            description: "Voice session saved but analysis failed. Check dashboard for insights.",
+            description: "Voice session saved but analysis failed. Check session recap for details.",
             variant: "default",
           });
           setIsAnalyzing(false);
-          navigate('/dashboard');
+          navigate(`/session-recap/${conversation.id}`);
         }
       } else {
         console.log(`⚠️ Session too short for insights: ${actualDuration} min, ${sessionTranscripts.length} transcripts`);
@@ -129,19 +129,23 @@ const VoiceConversation: React.FC = () => {
         });
         
         setIsAnalyzing(false);
-        navigate('/dashboard');
+        navigate(`/session-recap/${conversation.id}`);
       }
     } catch (error) {
       console.error('❌ handleEndSession: Error completing session:', error);
       
-      toast({
-        title: "⚠️ Completion Issues", 
-        description: "Voice session may not be fully processed, but navigating to dashboard.",
-        variant: "default",
-      });
-      
-      setIsAnalyzing(false);
-      navigate('/dashboard');
+      if (conversation?.id) {
+        toast({
+          title: "⚠️ Completion Issues", 
+          description: "Voice session may not be fully processed. Check session recap.",
+          variant: "default",
+        });
+        
+        setIsAnalyzing(false);
+        navigate(`/session-recap/${conversation.id}`);
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
 

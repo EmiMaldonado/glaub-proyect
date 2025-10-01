@@ -236,23 +236,20 @@ const ChatConversation: React.FC = () => {
   };
   
   const handleEndSession = async () => {
-    setIsAnalyzing(true);
+    if (!conversation?.id) return;
     
     try {
-      // Simulate processing time for better UX
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       await completeSession();
+      
       toast({
         title: "Session Completed",
-        description: "Your conversation has been saved and insights generated."
+        description: "Your conversation has been saved and insights are being generated."
       });
       
-      setIsAnalyzing(false);
-      navigate('/dashboard');
+      // Navigate directly to session recap
+      navigate(`/session-recap/${conversation.id}`);
     } catch (error) {
       console.error('Error ending session:', error);
-      setIsAnalyzing(false);
       toast({
         title: "Error",
         description: "Could not end session",
