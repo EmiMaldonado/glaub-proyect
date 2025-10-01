@@ -216,7 +216,7 @@ const SessionRecap = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-foreground mb-2">No Session Selected</h1>
           <p className="text-muted-foreground mb-4">Please select a session to view its recap.</p>
-          <Button onClick={() => navigate('/dashboard')}>
+          <Button onClick={() => navigate('/dashboard?refresh=true')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
@@ -302,7 +302,7 @@ const SessionRecap = () => {
             <div className="flex items-center justify-between pt-6 border-t border-border">
               <Button
                 variant="outline"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/dashboard?refresh=true')}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />

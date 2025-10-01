@@ -614,6 +614,29 @@ const Dashboard = () => {
   // useEffect para navegación CONTROLADA
   useEffect(() => {
     if (!user?.id || location.pathname !== '/dashboard') return;
+    
+    // Check if we're coming back from completing a session
+    const searchParams = new URLSearchParams(location.search);
+    const shouldRefresh = searchParams.get('refresh') === 'true';
+    
+    if (shouldRefresh) {
+      console.log('🔄 Forcing dashboard refresh after session completion');
+      loadingInProgress.current = false;
+      lastLoadTime.current = 0; // Reset to force reload
+      
+      // Clear the URL parameter
+      navigate('/dashboard', { replace: true });
+      
+      // Force reload all data
+      setTimeout(() => {
+        loadDashboardData();
+        if (refetchConversationState) {
+          refetchConversationState(user.id);
+        }
+      }, 500);
+      return;
+    }
+    
     const timeSinceLastLoad = Date.now() - lastLoadTime.current;
     if (timeSinceLastLoad < 2000) {
       console.log('⚠️ Skipping navigation refresh - too soon');
@@ -626,7 +649,7 @@ const Dashboard = () => {
       }
     }, 1000);
     return () => clearTimeout(refreshTimeout);
-  }, [user?.id, location.pathname]);
+  }, [user?.id, location.pathname, location.search]);
 
   // useEffect para datos históricos
   useEffect(() => {
