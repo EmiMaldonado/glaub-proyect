@@ -363,7 +363,79 @@ Base your analysis ONLY on what was actually discussed in this conversation. Do 
     }
 
     // Regular chat flow continues here...
-    const { message, conversationId, userId, isFirstMessage, aiInitiated } = requestBody;
+    const { message, conversationId, userId, isFirstMessage, aiInitiated, isWelcomeMessage } = requestBody;
+
+    // Handle welcome message for new conversations
+    if (isWelcomeMessage && conversationId && userId) {
+      debugInfo.processing_steps.push('Generating welcome message for new conversation');
+      
+      try {
+        // Get user profile for personalization
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('full_name, display_name')
+          .eq('user_id', userId)
+          .single();
+        
+        const userName = userProfile?.display_name || userProfile?.full_name || 'there';
+        
+        const welcomePrompt = `You are Glai, an AI career development coach. Generate a warm, brief welcome message (2-3 sentences) for a new user named ${userName} who is starting their first chat conversation. Introduce yourself, explain you're here to help with career guidance, and invite them to share what's on their mind. Be warm and encouraging.`;
+        
+        const welcomeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: welcomePrompt }],
+            max_tokens: 150,
+            temperature: 0.7,
+          }),
+        });
+        
+        if (welcomeResponse.ok) {
+          const welcomeData = await welcomeResponse.json();
+          const welcomeMessage = welcomeData.choices[0].message.content;
+          
+          // Save the welcome message
+          await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              role: 'assistant',
+              content: welcomeMessage,
+              metadata: { 
+                timestamp: new Date().toISOString(),
+                type: 'welcome_message',
+                debug_info: {
+                  tokens_used: welcomeData.usage?.total_tokens || 0
+                }
+              },
+              tokens_used: welcomeData.usage?.total_tokens || 0
+            });
+          
+          debugInfo.processing_steps.push('Welcome message sent successfully');
+          return new Response(JSON.stringify({ 
+            success: true,
+            message: welcomeMessage,
+            tokensUsed: welcomeData.usage?.total_tokens || 0,
+            debug: {
+              success: true,
+              processing_time_ms: Date.now() - startTime,
+              steps_completed: debugInfo.processing_steps,
+              timestamp: new Date().toISOString()
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (welcomeError) {
+        console.error('Error generating welcome message:', welcomeError);
+        // Continue with normal flow if welcome message fails
+      }
+    }
 
     // Handle AI-initiated conversation
     const isAIInitiated = aiInitiated || message === "__AI_START_CONVERSATION__";

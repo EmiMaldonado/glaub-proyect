@@ -449,7 +449,8 @@ const Dashboard = () => {
       const success = await startNewConversation(user.id);
       if (success) {
         const cacheKey = `ocean_description_${user.id}`;
-        localStorage.removeItem(cacheKey);
+        // Keep OCEAN profile in cache - don't remove it
+        // localStorage.removeItem(cacheKey);
         navigate('/conversation');
       }
     }
@@ -858,30 +859,6 @@ const Dashboard = () => {
                         </Button>
                       </div>
                     </div>)}
-                </div>
-              </CardContent>
-            </Card>}
-
-          {/* Join Team - Show only if no current manager and no pending invitations */}
-          {!currentManager && (!pendingInvitations || pendingInvitations.length === 0) && <Card className="h-fit">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-secondary" />
-                  Join a Team
-                </CardTitle>
-                <CardDescription>
-                  Request to join your manager's team
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="manager-email">Manager's Email</Label>
-                    <Input id="manager-email" type="email" placeholder="manager@company.com" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} />
-                  </div>
-                  <Button onClick={handleInviteManager} disabled={isInvitingManager} className="w-full">
-                    {isInvitingManager ? "Sending Request..." : "Request to Join"}
-                  </Button>
                 </div>
               </CardContent>
             </Card>}

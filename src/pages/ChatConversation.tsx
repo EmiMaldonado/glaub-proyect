@@ -97,6 +97,30 @@ const ChatConversation: React.FC = () => {
         throw new Error('Failed to create conversation');
       }
       startNewSession(newConversation as Conversation);
+      
+      // Send welcome message from AI
+      try {
+        const response = await supabase.functions.invoke('ai-chat', {
+          body: {
+            conversationId: newConversation.id,
+            userId: user.id,
+            isWelcomeMessage: true
+          }
+        });
+        
+        if (response.data?.message) {
+          const welcomeMessage: Message = {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: response.data.message,
+            created_at: new Date().toISOString()
+          };
+          addMessageToSession(welcomeMessage);
+        }
+      } catch (welcomeError) {
+        console.error('Error sending welcome message:', welcomeError);
+        // Non-critical error, don't block conversation creation
+      }
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast({

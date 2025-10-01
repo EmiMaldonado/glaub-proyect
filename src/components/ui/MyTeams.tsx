@@ -166,7 +166,7 @@ const MyTeams: React.FC<MyTeamsProps> = ({
       const { data, error } = await supabase.functions.invoke('unified-invitation', {
         body: {
           email: managerEmail,
-          invitationType: 'team_join'
+          invitationType: 'manager_request'
         }
       });
 

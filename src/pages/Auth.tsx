@@ -114,8 +114,24 @@ const Auth = () => {
             console.error('Error completing invitation:', invitationError);
           }
         } else {
-          // Regular signup without invitation
-          navigate('/dashboard');
+          // Regular signup without invitation - check onboarding status
+          const { data: { user: newUser }, error: userError } = await supabase.auth.getUser();
+          
+          if (newUser && !userError) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('onboarding_completed')
+              .eq('user_id', newUser.id)
+              .single();
+            
+            if (!profileData?.onboarding_completed) {
+              navigate('/post-registration');
+            } else {
+              navigate('/dashboard');
+            }
+          } else {
+            navigate('/dashboard');
+          }
         }
       }
     } finally {
